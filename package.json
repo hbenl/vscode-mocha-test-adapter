@@ -1,0 +1,76 @@
+{
+  "name": "vscode-mocha-test-adapter",
+  "description": "Mocha test adapter for VS Code",
+  "author": "Holger Benl <hbenl@evandor.de>",
+  "publisher": "hbenl",
+  "version": "0.1.0",
+  "license": "MIT",
+  "main": "out/main.js",
+  "scripts": {
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "dependencies": {
+    "escape-string-regexp": "^1.0.5",
+    "mocha": "^5.1.1",
+    "tslib": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/escape-string-regexp": "0.0.32",
+    "@types/mocha": "^5.2.0",
+    "typescript": "^2.8.3",
+    "vsce": "^1.40.0",
+    "vscode": "^1.1.17"
+  },
+  "engines": {
+    "vscode": "^1.23.0"
+  },
+  "activationEvents": [
+    "onView:extension.test-explorer.tests"
+  ],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Configuration for the Test Explorer extension",
+      "properties": {
+        "mochaExplorer.files": {
+          "description": "The glob describing the location of your test files (relative to the workspace folder)",
+          "type": "string",
+          "default": "test/**/*.js",
+          "scope": "resource"
+        },
+        "mochaExplorer.env": {
+          "description": "Environment variables to be set when running the tests",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "scope": "resource"
+        },
+        "mochaExplorer.cwd": {
+          "description": "The working directory where mocha is run (relative to the workspace folder)",
+          "type": "string",
+          "scope": "resource"
+        },
+        "mochaExplorer.ui": {
+          "description": "The mocha ui used by the tests",
+          "type": "string",
+          "default": "bdd",
+          "scope": "resource"
+        },
+        "mochaExplorer.timeout": {
+          "description": "The test-case timeout in milliseconds",
+          "type": "number",
+          "default": 2000,
+          "scope": "resource"
+        },
+        "mochaExplorer.retries": {
+          "description": "The number of times to retry failed tests",
+          "type": "number",
+          "default": 0,
+          "scope": "resource"
+        }
+      }
+    }
+  }
+}
