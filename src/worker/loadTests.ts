@@ -15,7 +15,13 @@ for (const file of files) {
 }
 mocha.loadFiles();
 
-sendMessage(convertSuite(mocha.suite));
+const rootSuite = convertSuite(mocha.suite);
+
+if (rootSuite.children.length > 0) {
+	sendMessage(rootSuite);
+} else {
+	sendMessage(undefined);
+}
 
 
 function convertSuite(suite: Mocha.ISuite): TestSuiteInfo {
