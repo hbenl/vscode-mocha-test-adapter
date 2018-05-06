@@ -5,6 +5,10 @@
   "publisher": "hbenl",
   "version": "0.1.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hbenl/vscode-mocha-test-adapter.git"
+  },
   "main": "out/main.js",
   "scripts": {
     "postinstall": "node ./node_modules/vscode/bin/install",
