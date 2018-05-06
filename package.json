@@ -20,6 +20,9 @@
     "package": "vsce package",
     "publish": "vsce publish"
   },
+  "extensionDependencies": [
+    "hbenl.vscode-test-explorer"
+  ],
   "dependencies": {
     "escape-string-regexp": "^1.0.5",
     "mocha": "^5.1.1",
