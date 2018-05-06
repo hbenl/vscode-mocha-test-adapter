@@ -18,6 +18,7 @@ mocha.loadFiles();
 const rootSuite = convertSuite(mocha.suite);
 
 if (rootSuite.children.length > 0) {
+	rootSuite.label = 'Mocha';
 	sendMessage(rootSuite);
 } else {
 	sendMessage(undefined);
