@@ -40,7 +40,7 @@
     "vscode": "^1.23.0"
   },
   "activationEvents": [
-    "onView:extension.test-explorer.tests"
+    "onView:test-explorer"
   ],
   "contributes": {
     "configuration": {
