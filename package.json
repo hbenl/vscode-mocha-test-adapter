@@ -1,6 +1,6 @@
 {
   "name": "vscode-mocha-test-adapter",
-  "displayName": "Mocha Test Adapter for the VS Code Test Explorer",
+  "displayName": "Mocha Test Explorer for Visual Studio Code",
   "description": "Run your Mocha tests in the Sidebar of Visual Studio Code",
   "icon": "icon.png",
   "author": "Holger Benl <hbenl@evandor.de>",
