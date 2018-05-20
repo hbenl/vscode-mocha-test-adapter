@@ -45,6 +45,7 @@ function convertTest(test: Mocha.ITest): TestInfo {
 		type: 'test',
 		id: test.title,
 		label: test.title,
-		file: test.file
+		file: test.file,
+		skipped: test.pending
 	}
 }
