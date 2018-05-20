@@ -1,14 +1,28 @@
 {
   "name": "vscode-mocha-test-adapter",
-  "description": "Mocha test adapter for VS Code",
+  "displayName": "Mocha Test Adapter for the VS Code Test Explorer",
+  "description": "Run your Mocha tests in the Sidebar of Visual Studio Code",
+  "icon": "icon.png",
   "author": "Holger Benl <hbenl@evandor.de>",
   "publisher": "hbenl",
   "version": "0.1.0",
   "license": "MIT",
+  "homepage": "https://github.com/hbenl/vscode-mocha-test-adapter",
   "repository": {
     "type": "git",
     "url": "https://github.com/hbenl/vscode-mocha-test-adapter.git"
   },
+  "bugs": {
+    "url": "https://github.com/hbenl/vscode-mocha-test-adapter/issues"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "mocha",
+    "test",
+    "testing"
+  ],
   "main": "out/main.js",
   "scripts": {
     "postinstall": "node ./node_modules/vscode/bin/install",
