@@ -3,7 +3,7 @@ import * as RegExEscape from 'escape-string-regexp';
 import { MochaOpts } from '../opts';
 import ReporterFactory from './reporter';
 
-const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
+const sendMessage = process.send ? (message: any) => process.send!(message) : () => {};
 
 const files = <string[]>JSON.parse(process.argv[2]);
 const testsToRun = <string[]>JSON.parse(process.argv[3]);
