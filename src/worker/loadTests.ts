@@ -1,4 +1,6 @@
 import * as Mocha from 'mocha';
+import * as fs from 'fs';
+import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { MochaOpts } from '../opts';
 
@@ -15,7 +17,8 @@ for (const file of files) {
 }
 mocha.loadFiles();
 
-const rootSuite = convertSuite(mocha.suite);
+const fileCache = new Map<string, string>();
+const rootSuite = convertSuite(mocha.suite, fileCache);
 
 if (rootSuite.children.length > 0) {
 	rootSuite.label = 'Mocha';
@@ -25,27 +28,55 @@ if (rootSuite.children.length > 0) {
 }
 
 
-function convertSuite(suite: Mocha.ISuite): TestSuiteInfo {
+function convertSuite(suite: Mocha.ISuite, fileCache: Map<string, string>): TestSuiteInfo {
 
-	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(suite));
-	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(test));
+	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(suite, fileCache));
+	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(test, fileCache));
 	const children = (<(TestSuiteInfo | TestInfo)[]>childSuites).concat(childTests);
+	const line = suite.file ? findLineContaining(suite.title, getFile(suite.file, fileCache)) : undefined;
 
 	return {
 		type: 'suite',
 		id: suite.title,
 		label: suite.title,
 		file: suite.file,
+		line,
 		children
 	};
 }
 
-function convertTest(test: Mocha.ITest): TestInfo {
+function convertTest(test: Mocha.ITest, fileCache: Map<string, string>): TestInfo {
+
+	const line = test.file ? findLineContaining(test.title, getFile(test.file, fileCache)) : undefined;
+
 	return {
 		type: 'test',
 		id: test.title,
 		label: test.title,
 		file: test.file,
+		line,
 		skipped: test.pending
 	}
+}
+
+function getFile(file: string, fileCache: Map<string, string>): string {
+
+	let content = fileCache.get(file);
+
+	if (!content) {
+		content = fs.readFileSync(file, 'utf8');
+		fileCache.set(file, content);
+	}
+
+	return content;
+}
+
+function findLineContaining(needle: string, haystack: string | undefined): number | undefined {
+
+	if (!haystack) return undefined;
+
+	const index = haystack.search(RegExpEscape(needle));
+	if (index < 0) return undefined;
+
+	return haystack.substr(0, index).split('\n').length - 1;
 }
