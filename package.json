@@ -5,7 +5,7 @@
   "icon": "icon.png",
   "author": "Holger Benl <hbenl@evandor.de>",
   "publisher": "hbenl",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "license": "MIT",
   "homepage": "https://github.com/hbenl/vscode-mocha-test-adapter",
   "repository": {
@@ -59,7 +59,7 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "Configuration for the Test Explorer extension",
+      "title": "Configuration for the Mocha Test Explorer extension",
       "properties": {
         "mochaExplorer.files": {
           "description": "The glob describing the location of your test files (relative to the workspace folder)",
