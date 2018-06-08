@@ -109,6 +109,12 @@
             "type": "string"
           },
           "scope": "resource"
+        },
+        "mochaExplorer.exit": {
+          "description": "shutdown the Mocha process (using process.exit()) after the last test has been run",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
         }
       }
     }

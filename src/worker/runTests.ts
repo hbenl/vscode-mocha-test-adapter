@@ -35,4 +35,4 @@ for (const file of files) {
 mocha.grep(regExp);
 mocha.reporter(ReporterFactory(sendMessage));
 
-mocha.run();
+mocha.run(mochaOpts.exit ? () => process.exit() : undefined);

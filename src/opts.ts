@@ -2,5 +2,6 @@ export interface MochaOpts {
 	ui: string,
 	timeout: number,
 	retries: number,
-	requires: string[]
+	requires: string[],
+	exit: boolean
 }

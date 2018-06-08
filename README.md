@@ -12,3 +12,4 @@ This extension allows you to run your Mocha tests using the
 * `mochaExplorer.timeout`: The test-case timeout in milliseconds
 * `mochaExplorer.retries`: The number of times to retry failed tests
 * `mochaExplorer.require`: Module(s) that Mocha should require()
+* `mochaExplorer.exit`: shutdown the Mocha process (using process.exit()) after the last test has been run

@@ -173,7 +173,8 @@ export class MochaAdapter implements TestAdapter {
 			ui: config.get<string>('ui')!,
 			timeout: config.get<number>('timeout')!,
 			retries: config.get<number>('retries')!,
-			requires
+			requires,
+			exit: config.get<boolean>('exit')!
 		}
 	}
 
