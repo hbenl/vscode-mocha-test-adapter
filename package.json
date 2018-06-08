@@ -98,6 +98,17 @@
           "type": "number",
           "default": 0,
           "scope": "resource"
+        },
+        "mochaExplorer.require": {
+          "description": "Module(s) that Mocha should require()",
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "scope": "resource"
         }
       }
     }

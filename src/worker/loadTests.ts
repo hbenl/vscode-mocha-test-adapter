@@ -1,5 +1,6 @@
-import * as Mocha from 'mocha';
+import * as path from 'path';
 import * as fs from 'fs';
+import * as Mocha from 'mocha';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { MochaOpts } from '../opts';
@@ -8,6 +9,15 @@ const sendMessage = process.send ? (message: any) => process.send!(message) : co
 
 const files = <string[]>JSON.parse(process.argv[2]);
 const mochaOpts = <MochaOpts>JSON.parse(process.argv[3]);
+
+const cwd = process.cwd();
+module.paths.push(cwd, path.join(cwd, 'node_modules'));
+for (let req of mochaOpts.requires) {
+	if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
+		req = path.resolve(req);
+	}
+	require(req);
+}
 
 const mocha = new Mocha();
 mocha.ui(mochaOpts.ui);

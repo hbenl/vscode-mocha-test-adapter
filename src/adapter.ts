@@ -161,10 +161,19 @@ export class MochaAdapter implements TestAdapter {
 	}
 
 	private getMochaOpts(config: vscode.WorkspaceConfiguration): MochaOpts {
+
+		let requires = config.get<string | string[]>('require');
+		if (typeof requires === 'string') {
+			requires = [ requires ];
+		} else if (typeof requires === 'undefined') {
+			requires = [];
+		}
+
 		return {
 			ui: config.get<string>('ui')!,
 			timeout: config.get<number>('timeout')!,
-			retries: config.get<number>('retries')!
+			retries: config.get<number>('retries')!,
+			requires
 		}
 	}
 

@@ -11,3 +11,4 @@ This extension allows you to run your Mocha tests using the
 * `mochaExplorer.ui`: The mocha ui used by the tests
 * `mochaExplorer.timeout`: The test-case timeout in milliseconds
 * `mochaExplorer.retries`: The number of times to retry failed tests
+* `mochaExplorer.require`: Module(s) that Mocha should require()

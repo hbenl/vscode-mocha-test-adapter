@@ -1,3 +1,5 @@
+import * as path from 'path';
+import * as fs from 'fs';
 import * as Mocha from 'mocha';
 import * as RegExEscape from 'escape-string-regexp';
 import { MochaOpts } from '../opts';
@@ -10,6 +12,15 @@ const testsToRun = <string[]>JSON.parse(process.argv[3]);
 const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
 
 const regExp = testsToRun.map(RegExEscape).join('|');
+
+const cwd = process.cwd();
+module.paths.push(cwd, path.join(cwd, 'node_modules'));
+for (let req of mochaOpts.requires) {
+	if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
+		req = path.resolve(req);
+	}
+	require(req);
+}
 
 const mocha = new Mocha();
 
