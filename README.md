@@ -13,3 +13,7 @@ This extension allows you to run your Mocha tests using the
 * `mochaExplorer.retries`: The number of times to retry failed tests
 * `mochaExplorer.require`: Module(s) that Mocha should require()
 * `mochaExplorer.exit`: shutdown the Mocha process (using process.exit()) after the last test has been run
+* `testExplorer.codeLens`: Show a CodeLens above each test or suite for running or debugging the tests
+* `testExplorer.gutterDecoration`: Show the state of each test in the editor using Gutter Decorations
+* `testExplorer.onStart`: Retire or reset all test states whenever a test run is started
+* `testExplorer.onReload`: Retire or reset all test states whenever the test tree is reloaded
