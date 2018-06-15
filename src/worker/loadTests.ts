@@ -47,7 +47,7 @@ function convertSuite(suite: Mocha.ISuite, fileCache: Map<string, string>): Test
 
 	return {
 		type: 'suite',
-		id: suite.title,
+		id: suite.fullTitle(),
 		label: suite.title,
 		file: suite.file,
 		line,
@@ -61,7 +61,7 @@ function convertTest(test: Mocha.ITest, fileCache: Map<string, string>): TestInf
 
 	return {
 		type: 'test',
-		id: test.title,
+		id: test.fullTitle(),
 		label: test.title,
 		file: test.file,
 		line,

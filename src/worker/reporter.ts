@@ -10,7 +10,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestSuiteEvent = {
 					type: 'suite',
-					suite: suite.title,
+					suite: suite.fullTitle(),
 					state: 'running'
 				};
 
@@ -21,7 +21,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestSuiteEvent = {
 					type: 'suite',
-					suite: suite.title,
+					suite: suite.fullTitle(),
 					state: 'completed'
 				};
 
@@ -32,7 +32,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.title,
+					test: test.fullTitle(),
 					state: 'running'
 				};
 
@@ -43,7 +43,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.title,
+					test: test.fullTitle(),
 					state: 'passed'
 				};
 
@@ -54,7 +54,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.title,
+					test: test.fullTitle(),
 					state: 'failed',
 					message: err.stack || err.message
 				};
@@ -66,7 +66,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.title,
+					test: test.fullTitle(),
 					state: 'skipped'
 				};
 
