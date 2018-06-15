@@ -164,7 +164,11 @@ export class MochaAdapter implements TestAdapter {
 
 		let requires = config.get<string | string[]>('require');
 		if (typeof requires === 'string') {
-			requires = [ requires ];
+			if (requires.length > 0) {
+				requires = [ requires ];
+			} else {
+				requires = [];
+			}
 		} else if (typeof requires === 'undefined') {
 			requires = [];
 		}
