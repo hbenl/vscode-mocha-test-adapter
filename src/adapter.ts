@@ -3,8 +3,16 @@ import { ChildProcess, fork } from 'child_process';
 import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent } from 'vscode-test-adapter-api';
 import { MochaOpts } from './opts';
+import { Minimatch } from 'minimatch';
 
 export class MochaAdapter implements TestAdapter {
+
+	private static readonly reloadConfigKeys = [
+		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui', 'mochaExplorer.require'
+	];
+	private static readonly autorunConfigKeys = [
+		'mochaExplorer.timeout', 'mochaExplorer.retries'
+	];
 
 	private readonly testStatesEmitter = new vscode.EventEmitter<TestSuiteEvent | TestEvent>();
 	private readonly reloadEmitter = new vscode.EventEmitter<void>();
@@ -27,8 +35,34 @@ export class MochaAdapter implements TestAdapter {
 	constructor(
 		public readonly workspaceFolder: vscode.WorkspaceFolder
 	) {
-		vscode.workspace.onDidSaveTextDocument((doc) => {
-			if (doc.uri.fsPath.startsWith(this.workspaceFolder.uri.fsPath)) {
+
+		vscode.workspace.onDidChangeConfiguration(configChange => {
+
+			for (const configKey of MochaAdapter.reloadConfigKeys) {
+				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
+					this.reloadEmitter.fire();
+					return;
+				}
+			}
+
+			for (const configKey of MochaAdapter.autorunConfigKeys) {
+				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
+					this.autorunEmitter.fire();
+					return;
+				}
+			}
+		});
+
+		vscode.workspace.onDidSaveTextDocument(document => {
+
+			const filename = document.uri.fsPath;
+			const relativeGlob = this.getTestFilesGlob(this.getConfiguration());
+			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
+			const matcher = new Minimatch(absoluteGlob);
+
+			if (matcher.match(filename)) {
+				this.reloadEmitter.fire();
+			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
 				this.autorunEmitter.fire();
 			}
 		});
@@ -128,8 +162,12 @@ export class MochaAdapter implements TestAdapter {
 		return vscode.workspace.getConfiguration('mochaExplorer', this.workspaceFolder.uri);
 	}
 
+	private getTestFilesGlob(config: vscode.WorkspaceConfiguration): string {
+		return config.get<string>('files') || 'test/**/*.js';
+	}
+
 	private async lookupFiles(config: vscode.WorkspaceConfiguration): Promise<string[]> {
-		const testFilesGlob = config.get<string>('files') || 'test/**/*.js';
+		const testFilesGlob = this.getTestFilesGlob(config);
 		const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
 		const fileUris = await vscode.workspace.findFiles(relativePattern);
 		return fileUris.map(uri => uri.fsPath);
