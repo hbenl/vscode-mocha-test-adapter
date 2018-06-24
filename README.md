@@ -1,7 +1,21 @@
 # Mocha Test Explorer for Visual Studio Code
 
-This extension allows you to run your Mocha tests using the 
+Run your Mocha tests using the 
 [Test Explorer UI](https://marketplace.visualstudio.com/items?itemName=hbenl.vscode-test-explorer).
+
+![Screenshot](img/screenshot.png)
+
+## Features
+* Shows a Test Explorer in the Test view in VS Code's sidebar with all detected tests and suites and their state
+* Adds CodeLenses to your test files for starting and debugging tests
+* Adds Gutter decorations to your test files showing the tests' state
+* Shows a failed test's log when the test is selected in the explorer
+* Lets you choose test suites or individual tests in the explorer that should be run automatically after each file change
+
+## Getting started
+* Install the extension
+* Restart VS Code and open the Test view
+* Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
 ## Configuration
 
