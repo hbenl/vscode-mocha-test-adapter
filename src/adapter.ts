@@ -147,7 +147,7 @@ export class MochaAdapter implements TestAdapter {
 			request: 'launch',
 			program: require.resolve('./worker/runTests.js'),
 			args: [ JSON.stringify(testFiles), JSON.stringify(tests), JSON.stringify(mochaOpts) ],
-			cwd: '${workspaceRoot}',
+			cwd: this.getCwd(config),
 			stopOnEntry: false
 		});
 	}
