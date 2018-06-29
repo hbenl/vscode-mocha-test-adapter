@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent } from 'vscode-test-adapter-api';
 import { MochaOpts } from './opts';
 import { Minimatch } from 'minimatch';
+import { Log } from 'vscode-test-adapter-util';
 
 export class MochaAdapter implements TestAdapter {
 
@@ -33,13 +34,17 @@ export class MochaAdapter implements TestAdapter {
 	}
 
 	constructor(
-		public readonly workspaceFolder: vscode.WorkspaceFolder
+		public readonly workspaceFolder: vscode.WorkspaceFolder,
+		private readonly log: Log
 	) {
 
 		vscode.workspace.onDidChangeConfiguration(configChange => {
 
+			this.log.info('Configuration changed');
+
 			for (const configKey of MochaAdapter.reloadConfigKeys) {
 				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
+					if (this.log.enabled) this.log.info(`Sending reload event because ${configKey} changed`);
 					this.reloadEmitter.fire();
 					return;
 				}
@@ -47,6 +52,7 @@ export class MochaAdapter implements TestAdapter {
 
 			for (const configKey of MochaAdapter.autorunConfigKeys) {
 				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
+					if (this.log.enabled) this.log.info(`Sending autorun event because ${configKey} changed`);
 					this.autorunEmitter.fire();
 					return;
 				}
@@ -56,19 +62,24 @@ export class MochaAdapter implements TestAdapter {
 		vscode.workspace.onDidSaveTextDocument(document => {
 
 			const filename = document.uri.fsPath;
+			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
 			const relativeGlob = this.getTestFilesGlob(this.getConfiguration());
 			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
 			const matcher = new Minimatch(absoluteGlob);
 
 			if (matcher.match(filename)) {
+				if (this.log.enabled) this.log.info(`Sending reload event because ${filename} is a test file`);
 				this.reloadEmitter.fire();
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
+				this.log.info('Sending autorun event');
 				this.autorunEmitter.fire();
 			}
 		});
 	}
 
 	async load(): Promise<TestSuiteInfo | undefined> {
+
+		if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolder.uri.fsPath}`);
 
 		const config = this.getConfiguration();
 		const testFiles = await this.lookupFiles(config);
@@ -89,11 +100,13 @@ export class MochaAdapter implements TestAdapter {
 			);
 
 			childProc.on('message', (info: TestSuiteInfo | undefined) => {
+				this.log.info('Received tests from worker');
 				testsLoaded = true;
 				resolve(info);
 			});
 
 			childProc.on('exit', () => {
+				this.log.info('Worker finished');
 				if (!testsLoaded) {
 					resolve(undefined);
 				}
@@ -102,6 +115,8 @@ export class MochaAdapter implements TestAdapter {
 	}
 
 	async run(info: TestSuiteInfo | TestInfo): Promise<void> {
+
+		if (this.log.enabled) this.log.info(`Running test(s) "${info.id}" of ${this.workspaceFolder.uri.fsPath}`);
 
 		const tests: string[] = [];
 		this.collectTests(info, tests);
@@ -122,10 +137,13 @@ export class MochaAdapter implements TestAdapter {
 				}
 			);
 
-			this.runningTestProcess.on('message',
-				message => this.testStatesEmitter.fire(<TestSuiteEvent | TestEvent>message));
+			this.runningTestProcess.on('message', (message: TestSuiteEvent | TestEvent) => {
+				if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
+				this.testStatesEmitter.fire(message);
+			});
 
 			this.runningTestProcess.on('exit', () => {
+				this.log.info('Worker finished');
 				this.runningTestProcess = undefined;
 				resolve();
 			});
@@ -133,6 +151,8 @@ export class MochaAdapter implements TestAdapter {
 	}
 
 	async debug(info: TestSuiteInfo | TestInfo): Promise<void> {
+
+		if (this.log.enabled) this.log.info(`Debugging test(s) "${info.id}" of ${this.workspaceFolder.uri.fsPath}`);
 
 		const tests: string[] = [];
 		this.collectTests(info, tests);
@@ -155,6 +175,7 @@ export class MochaAdapter implements TestAdapter {
 
 	cancel(): void {
 		if (this.runningTestProcess) {
+			this.log.info('Killing running test process');
 			this.runningTestProcess.kill();
 		}
 	}
@@ -168,16 +189,24 @@ export class MochaAdapter implements TestAdapter {
 	}
 
 	private async lookupFiles(config: vscode.WorkspaceConfiguration): Promise<string[]> {
+
 		const testFilesGlob = this.getTestFilesGlob(config);
+		if (this.log.enabled) this.log.debug(`Looking for test files ${testFilesGlob} in ${this.workspaceFolder.uri.fsPath}`);
 		const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
+
 		const fileUris = await vscode.workspace.findFiles(relativePattern);
-		return fileUris.map(uri => uri.fsPath);
+
+		const testFiles = fileUris.map(uri => uri.fsPath);
+		if (this.log.enabled) this.log.debug(`Found test files ${JSON.stringify(testFiles)}`);
+		return testFiles;
 	}
 
 	private getEnv(config: vscode.WorkspaceConfiguration): object {
 
 		const processEnv = process.env;
 		const configEnv: { [prop: string]: any } = config.get('env') || {};
+
+		if (this.log.enabled) this.log.debug(`Using environment variable config: ${JSON.stringify(configEnv)}`);
 
 		const resultEnv = { ...processEnv };
 
@@ -196,7 +225,9 @@ export class MochaAdapter implements TestAdapter {
 	private getCwd(config: vscode.WorkspaceConfiguration): string {
 		const dirname = this.workspaceFolder.uri.fsPath;
 		const configCwd = config.get<string>('cwd');
-		return configCwd ? path.resolve(dirname, configCwd) : dirname;
+		const cwd = configCwd ? path.resolve(dirname, configCwd) : dirname;
+		if (this.log.enabled) this.log.debug(`Using working directory: ${cwd}`);
+		return cwd;
 	}
 
 	private getMochaOpts(config: vscode.WorkspaceConfiguration): MochaOpts {
@@ -212,13 +243,17 @@ export class MochaAdapter implements TestAdapter {
 			requires = [];
 		}
 
-		return {
+		const mochaOpts = {
 			ui: config.get<string>('ui')!,
 			timeout: config.get<number>('timeout')!,
 			retries: config.get<number>('retries')!,
 			requires,
 			exit: config.get<boolean>('exit')!
 		}
+
+		if (this.log.enabled) this.log.debug(`Using Mocha options: ${JSON.stringify(mochaOpts)}`);
+
+		return mochaOpts;
 	}
 
 	private collectTests(info: TestSuiteInfo | TestInfo, tests: string[]): void {

@@ -31,3 +31,5 @@ Run your Mocha tests using the
 * `testExplorer.gutterDecoration`: Show the state of each test in the editor using Gutter Decorations
 * `testExplorer.onStart`: Retire or reset all test states whenever a test run is started
 * `testExplorer.onReload`: Retire or reset all test states whenever the test tree is reloaded
+* `mochaExplorer.logpanel`: Write diagnotic logs to an output panel (note: in multi-root workspaces, this option is always taken from the first workspace folder)
+* `mochaExplorer.logfile`: Write diagnostic logs to the given file (note: in multi-root workspaces, this option is always taken from the first workspace folder)

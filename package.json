@@ -42,7 +42,8 @@
     "minimatch": "^3.0.4",
     "mocha": "^5.2.0",
     "tslib": "^1.9.2",
-    "vscode-test-adapter-api": "^0.3.0"
+    "vscode-test-adapter-api": "^0.3.0",
+    "vscode-test-adapter-util": "^0.1.0"
   },
   "devDependencies": {
     "@types/escape-string-regexp": "0.0.32",
@@ -116,6 +117,16 @@
           "description": "shutdown the Mocha process (using process.exit()) after the last test has been run",
           "type": "boolean",
           "default": false,
+          "scope": "resource"
+        },
+        "mochaExplorer.logpanel": {
+          "description": "write diagnotic logs to an output panel",
+          "type": "boolean",
+          "scope": "resource"
+        },
+        "mochaExplorer.logfile": {
+          "description": "write diagnostic logs to the given file",
+          "type": "string",
           "scope": "resource"
         }
       }
