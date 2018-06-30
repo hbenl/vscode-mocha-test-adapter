@@ -123,6 +123,13 @@ export class MochaAdapter implements TestAdapter {
 					resolve(undefined);
 				}
 			});
+
+			childProc.on('error', err => {
+				if (this.log.enabled) this.log.error(`Error from child process: ${err}`);
+				if (!testsLoaded) {
+					resolve(undefined);
+				}
+			});
 		});
 	}
 
@@ -136,6 +143,8 @@ export class MochaAdapter implements TestAdapter {
 		const config = this.getConfiguration();
 		const testFiles = await this.lookupFiles(config);
 		const mochaOpts = this.getMochaOpts(config);
+
+		let childProcessFinished = false;
 
 		await new Promise<void>((resolve, reject) => {
 
@@ -170,7 +179,19 @@ export class MochaAdapter implements TestAdapter {
 			this.runningTestProcess.on('exit', () => {
 				this.log.info('Worker finished');
 				this.runningTestProcess = undefined;
-				resolve();
+				if (!childProcessFinished) {
+					childProcessFinished = true;
+					resolve();
+				}
+			});
+
+			this.runningTestProcess.on('error', err => {
+				if (this.log.enabled) this.log.error(`Error from child process: ${err}`);
+				this.runningTestProcess = undefined;
+				if (!childProcessFinished) {
+					childProcessFinished = true;
+					resolve();
+				}
 			});
 		});
 	}
