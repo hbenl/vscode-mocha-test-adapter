@@ -91,7 +91,11 @@ export class MochaAdapter implements TestAdapter {
 
 			const childProc = fork(
 				require.resolve('./worker/loadTests.js'),
-				[ JSON.stringify(testFiles), JSON.stringify(mochaOpts) ],
+				[
+					JSON.stringify(testFiles),
+					JSON.stringify(mochaOpts),
+					JSON.stringify(this.log.enabled)
+				],
 				{
 					cwd: this.getCwd(config),
 					env: this.getEnv(config),
@@ -99,10 +103,18 @@ export class MochaAdapter implements TestAdapter {
 				}
 			);
 
-			childProc.on('message', (info: TestSuiteInfo | undefined) => {
-				this.log.info('Received tests from worker');
-				testsLoaded = true;
-				resolve(info);
+			childProc.on('message', (info: string | TestSuiteInfo | undefined) => {
+
+				if (typeof info === 'string') {
+
+					if (this.log.enabled) this.log.info(`Worker: ${info}`);
+
+				} else {
+
+					this.log.info('Received tests from worker');
+					testsLoaded = true;
+					resolve(info);
+				}
 			});
 
 			childProc.on('exit', () => {
@@ -129,7 +141,12 @@ export class MochaAdapter implements TestAdapter {
 
 			this.runningTestProcess = fork(
 				require.resolve('./worker/runTests.js'),
-				[ JSON.stringify(testFiles), JSON.stringify(tests), JSON.stringify(mochaOpts) ],
+				[ 
+					JSON.stringify(testFiles),
+					JSON.stringify(tests),
+					JSON.stringify(mochaOpts),
+					JSON.stringify(this.log.enabled)
+				],
 				{
 					cwd: this.getCwd(config),
 					env: this.getEnv(config),
@@ -137,9 +154,17 @@ export class MochaAdapter implements TestAdapter {
 				}
 			);
 
-			this.runningTestProcess.on('message', (message: TestSuiteEvent | TestEvent) => {
-				if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
-				this.testStatesEmitter.fire(message);
+			this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
+
+				if (typeof message === 'string') {
+
+					if (this.log.enabled) this.log.info(`Worker: ${message}`);
+
+				} else {
+
+					if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
+					this.testStatesEmitter.fire(message);
+				}
 			});
 
 			this.runningTestProcess.on('exit', () => {
@@ -166,7 +191,13 @@ export class MochaAdapter implements TestAdapter {
 			type: 'node',
 			request: 'launch',
 			program: require.resolve('./worker/runTests.js'),
-			args: [ JSON.stringify(testFiles), JSON.stringify(tests), JSON.stringify(mochaOpts) ],
+			args:
+			[
+				JSON.stringify(testFiles),
+				JSON.stringify(tests),
+				JSON.stringify(mochaOpts),
+				JSON.stringify(this.log.enabled)
+			],
 			cwd: this.getCwd(config),
 			env: this.getEnv(config),
 			stopOnEntry: false

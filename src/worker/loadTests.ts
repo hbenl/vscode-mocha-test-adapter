@@ -7,35 +7,49 @@ import { MochaOpts } from '../opts';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
 
-const files = <string[]>JSON.parse(process.argv[2]);
-const mochaOpts = <MochaOpts>JSON.parse(process.argv[3]);
+let logEnabled = false;
+try {
 
-const cwd = process.cwd();
-module.paths.push(cwd, path.join(cwd, 'node_modules'));
-for (let req of mochaOpts.requires) {
-	if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
-		req = path.resolve(req);
+	const files = <string[]>JSON.parse(process.argv[2]);
+	const mochaOpts = <MochaOpts>JSON.parse(process.argv[3]);
+	logEnabled = <boolean>JSON.parse(process.argv[4]);
+
+	const cwd = process.cwd();
+	module.paths.push(cwd, path.join(cwd, 'node_modules'));
+	for (let req of mochaOpts.requires) {
+
+		if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
+			req = path.resolve(req);
+		}
+
+		if (logEnabled) sendMessage(`Trying require('${req}')`);
+		require(req);
 	}
-	require(req);
-}
 
-const mocha = new Mocha();
-mocha.ui(mochaOpts.ui);
+	const mocha = new Mocha();
+	mocha.ui(mochaOpts.ui);
 
-for (const file of files) {
-	mocha.addFile(file);
-}
-mocha.loadFiles();
+	if (logEnabled) sendMessage('Loading files');
+	for (const file of files) {
+		mocha.addFile(file);
+	}
+	mocha.loadFiles();
 
-const fileCache = new Map<string, string>();
-const rootSuite = convertSuite(mocha.suite, fileCache);
+	if (logEnabled) sendMessage('Converting tests and suites');
+	const fileCache = new Map<string, string>();
+	const rootSuite = convertSuite(mocha.suite, fileCache);
 
-if (rootSuite.children.length > 0) {
-	sort(rootSuite);
-	rootSuite.label = 'Mocha';
-	sendMessage(rootSuite);
-} else {
-	sendMessage(undefined);
+	if (rootSuite.children.length > 0) {
+		sort(rootSuite);
+		rootSuite.label = 'Mocha';
+		sendMessage(rootSuite);
+	} else {
+		sendMessage(undefined);
+	}
+
+} catch (err) {
+	if (logEnabled) sendMessage(`Caught error ${JSON.stringify(err)}`);
+	throw err;
 }
 
 

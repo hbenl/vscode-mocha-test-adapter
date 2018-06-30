@@ -7,32 +7,46 @@ import ReporterFactory from './reporter';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : () => {};
 
-const files = <string[]>JSON.parse(process.argv[2]);
-const testsToRun = <string[]>JSON.parse(process.argv[3]);
-const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
+let logEnabled = false;
+try {
 
-const regExp = testsToRun.map(RegExEscape).join('|');
+	const files = <string[]>JSON.parse(process.argv[2]);
+	const testsToRun = <string[]>JSON.parse(process.argv[3]);
+	const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
+	const logEnabled = <boolean>JSON.parse(process.argv[5]);
 
-const cwd = process.cwd();
-module.paths.push(cwd, path.join(cwd, 'node_modules'));
-for (let req of mochaOpts.requires) {
-	if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
-		req = path.resolve(req);
+	const regExp = testsToRun.map(RegExEscape).join('|');
+
+	const cwd = process.cwd();
+	module.paths.push(cwd, path.join(cwd, 'node_modules'));
+	for (let req of mochaOpts.requires) {
+
+		if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
+			req = path.resolve(req);
+		}
+
+		if (logEnabled) sendMessage(`Trying require('${req}')`);
+		require(req);
 	}
-	require(req);
+
+	const mocha = new Mocha();
+
+	mocha.ui(mochaOpts.ui);
+	mocha.timeout(mochaOpts.timeout);
+	mocha.suite.retries(mochaOpts.retries);
+
+	for (const file of files) {
+		mocha.addFile(file);
+	}
+
+	mocha.grep(regExp);
+	mocha.reporter(ReporterFactory(sendMessage));
+
+	if (logEnabled) sendMessage('Running tests');
+
+	mocha.run(mochaOpts.exit ? () => process.exit() : undefined);
+
+} catch (err) {
+	if (logEnabled) sendMessage(`Caught error ${JSON.stringify(err)}`);
+	throw err;
 }
-
-const mocha = new Mocha();
-
-mocha.ui(mochaOpts.ui);
-mocha.timeout(mochaOpts.timeout);
-mocha.suite.retries(mochaOpts.retries);
-
-for (const file of files) {
-	mocha.addFile(file);
-}
-
-mocha.grep(regExp);
-mocha.reporter(ReporterFactory(sendMessage));
-
-mocha.run(mochaOpts.exit ? () => process.exit() : undefined);
