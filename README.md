@@ -18,7 +18,6 @@ Run your Mocha tests using the
 * Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
 ## Configuration
-
 * `mochaExplorer.files`: The glob describing the location of your test files (relative to the workspace folder) (default: `test/**/*.js`)
 * `mochaExplorer.env`: Environment variables to be set when running the tests
 * `mochaExplorer.cwd`: The working directory where mocha is run (relative to the workspace folder)
@@ -32,5 +31,11 @@ Run your Mocha tests using the
 * `testExplorer.gutterDecoration`: Show the state of each test in the editor using Gutter Decorations
 * `testExplorer.onStart`: Retire or reset all test states whenever a test run is started
 * `testExplorer.onReload`: Retire or reset all test states whenever the test tree is reloaded
-* `mochaExplorer.logpanel`: Write diagnotic logs to an output panel (note: in multi-root workspaces, this option is always taken from the first workspace folder)
-* `mochaExplorer.logfile`: Write diagnostic logs to the given file (note: in multi-root workspaces, this option is always taken from the first workspace folder)
+
+## Troubleshooting
+If the Test view doesn't show your tests or anything else doesn't work as expected, you can turn on diagnostic logging using one of the following configuration options
+(note: in multi-root workspaces, these options are always taken from the first workspace folder):
+* `mochaExplorer.logpanel`: Write diagnotic logs to an output panel
+* `mochaExplorer.logfile`: Write diagnostic logs to the given file
+
+If you think you've found a bug, please [file a bug report](https://github.com/hbenl/vscode-mocha-test-adapter/issues) and attach the diagnostic logs.
