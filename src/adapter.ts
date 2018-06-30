@@ -6,7 +6,11 @@ import { MochaOpts } from './opts';
 import { Minimatch } from 'minimatch';
 import { Log } from 'vscode-test-adapter-util';
 
-export class MochaAdapter implements TestAdapter {
+interface IDisposable {
+	dispose(): void;
+}
+
+export class MochaAdapter implements TestAdapter, IDisposable {
 
 	private static readonly reloadConfigKeys = [
 		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui', 'mochaExplorer.require', 'mochaExplorer.node'
@@ -14,6 +18,8 @@ export class MochaAdapter implements TestAdapter {
 	private static readonly autorunConfigKeys = [
 		'mochaExplorer.timeout', 'mochaExplorer.retries'
 	];
+
+	private disposables: IDisposable[] = [];
 
 	private readonly testStatesEmitter = new vscode.EventEmitter<TestSuiteEvent | TestEvent>();
 	private readonly reloadEmitter = new vscode.EventEmitter<void>();
@@ -38,7 +44,11 @@ export class MochaAdapter implements TestAdapter {
 		private readonly log: Log
 	) {
 
-		vscode.workspace.onDidChangeConfiguration(configChange => {
+		this.disposables.push(this.testStatesEmitter);
+		this.disposables.push(this.reloadEmitter);
+		this.disposables.push(this.autorunEmitter);
+
+		this.disposables.push(vscode.workspace.onDidChangeConfiguration(configChange => {
 
 			this.log.info('Configuration changed');
 
@@ -57,9 +67,9 @@ export class MochaAdapter implements TestAdapter {
 					return;
 				}
 			}
-		});
+		}));
 
-		vscode.workspace.onDidSaveTextDocument(document => {
+		this.disposables.push(vscode.workspace.onDidSaveTextDocument(document => {
 
 			const filename = document.uri.fsPath;
 			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
@@ -74,7 +84,7 @@ export class MochaAdapter implements TestAdapter {
 				this.log.info('Sending autorun event');
 				this.autorunEmitter.fire();
 			}
-		});
+		}));
 	}
 
 	async load(): Promise<TestSuiteInfo | undefined> {
@@ -232,6 +242,14 @@ export class MochaAdapter implements TestAdapter {
 			this.log.info('Killing running test process');
 			this.runningTestProcess.kill();
 		}
+	}
+
+	dispose(): void {
+		this.cancel();
+		for (const disposable of this.disposables) {
+			disposable.dispose();
+		}
+		this.disposables = [];
 	}
 
 	private getConfiguration(): vscode.WorkspaceConfiguration {

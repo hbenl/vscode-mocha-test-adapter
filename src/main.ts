@@ -18,15 +18,22 @@ export async function activate(context: vscode.ExtensionContext) {
 			await testExplorerExtension.activate();
 		}
 
-		const registeredAdapters = new Map<vscode.WorkspaceFolder, MochaAdapter>();
+		context.subscriptions.push(new TestAdapterRegistrar(testExplorerExtension.exports, log));
+	}
+}
+
+class TestAdapterRegistrar {
+
+	private readonly registeredAdapters = new Map<vscode.WorkspaceFolder, MochaAdapter>();
+
+	constructor(
+		private readonly testExplorer: TestExplorerExtension,
+		private readonly log: Log
+	) {
 
 		if (vscode.workspace.workspaceFolders) {
 			for (const workspaceFolder of vscode.workspace.workspaceFolders) {
-				if (log.enabled) log.info(`Creating adapter for ${workspaceFolder.uri.fsPath}`);
-				const adapter = new MochaAdapter(workspaceFolder, log);
-				registeredAdapters.set(workspaceFolder, adapter);
-				if (log.enabled) log.info(`Registering adapter for ${workspaceFolder.uri.fsPath}`);
-				testExplorerExtension.exports.registerAdapter(adapter);
+				this.add(workspaceFolder);
 			}
 		}
 
@@ -35,21 +42,44 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeWorkspaceFolders((event) => {
 
 			for (const workspaceFolder of event.removed) {
-				const adapter = registeredAdapters.get(workspaceFolder);
-				if (adapter) {
-					if (log.enabled) log.info(`Removing adapter for ${workspaceFolder.uri.fsPath}`);
-					testExplorerExtension.exports.unregisterAdapter(adapter);
-					registeredAdapters.delete(workspaceFolder);
-				}
+				this.remove(workspaceFolder);
 			}
 
 			for (const workspaceFolder of event.added) {
-				if (log.enabled) log.info(`Creating adapter for ${workspaceFolder.uri.fsPath}`);
-				const adapter = new MochaAdapter(workspaceFolder, log);
-				registeredAdapters.set(workspaceFolder, adapter);
-				if (log.enabled) log.info(`Registering adapter for ${workspaceFolder.uri.fsPath}`);
-				testExplorerExtension.exports.registerAdapter(adapter);
+				this.add(workspaceFolder);
 			}
 		});
+	}
+
+	add(workspaceFolder: vscode.WorkspaceFolder) {
+
+		if (this.log.enabled) this.log.info(`Creating adapter for ${workspaceFolder.uri.fsPath}`);
+
+		const adapter = new MochaAdapter(workspaceFolder, this.log);
+		this.registeredAdapters.set(workspaceFolder, adapter);
+
+		if (this.log.enabled) this.log.info(`Registering adapter for ${workspaceFolder.uri.fsPath}`);
+
+		this.testExplorer.registerAdapter(adapter);
+	}
+
+	remove(workspaceFolder: vscode.WorkspaceFolder) {
+
+		const adapter = this.registeredAdapters.get(workspaceFolder);
+		if (adapter) {
+
+			if (this.log.enabled) this.log.info(`Removing adapter for ${workspaceFolder.uri.fsPath}`);
+
+			this.testExplorer.unregisterAdapter(adapter);
+			this.registeredAdapters.delete(workspaceFolder);
+			adapter.dispose();
+		}
+	}
+
+	dispose(): void {
+		for (const workspaceFolder of this.registeredAdapters.keys()) {
+			this.remove(workspaceFolder);
+		}
+		this.log.dispose();
 	}
 }
