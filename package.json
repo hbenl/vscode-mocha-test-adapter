@@ -119,6 +119,11 @@
           "default": false,
           "scope": "resource"
         },
+        "mochaExplorer.node": {
+          "description": "Absolute path to the node executable to use for loading and running your tests instead of the one shipped with VS Code",
+          "type": "string",
+          "scope": "resource"
+        },
         "mochaExplorer.logpanel": {
           "description": "write diagnotic logs to an output panel",
           "type": "boolean",

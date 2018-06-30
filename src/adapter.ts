@@ -9,7 +9,7 @@ import { Log } from 'vscode-test-adapter-util';
 export class MochaAdapter implements TestAdapter {
 
 	private static readonly reloadConfigKeys = [
-		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui', 'mochaExplorer.require'
+		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui', 'mochaExplorer.require', 'mochaExplorer.node'
 	];
 	private static readonly autorunConfigKeys = [
 		'mochaExplorer.timeout', 'mochaExplorer.retries'
@@ -99,6 +99,7 @@ export class MochaAdapter implements TestAdapter {
 				{
 					cwd: this.getCwd(config),
 					env: this.getEnv(config),
+					execPath: this.getExecPath(config),
 					execArgv: [] // ['--inspect-brk=12345']
 				}
 			);
@@ -159,6 +160,7 @@ export class MochaAdapter implements TestAdapter {
 				{
 					cwd: this.getCwd(config),
 					env: this.getEnv(config),
+					execPath: this.getExecPath(config),
 					execArgv: []
 				}
 			);
@@ -306,6 +308,10 @@ export class MochaAdapter implements TestAdapter {
 		if (this.log.enabled) this.log.debug(`Using Mocha options: ${JSON.stringify(mochaOpts)}`);
 
 		return mochaOpts;
+	}
+
+	private getExecPath(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>('node');
 	}
 
 	private collectTests(info: TestSuiteInfo | TestInfo, tests: string[]): void {
