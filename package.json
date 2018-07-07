@@ -44,7 +44,7 @@
     "stack-trace": "0.0.10",
     "tslib": "^1.9.3",
     "vscode-test-adapter-api": "^0.4.0",
-    "vscode-test-adapter-util": "^0.2.0"
+    "vscode-test-adapter-util": "^0.3.0"
   },
   "devDependencies": {
     "@types/escape-string-regexp": "0.0.32",
@@ -121,9 +121,13 @@
           "default": false,
           "scope": "resource"
         },
-        "mochaExplorer.node": {
-          "description": "Absolute path to the node executable to use for loading and running your tests instead of the one shipped with VS Code",
-          "type": "string",
+        "mochaExplorer.nodePath": {
+          "description": "The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "default",
           "scope": "resource"
         },
         "mochaExplorer.logpanel": {

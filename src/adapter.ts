@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent } from 'vscode-test-adapter-api';
 import { MochaOpts } from './opts';
 import { Minimatch } from 'minimatch';
-import { Log } from 'vscode-test-adapter-util';
+import { Log, detectNodePath } from 'vscode-test-adapter-util';
 
 interface IDisposable {
 	dispose(): void;
@@ -13,7 +13,7 @@ interface IDisposable {
 export class MochaAdapter implements TestAdapter, IDisposable {
 
 	private static readonly reloadConfigKeys = [
-		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui', 'mochaExplorer.require', 'mochaExplorer.node'
+		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui', 'mochaExplorer.require', 'mochaExplorer.nodePath'
 	];
 	private static readonly autorunConfigKeys = [
 		'mochaExplorer.timeout', 'mochaExplorer.retries'
@@ -94,6 +94,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		const config = this.getConfiguration();
 		const testFiles = await this.lookupFiles(config);
 		const mochaOpts = this.getMochaOpts(config);
+		const execPath = await this.getNodePath(config);
 
 		let testsLoaded = false;
 
@@ -109,7 +110,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				{
 					cwd: this.getCwd(config),
 					env: this.getEnv(config),
-					execPath: this.getExecPath(config),
+					execPath,
 					execArgv: [] // ['--inspect-brk=12345']
 				}
 			);
@@ -154,6 +155,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		const config = this.getConfiguration();
 		const testFiles = await this.lookupFiles(config);
 		const mochaOpts = this.getMochaOpts(config);
+		const execPath = await this.getNodePath(config);
 
 		let childProcessFinished = false;
 
@@ -170,7 +172,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				{
 					cwd: this.getCwd(config),
 					env: this.getEnv(config),
-					execPath: this.getExecPath(config),
+					execPath,
 					execArgv: []
 				}
 			);
@@ -328,8 +330,12 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		return mochaOpts;
 	}
 
-	private getExecPath(config: vscode.WorkspaceConfiguration): string | undefined {
-		return config.get<string>('node');
+	private async getNodePath(config: vscode.WorkspaceConfiguration): Promise<string | undefined> {
+		let nodePath = config.get<string | null>('nodePath') || undefined;
+		if (nodePath === 'default') {
+			nodePath = await detectNodePath();
+		}
+		return nodePath;
 	}
 
 	private collectTests(info: TestSuiteInfo | TestInfo, tests: string[]): void {
