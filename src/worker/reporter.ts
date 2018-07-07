@@ -1,4 +1,6 @@
-import { TestEvent, TestSuiteEvent } from 'vscode-test-adapter-api';
+import * as path from 'path';
+import { parse as parseStackTrace } from 'stack-trace';
+import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
 
 export default (sendMessage: (message: any) => void) => {
 
@@ -52,11 +54,27 @@ export default (sendMessage: (message: any) => void) => {
 
 			runner.on('fail', (test: Mocha.ITest, err: Error) => {
 
+				let decorations: TestDecoration[] = [];
+				if (err.stack) {
+					const parsedStack = parseStackTrace(err);
+					for (const stackFrame of parsedStack) {
+						const filename = path.resolve(stackFrame.getFileName());
+						if (filename === test.file) {
+							decorations.push({
+								line: stackFrame.getLineNumber() - 1,
+								message: err.message
+							});
+							break;
+						}
+					}
+				}
+
 				const event: TestEvent = {
 					type: 'test',
 					test: test.fullTitle(),
 					state: 'failed',
-					message: err.stack || err.message
+					message: err.stack || err.message,
+					decorations
 				};
 
 				sendMessage(event);

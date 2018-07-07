@@ -40,7 +40,7 @@ try {
 	}
 
 	mocha.grep(regExp);
-	mocha.reporter(ReporterFactory(sendMessage));
+	mocha.reporter(<any>ReporterFactory(sendMessage));
 
 	if (logEnabled) sendMessage('Running tests');
 
