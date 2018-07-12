@@ -335,6 +335,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		if (nodePath === 'default') {
 			nodePath = await detectNodePath();
 		}
+		if (this.log.enabled) this.log.debug(`Using nodePath: ${nodePath}`);
 		return nodePath;
 	}
 
