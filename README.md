@@ -27,6 +27,7 @@ Run your Mocha tests using the
 * `mochaExplorer.require`: Module(s) that Mocha should require()
 * `mochaExplorer.exit`: shutdown the Mocha process (using process.exit()) after the last test has been run
 * `mochaExplorer.nodePath`: The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
+* `mochaExplorer.monkeyPatch`: apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
 * `testExplorer.codeLens`: Show a CodeLens above each test or suite for running or debugging the tests
 * `testExplorer.gutterDecoration`: Show the state of each test in the editor using Gutter Decorations
 * `testExplorer.onStart`: Retire or reset all test states whenever a test run is started

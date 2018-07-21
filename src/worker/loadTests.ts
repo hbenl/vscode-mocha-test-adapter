@@ -13,7 +13,8 @@ try {
 
 	const files = <string[]>JSON.parse(process.argv[2]);
 	const mochaOpts = <MochaOpts>JSON.parse(process.argv[3]);
-	logEnabled = <boolean>JSON.parse(process.argv[4]);
+	const monkeyPatch = <boolean>JSON.parse(process.argv[4]);
+	logEnabled = <boolean>JSON.parse(process.argv[5]);
 
 	const cwd = process.cwd();
 	module.paths.push(cwd, path.join(cwd, 'node_modules'));
@@ -27,9 +28,11 @@ try {
 		require(req);
 	}
 
-	if (logEnabled) sendMessage('Patching Mocha');
 	const lineSymbol = Symbol('line number');
-	patchMocha(mochaOpts.ui, lineSymbol);
+	if (monkeyPatch) {
+		if (logEnabled) sendMessage('Patching Mocha');
+		patchMocha(mochaOpts.ui, lineSymbol);
+	}
 
 	const mocha = new Mocha();
 	mocha.ui(mochaOpts.ui);

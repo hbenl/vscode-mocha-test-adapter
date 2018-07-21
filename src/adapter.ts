@@ -13,7 +13,8 @@ interface IDisposable {
 export class MochaAdapter implements TestAdapter, IDisposable {
 
 	private static readonly reloadConfigKeys = [
-		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui', 'mochaExplorer.require', 'mochaExplorer.nodePath'
+		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui',
+		'mochaExplorer.require', 'mochaExplorer.nodePath', 'mochaExplorer.monkeyPatch'
 	];
 	private static readonly autorunConfigKeys = [
 		'mochaExplorer.timeout', 'mochaExplorer.retries'
@@ -95,6 +96,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		const testFiles = await this.lookupFiles(config);
 		const mochaOpts = this.getMochaOpts(config);
 		const execPath = await this.getNodePath(config);
+		const monkeyPatch = this.getMonkeyPatch(config);
 
 		let testsLoaded = false;
 
@@ -105,6 +107,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				[
 					JSON.stringify(testFiles),
 					JSON.stringify(mochaOpts),
+					JSON.stringify(monkeyPatch),
 					JSON.stringify(this.log.enabled)
 				],
 				{
@@ -337,6 +340,11 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		}
 		if (this.log.enabled) this.log.debug(`Using nodePath: ${nodePath}`);
 		return nodePath;
+	}
+
+	private getMonkeyPatch(config: vscode.WorkspaceConfiguration): boolean {
+		let monkeyPatch = config.get<boolean>('monkeyPatch');
+		return (monkeyPatch !== undefined) ? monkeyPatch : true;
 	}
 
 	private collectTests(info: TestSuiteInfo | TestInfo, tests: string[]): void {

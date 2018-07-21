@@ -130,6 +130,12 @@
           "default": "default",
           "scope": "resource"
         },
+        "mochaExplorer.monkeyPatch": {
+          "description": "apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites",
+          "type": "boolean",
+          "default": true,
+          "scope": "resource"
+        },
         "mochaExplorer.logpanel": {
           "description": "write diagnotic logs to an output panel",
           "type": "boolean",
