@@ -4,6 +4,7 @@ import * as Mocha from 'mocha';
 import * as RegExEscape from 'escape-string-regexp';
 import { MochaOpts } from '../opts';
 import ReporterFactory from './reporter';
+import { copyOwnProperties } from '../util';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : () => {};
 
@@ -47,6 +48,6 @@ try {
 	mocha.run(mochaOpts.exit ? () => process.exit() : undefined);
 
 } catch (err) {
-	if (logEnabled) sendMessage(`Caught error ${JSON.stringify(err)}`);
+	if (logEnabled) sendMessage(`Caught error ${JSON.stringify(copyOwnProperties(err))}`);
 	throw err;
 }
