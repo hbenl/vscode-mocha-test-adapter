@@ -32,7 +32,7 @@ try {
 	const lineSymbol = Symbol('line number');
 	if (monkeyPatch) {
 		if (logEnabled) sendMessage('Patching Mocha');
-		patchMocha(mochaOpts.ui, lineSymbol);
+		patchMocha(mochaOpts.ui, lineSymbol, logEnabled ? sendMessage : undefined);
 	}
 
 	const mocha = new Mocha();
