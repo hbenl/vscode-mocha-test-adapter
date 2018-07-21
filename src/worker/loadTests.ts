@@ -4,6 +4,7 @@ import * as Mocha from 'mocha';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { MochaOpts } from '../opts';
+import { patchMocha } from './patchMocha';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
 
@@ -26,6 +27,10 @@ try {
 		require(req);
 	}
 
+	if (logEnabled) sendMessage('Patching Mocha');
+	const lineSymbol = Symbol('line number');
+	patchMocha(mochaOpts.ui, lineSymbol);
+
 	const mocha = new Mocha();
 	mocha.ui(mochaOpts.ui);
 
@@ -37,7 +42,7 @@ try {
 
 	if (logEnabled) sendMessage('Converting tests and suites');
 	const fileCache = new Map<string, string>();
-	const rootSuite = convertSuite(mocha.suite, fileCache);
+	const rootSuite = convertSuite(mocha.suite, lineSymbol, fileCache);
 
 	if (rootSuite.children.length > 0) {
 		sort(rootSuite);
@@ -53,12 +58,19 @@ try {
 }
 
 
-function convertSuite(suite: Mocha.ISuite, fileCache: Map<string, string>): TestSuiteInfo {
+function convertSuite(
+	suite: Mocha.ISuite,
+	lineSymbol: symbol,
+	fileCache: Map<string, string>
+): TestSuiteInfo {
 
-	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(suite, fileCache));
-	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(test, fileCache));
+	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(suite, lineSymbol, fileCache));
+	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(test, lineSymbol, fileCache));
 	const children = (<(TestSuiteInfo | TestInfo)[]>childSuites).concat(childTests);
-	const line = suite.file ? findLineContaining(suite.title, getFile(suite.file, fileCache)) : undefined;
+	let line = (<any>suite)[lineSymbol];
+	if (line === undefined) {
+		line = suite.file ? findLineContaining(suite.title, getFile(suite.file, fileCache)) : undefined;
+	}
 
 	return {
 		type: 'suite',
@@ -70,9 +82,16 @@ function convertSuite(suite: Mocha.ISuite, fileCache: Map<string, string>): Test
 	};
 }
 
-function convertTest(test: Mocha.ITest, fileCache: Map<string, string>): TestInfo {
+function convertTest(
+	test: Mocha.ITest,
+	lineSymbol: symbol,
+	fileCache: Map<string, string>
+): TestInfo {
 
-	const line = test.file ? findLineContaining(test.title, getFile(test.file, fileCache)) : undefined;
+	let line = (<any>test)[lineSymbol];
+	if (line === undefined) {
+		line = test.file ? findLineContaining(test.title, getFile(test.file, fileCache)) : undefined;
+	}
 
 	return {
 		type: 'test',
