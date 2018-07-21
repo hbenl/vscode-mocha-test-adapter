@@ -148,7 +148,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		});
 	}
 
-	async run(info: TestSuiteInfo | TestInfo): Promise<void> {
+	async run(info: TestSuiteInfo | TestInfo, execArgv: string[] = []): Promise<void> {
 
 		if (this.log.enabled) this.log.info(`Running test(s) "${info.id}" of ${this.workspaceFolder.uri.fsPath}`);
 
@@ -176,7 +176,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					cwd: this.getCwd(config),
 					env: this.getEnv(config),
 					execPath,
-					execArgv: []
+					execArgv
 				}
 			);
 
@@ -221,25 +221,42 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		this.collectTests(info, tests);
 
 		const config = this.getConfiguration();
-		const testFiles = await this.lookupFiles(config);
-		const mochaOpts = this.getMochaOpts(config);
+		const debuggerPort = this.getDebuggerPort(config);
 
-		vscode.debug.startDebugging(this.workspaceFolder, {
+		const testRunPromise = this.run(info, [ `--inspect-brk=${debuggerPort}` ]);
+
+		this.log.info('Starting the debug session');
+		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, {
 			name: 'Debug Mocha Tests',
 			type: 'node',
-			request: 'launch',
-			program: require.resolve('./worker/runTests.js'),
-			args:
-			[
-				JSON.stringify(testFiles),
-				JSON.stringify(tests),
-				JSON.stringify(mochaOpts),
-				JSON.stringify(this.log.enabled)
-			],
-			cwd: this.getCwd(config),
-			env: this.getEnv(config),
+			request: 'attach',
+			port: debuggerPort,
+			protocol: 'inspector',
+			timeout: 30000,
 			stopOnEntry: false
 		});
+
+		if (!debugSessionStarted) {
+			this.log.error('Failed starting the debug session - aborting');
+			this.cancel();
+			return;
+		}
+
+		const currentSession = vscode.debug.activeDebugSession;
+		if (!currentSession) {
+			this.log.error('No active debug session - aborting');
+			this.cancel();
+			return;
+		}
+
+		const subscription = vscode.debug.onDidTerminateDebugSession((session) => {
+			if (currentSession != session) return;
+			this.log.info('Debug session ended');
+			this.cancel(); // terminate the test run
+			subscription.dispose();
+		});
+
+		await testRunPromise;
 	}
 
 	cancel(): void {
@@ -345,6 +362,10 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 	private getMonkeyPatch(config: vscode.WorkspaceConfiguration): boolean {
 		let monkeyPatch = config.get<boolean>('monkeyPatch');
 		return (monkeyPatch !== undefined) ? monkeyPatch : true;
+	}
+
+	private getDebuggerPort(config: vscode.WorkspaceConfiguration): number {
+		return config.get<number>('debuggerPort') || 9229;
 	}
 
 	private collectTests(info: TestSuiteInfo | TestInfo, tests: string[]): void {

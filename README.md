@@ -21,13 +21,14 @@ Run your Mocha tests using the
 * `mochaExplorer.files`: The glob describing the location of your test files (relative to the workspace folder) (default: `test/**/*.js`)
 * `mochaExplorer.env`: Environment variables to be set when running the tests
 * `mochaExplorer.cwd`: The working directory where mocha is run (relative to the workspace folder)
-* `mochaExplorer.ui`: The mocha ui used by the tests
-* `mochaExplorer.timeout`: The test-case timeout in milliseconds
-* `mochaExplorer.retries`: The number of times to retry failed tests
+* `mochaExplorer.ui`: The mocha ui used by the tests (default: `bdd`)
+* `mochaExplorer.timeout`: The test-case timeout in milliseconds (default: `2000`)
+* `mochaExplorer.retries`: The number of times to retry failed tests (default: `0`)
 * `mochaExplorer.require`: Module(s) that Mocha should require()
-* `mochaExplorer.exit`: shutdown the Mocha process (using process.exit()) after the last test has been run
+* `mochaExplorer.exit`: shutdown the Mocha process (using process.exit()) after the last test has been run (default: `false`)
 * `mochaExplorer.nodePath`: The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
 * `mochaExplorer.monkeyPatch`: apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
+* `mochaExplorer.debuggerPort`: The port to use for debugging sessions (default: `9229`)
 * `testExplorer.codeLens`: Show a CodeLens above each test or suite for running or debugging the tests
 * `testExplorer.gutterDecoration`: Show the state of each test in the editor using Gutter Decorations
 * `testExplorer.onStart`: Retire or reset all test states whenever a test run is started

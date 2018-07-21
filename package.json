@@ -136,6 +136,12 @@
           "default": true,
           "scope": "resource"
         },
+        "mochaExplorer.debuggerPort": {
+          "description": "The port to use for debugging sessions",
+          "type": "number",
+          "default": 9229,
+          "scope": "resource"
+        },
         "mochaExplorer.logpanel": {
           "description": "write diagnotic logs to an output panel",
           "type": "boolean",
