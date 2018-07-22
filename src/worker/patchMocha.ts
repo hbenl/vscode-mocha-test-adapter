@@ -80,9 +80,11 @@ function patchFunction(
 
 		const result = origFunction.apply(this, arguments);
 
-		const line = findCallLocation(file, log);
-		if (line !== undefined) {
-			result[lineSymbol] = line;
+		if (result) {
+			const line = findCallLocation(file, log);
+			if (line !== undefined) {
+				result[lineSymbol] = line;
+			}
 		}
 
 		return result;
