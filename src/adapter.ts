@@ -217,9 +217,6 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		if (this.log.enabled) this.log.info(`Debugging test(s) "${info.id}" of ${this.workspaceFolder.uri.fsPath}`);
 
-		const tests: string[] = [];
-		this.collectTests(info, tests);
-
 		const config = this.getConfiguration();
 		const debuggerPort = this.getDebuggerPort(config);
 
