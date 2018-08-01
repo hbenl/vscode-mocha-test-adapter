@@ -50,7 +50,6 @@ try {
 
 	if (rootSuite.children.length > 0) {
 		sort(rootSuite);
-		rootSuite.label = 'Mocha';
 		sendMessage(rootSuite);
 	} else {
 		sendMessage(null);
@@ -78,7 +77,7 @@ function convertSuite(
 
 	return {
 		type: 'suite',
-		id: suite.fullTitle(),
+		id: `${suite.file}: ${suite.fullTitle()}`,
 		label: suite.title,
 		file: suite.file,
 		line,
@@ -99,7 +98,7 @@ function convertTest(
 
 	return {
 		type: 'test',
-		id: test.fullTitle(),
+		id: `${test.file}: ${test.fullTitle()}`,
 		label: test.title,
 		file: test.file,
 		line,

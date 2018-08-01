@@ -12,7 +12,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestSuiteEvent = {
 					type: 'suite',
-					suite: suite.fullTitle(),
+					suite: `${suite.file}: ${suite.fullTitle()}`,
 					state: 'running'
 				};
 
@@ -23,7 +23,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestSuiteEvent = {
 					type: 'suite',
-					suite: suite.fullTitle(),
+					suite: `${suite.file}: ${suite.fullTitle()}`,
 					state: 'completed'
 				};
 
@@ -34,7 +34,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.fullTitle(),
+					test: `${test.file}: ${test.fullTitle()}`,
 					state: 'running'
 				};
 
@@ -45,7 +45,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.fullTitle(),
+					test: `${test.file}: ${test.fullTitle()}`,
 					state: 'passed'
 				};
 
@@ -71,7 +71,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.fullTitle(),
+					test: `${test.file}: ${test.fullTitle()}`,
 					state: 'failed',
 					message: err.stack || err.message,
 					decorations
@@ -84,7 +84,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				const event: TestEvent = {
 					type: 'test',
-					test: test.fullTitle(),
+					test: `${test.file}: ${test.fullTitle()}`,
 					state: 'skipped'
 				};
 

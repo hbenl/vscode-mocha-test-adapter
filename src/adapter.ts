@@ -127,6 +127,10 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				} else {
 
 					this.log.info('Received tests from worker');
+					if (info) {
+						info.id = `${this.workspaceFolder.uri.fsPath}: Mocha`;
+						info.label = 'Mocha';
+					}
 					testsLoaded = true;
 					resolve(info || undefined);
 				}
@@ -152,11 +156,19 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		if (this.log.enabled) this.log.info(`Running test(s) "${info.id}" of ${this.workspaceFolder.uri.fsPath}`);
 
-		const tests: string[] = [];
+		let tests: string[] = [];
 		this.collectTests(info, tests);
+		tests = tests.map(test => {
+			const separatorIndex = test.indexOf(': ');
+			if (separatorIndex >= 0) {
+				return test.substr(separatorIndex + 2);
+			} else {
+				return test;
+			}
+		});
 
 		const config = this.getConfiguration();
-		const testFiles = await this.lookupFiles(config);
+		const testFiles = info.file ? [ info.file ] : await this.lookupFiles(config);
 		const mochaOpts = this.getMochaOpts(config);
 		const execPath = await this.getNodePath(config);
 
