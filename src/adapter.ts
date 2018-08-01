@@ -118,7 +118,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			);
 
-			childProc.on('message', (info: string | TestSuiteInfo | undefined) => {
+			childProc.on('message', (info: string | TestSuiteInfo | null) => {
 
 				if (typeof info === 'string') {
 
@@ -128,7 +128,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 					this.log.info('Received tests from worker');
 					testsLoaded = true;
-					resolve(info);
+					resolve(info || undefined);
 				}
 			});
 

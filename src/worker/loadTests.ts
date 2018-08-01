@@ -53,7 +53,7 @@ try {
 		rootSuite.label = 'Mocha';
 		sendMessage(rootSuite);
 	} else {
-		sendMessage(undefined);
+		sendMessage(null);
 	}
 
 } catch (err) {
