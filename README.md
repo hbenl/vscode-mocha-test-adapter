@@ -57,4 +57,7 @@ If the Test view doesn't show your tests or anything else doesn't work as expect
 * `mochaExplorer.logpanel`: Write diagnotic logs to an output panel
 * `mochaExplorer.logfile`: Write diagnostic logs to the given file
 
+There is a [bug in Node >= 10.6](https://github.com/nodejs/node/issues/21671) that breaks this adapter.
+If you're using a version of Node affected by this bug, add `"mochaExplorer.nodePath": null` to your configuration as a workaround.
+
 If you think you've found a bug, please [file a bug report](https://github.com/hbenl/vscode-mocha-test-adapter/issues) and attach the diagnostic logs.
