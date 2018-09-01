@@ -9,6 +9,7 @@ Run your Mocha tests using the
 * Shows a Test Explorer in the Test view in VS Code's sidebar with all detected tests and suites and their state
 * Adds CodeLenses to your test files for starting and debugging tests
 * Adds Gutter decorations to your test files showing the tests' state
+* Adds line decorations to the source line where a test failed
 * Shows a failed test's log when the test is selected in the explorer
 * Lets you choose test suites or individual tests in the explorer that should be run automatically after each file change
 
