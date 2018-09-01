@@ -59,7 +59,7 @@
     "vscode": "^1.23.0"
   },
   "activationEvents": [
-    "onView:test-explorer"
+    "*"
   ],
   "contributes": {
     "configuration": {
