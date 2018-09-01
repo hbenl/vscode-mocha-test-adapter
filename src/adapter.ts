@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { ChildProcess, fork } from 'child_process';
 import * as vscode from 'vscode';
-import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent } from 'vscode-test-adapter-api';
+import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
 import { MochaOpts } from './opts';
 import { Minimatch } from 'minimatch';
 import { Log, detectNodePath } from 'vscode-test-adapter-util';
@@ -22,18 +22,20 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 	private disposables: IDisposable[] = [];
 
-	private readonly testStatesEmitter = new vscode.EventEmitter<TestSuiteEvent | TestEvent>();
-	private readonly reloadEmitter = new vscode.EventEmitter<void>();
+	private readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
+	private readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
 	private readonly autorunEmitter = new vscode.EventEmitter<void>();
+
+	private nodesById = new Map<string, TestSuiteInfo | TestInfo>();
 
 	private runningTestProcess: ChildProcess | undefined;
 
-	get testStates(): vscode.Event<TestSuiteEvent | TestEvent> {
-		return this.testStatesEmitter.event;
+	get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> {
+		return this.testsEmitter.event;
 	}
 
-	get reload(): vscode.Event<void> {
-		return this.reloadEmitter.event;
+	get testStates(): vscode.Event<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent> {
+		return this.testStatesEmitter.event;
 	}
 
 	get autorun(): vscode.Event<void> {
@@ -45,8 +47,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		private readonly log: Log
 	) {
 
+		this.disposables.push(this.testsEmitter);
 		this.disposables.push(this.testStatesEmitter);
-		this.disposables.push(this.reloadEmitter);
 		this.disposables.push(this.autorunEmitter);
 
 		this.disposables.push(vscode.workspace.onDidChangeConfiguration(configChange => {
@@ -56,7 +58,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			for (const configKey of MochaAdapter.reloadConfigKeys) {
 				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
 					if (this.log.enabled) this.log.info(`Sending reload event because ${configKey} changed`);
-					this.reloadEmitter.fire();
+					this.load();
 					return;
 				}
 			}
@@ -80,7 +82,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			if (matcher.match(filename)) {
 				if (this.log.enabled) this.log.info(`Sending reload event because ${filename} is a test file`);
-				this.reloadEmitter.fire();
+				this.load();
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
 				this.log.info('Sending autorun event');
 				this.autorunEmitter.fire();
@@ -88,7 +90,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		}));
 	}
 
-	async load(): Promise<TestSuiteInfo | undefined> {
+	async load(): Promise<void> {
+
+		this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
 		if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolder.uri.fsPath}`);
 
@@ -100,7 +104,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		let testsLoaded = false;
 
-		return await new Promise<TestSuiteInfo | undefined>((resolve, reject) => {
+		await new Promise<void>(resolve => {
 
 			const childProc = fork(
 				require.resolve('./worker/loadTests.js'),
@@ -130,34 +134,46 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					if (info) {
 						info.id = `${this.workspaceFolder.uri.fsPath}: Mocha`;
 						info.label = 'Mocha';
+						this.nodesById.clear();
+						this.collectNodesById(info);
 					}
 					testsLoaded = true;
-					resolve(info || undefined);
+					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info || undefined });
+					resolve();
 				}
 			});
 
 			childProc.on('exit', () => {
 				this.log.info('Worker finished');
 				if (!testsLoaded) {
-					resolve(undefined);
+					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+					resolve();
 				}
 			});
 
 			childProc.on('error', err => {
 				if (this.log.enabled) this.log.error(`Error from child process: ${err}`);
 				if (!testsLoaded) {
-					resolve(undefined);
+					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+					resolve();
 				}
 			});
 		});
 	}
 
-	async run(info: TestSuiteInfo | TestInfo, execArgv: string[] = []): Promise<void> {
+	async run(testsToRun: string[], execArgv: string[] = []): Promise<void> {
 
-		if (this.log.enabled) this.log.info(`Running test(s) "${info.id}" of ${this.workspaceFolder.uri.fsPath}`);
+		if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
+
+		this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
 
 		let tests: string[] = [];
-		this.collectTests(info, tests);
+		for (const suiteOrTestId of testsToRun) {
+			const node = this.nodesById.get(suiteOrTestId);
+			if (node) {
+				this.collectTests(node, tests);
+			}
+		}
 		tests = tests.map(test => {
 			const separatorIndex = test.indexOf(': ');
 			if (separatorIndex >= 0) {
@@ -168,13 +184,13 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		});
 
 		const config = this.getConfiguration();
-		const testFiles = info.file ? [ info.file ] : await this.lookupFiles(config);
+		const testFiles = await this.lookupFiles(config);
 		const mochaOpts = this.getMochaOpts(config);
 		const execPath = await this.getNodePath(config);
 
 		let childProcessFinished = false;
 
-		await new Promise<void>((resolve, reject) => {
+		await new Promise<void>(resolve => {
 
 			this.runningTestProcess = fork(
 				require.resolve('./worker/runTests.js'),
@@ -210,6 +226,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				this.runningTestProcess = undefined;
 				if (!childProcessFinished) {
 					childProcessFinished = true;
+					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
 					resolve();
 				}
 			});
@@ -219,20 +236,21 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				this.runningTestProcess = undefined;
 				if (!childProcessFinished) {
 					childProcessFinished = true;
+					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
 					resolve();
 				}
 			});
 		});
 	}
 
-	async debug(info: TestSuiteInfo | TestInfo): Promise<void> {
+	async debug(testsToRun: string[]): Promise<void> {
 
-		if (this.log.enabled) this.log.info(`Debugging test(s) "${info.id}" of ${this.workspaceFolder.uri.fsPath}`);
+		if (this.log.enabled) this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
 
 		const config = this.getConfiguration();
 		const debuggerPort = this.getDebuggerPort(config);
 
-		const testRunPromise = this.run(info, [ `--inspect-brk=${debuggerPort}` ]);
+		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${debuggerPort}` ]);
 
 		this.log.info('Starting the debug session');
 		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, {
@@ -281,6 +299,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			disposable.dispose();
 		}
 		this.disposables = [];
+		this.nodesById.clear();
 	}
 
 	private getConfiguration(): vscode.WorkspaceConfiguration {
@@ -304,7 +323,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		return testFiles;
 	}
 
-	private getEnv(config: vscode.WorkspaceConfiguration): object {
+	private getEnv(config: vscode.WorkspaceConfiguration): NodeJS.ProcessEnv {
 
 		const processEnv = process.env;
 		const configEnv: { [prop: string]: any } = config.get('env') || {};
@@ -375,6 +394,15 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 	private getDebuggerPort(config: vscode.WorkspaceConfiguration): number {
 		return config.get<number>('debuggerPort') || 9229;
+	}
+
+	private collectNodesById(info: TestSuiteInfo | TestInfo): void {
+		this.nodesById.set(info.id, info);
+		if (info.type === 'suite') {
+			for (const child of info.children) {
+				this.collectNodesById(child);
+			}
+		}
 	}
 
 	private collectTests(info: TestSuiteInfo | TestInfo, tests: string[]): void {
