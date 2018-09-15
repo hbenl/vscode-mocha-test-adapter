@@ -1,10 +1,12 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import { ChildProcess, fork } from 'child_process';
 import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
 import { MochaOpts } from './opts';
 import { Minimatch } from 'minimatch';
 import { Log, detectNodePath } from 'vscode-test-adapter-util';
+import { copyOwnProperties } from './util';
 
 interface IDisposable {
 	dispose(): void;
@@ -98,7 +100,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		const config = this.getConfiguration();
 		const testFiles = await this.lookupFiles(config);
-		const mochaOpts = this.getMochaOpts(config);
+		const mochaOpts = await this.getMochaOpts(config);
 		const execPath = await this.getNodePath(config);
 		const monkeyPatch = this.getMonkeyPatch(config);
 
@@ -185,7 +187,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		const config = this.getConfiguration();
 		const testFiles = await this.lookupFiles(config);
-		const mochaOpts = this.getMochaOpts(config);
+		const mochaOpts = await this.getMochaOpts(config);
 		const execPath = await this.getNodePath(config);
 
 		let childProcessFinished = false;
@@ -352,9 +354,87 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		return cwd;
 	}
 
-	private getMochaOpts(config: vscode.WorkspaceConfiguration): MochaOpts {
+	private async readMochaOptsFile(file: string): Promise<Partial<MochaOpts>> {
 
-		let requires = config.get<string | string[]>('require');
+		const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
+		if (this.log.enabled) this.log.debug(`Looking for mocha options in ${resolvedFile}`);
+
+		return new Promise<Partial<MochaOpts>>(resolve => {
+			fs.readFile(resolvedFile, 'utf8', (err, data) => {
+
+				if (err) {
+					if (this.log.enabled) this.log.debug(`Couldn't read mocha.opts file: ${JSON.stringify(copyOwnProperties(err))}`);
+					resolve({});
+				}
+
+				try {
+					const opts = data
+						.replace(/^#.*$/gm, '')
+						.replace(/\\\s/g, '%20')
+						.split(/\s/)
+						.filter(Boolean)
+						.map(value => value.replace(/%20/g, ' '));
+
+					const ui = this.findOptValue(['-u', '--ui'], opts);
+					const timeoutString = this.findOptValue(['-t', '--timeout'], opts);
+					const timeout = timeoutString ? Number.parseInt(timeoutString) : undefined;
+					const retriesString = this.findOptValue(['--retries'], opts);
+					const retries = retriesString ? Number.parseInt(retriesString) : undefined;
+					const requires = this.findOptValues(['-r', '--require'], opts);
+					const exit = (opts.indexOf('--exit') >= 0) ? true : undefined;
+
+					const mochaOpts = { ui, timeout, retries, requires, exit };
+					if (this.log.enabled) this.log.debug(`Options from mocha.opts file: ${JSON.stringify(mochaOpts)}`);
+
+					resolve(mochaOpts);
+
+				} catch (err) {
+					if (this.log.enabled) this.log.debug(`Couldn't parse mocha.opts file: ${JSON.stringify(copyOwnProperties(err))}`);
+					resolve({});
+				}
+			});
+		});
+	}
+
+	private findOptValue(needles: string[], haystack: string[]): string | undefined {
+
+		let index: number | undefined;
+		for (const needle of needles) {
+			const needleIndex = haystack.lastIndexOf(needle);
+			if ((needleIndex >= 0) && ((index === undefined) || (needleIndex > index))) {
+				index = needleIndex;
+			}
+		}
+
+		if ((index !== undefined) && (haystack.length > index + 1)) {
+			return haystack[index + 1];
+		} else {
+			return undefined;
+		}
+	}
+
+	private findOptValues(needles: string[], haystack: string[]): string[] {
+
+		const values: string[] = [];
+
+		for (let i = 0; i < haystack.length; i++) {
+			if (needles.indexOf(haystack[i]) >= 0) {
+				i++;
+				if (i < haystack.length) {
+					values.push(haystack[i]);
+				}
+			}
+		}
+
+		return values;
+	}
+
+	private async getMochaOpts(config: vscode.WorkspaceConfiguration): Promise<MochaOpts> {
+
+		const mochaOptsFile = config.get<string>('optsFile')!;
+		const mochaOptsFromFile = mochaOptsFile ? await this.readMochaOptsFile(mochaOptsFile) : {};
+
+		let requires = this.mergeOpts<string | string[]>('require', mochaOptsFromFile.requires, config);
 		if (typeof requires === 'string') {
 			if (requires.length > 0) {
 				requires = [ requires ];
@@ -366,16 +446,33 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		}
 
 		const mochaOpts = {
-			ui: config.get<string>('ui')!,
-			timeout: config.get<number>('timeout')!,
-			retries: config.get<number>('retries')!,
+			ui: this.mergeOpts<string>('ui', mochaOptsFromFile.ui, config),
+			timeout: this.mergeOpts<number>('timeout', mochaOptsFromFile.timeout, config),
+			retries: this.mergeOpts<number>('retries', mochaOptsFromFile.retries, config),
 			requires,
-			exit: config.get<boolean>('exit')!
+			exit: this.mergeOpts<boolean>('exit', mochaOptsFromFile.exit, config)
 		}
 
 		if (this.log.enabled) this.log.debug(`Using Mocha options: ${JSON.stringify(mochaOpts)}`);
 
 		return mochaOpts;
+	}
+
+	private mergeOpts<T>(configKey: string, fileConfigValue: T | undefined, config: vscode.WorkspaceConfiguration): T {
+
+		const vsCodeConfigValues = config.inspect<T>(configKey)!;
+
+		if (vsCodeConfigValues.workspaceFolderValue !== undefined) {
+			return vsCodeConfigValues.workspaceFolderValue;
+		} else if (vsCodeConfigValues.workspaceValue !== undefined) {
+			return vsCodeConfigValues.workspaceValue;
+		} else if (vsCodeConfigValues.globalValue !== undefined) {
+			return vsCodeConfigValues.globalValue;
+		} else if (fileConfigValue !== undefined) {
+			return fileConfigValue;
+		} else {
+			return vsCodeConfigValues.defaultValue!;
+		}
 	}
 
 	private async getNodePath(config: vscode.WorkspaceConfiguration): Promise<string | undefined> {
