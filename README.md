@@ -6,6 +6,7 @@ Run your Mocha tests using the
 ![Screenshot](img/screenshot.png)
 
 ## Features
+
 * Shows a Test Explorer in the Test view in VS Code's sidebar with all detected tests and suites and their state
 * Adds CodeLenses to your test files for starting and debugging tests
 * Adds Gutter decorations to your test files showing the tests' state
@@ -14,24 +15,38 @@ Run your Mocha tests using the
 * Lets you choose test suites or individual tests in the explorer that should be run automatically after each file change
 
 ## Getting started
-* Install the extension
-* Restart VS Code and open the Test view
+
+* Install the extension and restart VS Code
+* Put your Mocha command line options (if you have any) in a `mocha.opts` file or VS Code's settings (see below)
+* Open the Test view
 * Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
 ## Configuration
 
-The following configuration properties are available:
+### Mocha command line options
+
+You can put any command line options into [a `mocha.opts` file](https://mochajs.org/#mochaopts).
+By default, this adapter will use `test/mocha.opts` but you can override that with the
+`mochaExplorer.optsFile` setting.
+
+Alternatively, you can put supported options into VS Code's settings:
+
+Property                | Corresponding command line option
+------------------------|----------------------------------
+`mochaExplorer.ui`      | `-u`, `--ui` (default: `"bdd"`)
+`mochaExplorer.timeout` | `-t`, `--timeout` (default: `2000`)
+`mochaExplorer.retries` | `--retries` (default: `0`)
+`mochaExplorer.require` | `-r`, `--require` (default: `[]`)
+`mochaExplorer.exit`    | `--exit` (default: `false`)
+`mochaExplorer.optsFile`| `--opts` (default: `"test/mocha.opts"`)
+
+### Other options
 
 Property                        | Description
 --------------------------------|---------------------------------------------------------------
-`mochaExplorer.files`           | The glob describing the location of your test files (relative to the workspace folder) (default: `test/**/*.js`)
-`mochaExplorer.env`             | Environment variables to be set when running the tests
+`mochaExplorer.files`           | The glob describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`)
+`mochaExplorer.env`             | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`)
 `mochaExplorer.cwd`             | The working directory where mocha is run (relative to the workspace folder)
-`mochaExplorer.ui`              | The mocha ui used by the tests (default: `bdd`)
-`mochaExplorer.timeout`         | The test-case timeout in milliseconds (default: `2000`)
-`mochaExplorer.retries`         | The number of times to retry failed tests (default: `0`)
-`mochaExplorer.require`         | Module(s) that Mocha should require()
-`mochaExplorer.exit`            | shutdown the Mocha process (using process.exit()) after the last test has been run (default: `false`)
 `mochaExplorer.nodePath`        | The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
 `mochaExplorer.monkeyPatch`     | apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
 `mochaExplorer.debuggerPort`    | The port to use for debugging sessions (default: `9229`)
