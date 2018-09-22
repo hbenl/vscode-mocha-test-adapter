@@ -48,6 +48,7 @@ Property                        | Description
 `mochaExplorer.env`             | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`)
 `mochaExplorer.cwd`             | The working directory where mocha is run (relative to the workspace folder)
 `mochaExplorer.nodePath`        | The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
+`mochaExplorer.mochaPath`       | The path to the mocha package to use (relative to the workspace folder). By default (or if this option is set to `null`) it uses a bundled version of mocha, to use the one installed in your project's `node_modules` folder, set this option to `"node_modules/mocha"`
 `mochaExplorer.monkeyPatch`     | apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
 `mochaExplorer.debuggerPort`    | The port to use for debugging sessions (default: `9229`)
 `testExplorer.codeLens`         | Show a CodeLens above each test or suite for running or debugging the tests

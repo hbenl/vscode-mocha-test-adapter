@@ -1,7 +1,6 @@
-import * as Mocha from 'mocha';
 import { parse as parseStackTrace } from 'stack-trace';
 
-export function patchMocha(ui: string, lineSymbol: symbol, log?: (message: any) => void) {
+export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol: symbol, log?: (message: any) => void) {
 
 	if (ui === 'bdd') {
 

@@ -13,8 +13,9 @@ interface IDisposable {
 export class MochaAdapter implements TestAdapter, IDisposable {
 
 	private static readonly reloadConfigKeys = [
-		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env','mochaExplorer.ui',
-		'mochaExplorer.require', 'mochaExplorer.nodePath', 'mochaExplorer.monkeyPatch'
+		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env', 'mochaExplorer.ui',
+		'mochaExplorer.require', 'mochaExplorer.optsFile', 'mochaExplorer.nodePath',
+		'mochaExplorer.mochaPath', 'mochaExplorer.monkeyPatch'
 	];
 	private static readonly autorunConfigKeys = [
 		'mochaExplorer.timeout', 'mochaExplorer.retries'
@@ -61,7 +62,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			for (const configKey of MochaAdapter.reloadConfigKeys) {
 				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
-					if (this.log.enabled) this.log.info(`Sending reload event because ${configKey} changed`);
+					if (this.log.enabled) this.log.info(`Reloading because ${configKey} changed`);
 					this.load();
 					return;
 				}
@@ -85,7 +86,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			const matcher = new Minimatch(absoluteGlob);
 
 			if (matcher.match(filename)) {
-				if (this.log.enabled) this.log.info(`Sending reload event because ${filename} is a test file`);
+				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
 				this.load();
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
 				this.log.info('Sending autorun event');

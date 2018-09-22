@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import * as Mocha from 'mocha';
 import * as RegExEscape from 'escape-string-regexp';
 import { MochaOpts } from '../opts';
 import ReporterFactory from './reporter';
@@ -15,6 +14,8 @@ try {
 	const testsToRun = <string[]>JSON.parse(process.argv[3]);
 	const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
 	const logEnabled = <boolean>JSON.parse(process.argv[5]);
+
+	const Mocha: typeof import('mocha') = require(mochaOpts.mochaPath);
 
 	const regExp = testsToRun.map(RegExEscape).join('|');
 

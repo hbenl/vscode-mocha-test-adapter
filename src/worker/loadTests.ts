@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import * as Mocha from 'mocha';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { MochaOpts } from '../opts';
@@ -17,6 +16,8 @@ try {
 	const monkeyPatch = <boolean>JSON.parse(process.argv[4]);
 	logEnabled = <boolean>JSON.parse(process.argv[5]);
 
+	const Mocha: typeof import('mocha') = require(mochaOpts.mochaPath);
+
 	const cwd = process.cwd();
 	module.paths.push(cwd, path.join(cwd, 'node_modules'));
 	for (let req of mochaOpts.requires) {
@@ -32,7 +33,7 @@ try {
 	const lineSymbol = Symbol('line number');
 	if (monkeyPatch) {
 		if (logEnabled) sendMessage('Patching Mocha');
-		patchMocha(mochaOpts.ui, lineSymbol, logEnabled ? sendMessage : undefined);
+		patchMocha(Mocha, mochaOpts.ui, lineSymbol, logEnabled ? sendMessage : undefined);
 	}
 
 	const mocha = new Mocha();
