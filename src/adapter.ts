@@ -5,6 +5,7 @@ import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLo
 import { Minimatch } from 'minimatch';
 import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
+import { ErrorInfo } from './util';
 
 interface IDisposable {
 	dispose(): void;
@@ -127,7 +128,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			);
 
-			childProc.on('message', (info: string | TestSuiteInfo | null) => {
+			childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
 				if (typeof info === 'string') {
 
@@ -135,15 +136,33 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 				} else {
 
-					this.log.info('Received tests from worker');
+					this.nodesById.clear();
+
 					if (info) {
-						info.id = `${this.workspaceFolder.uri.fsPath}: Mocha`;
-						info.label = 'Mocha';
-						this.nodesById.clear();
-						this.collectNodesById(info);
+
+						if (info.type === 'suite') {
+
+							this.log.info('Received tests from worker');
+							info.id = `${this.workspaceFolder.uri.fsPath}: Mocha`;
+							info.label = 'Mocha';
+							this.collectNodesById(info);
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
+
+						} else { // info.type === 'error'
+
+							this.log.info('Received error from worker');
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
+
+						}
+
+					} else {
+
+						this.log.info('Worker found no tests');
+						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
+
 					}
+
 					testsLoaded = true;
-					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info || undefined });
 					resolve();
 				}
 			});

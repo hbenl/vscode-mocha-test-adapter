@@ -4,7 +4,7 @@ import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { MochaOpts } from '../opts';
 import { patchMocha } from './patchMocha';
-import { copyOwnProperties } from '../util';
+import { copyOwnProperties, ErrorInfo } from '../util';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
 
@@ -58,6 +58,7 @@ try {
 
 } catch (err) {
 	if (logEnabled) sendMessage(`Caught error ${JSON.stringify(copyOwnProperties(err))}`);
+	sendMessage(<ErrorInfo>{ type: 'error', errorMessage: err.stack });
 	throw err;
 }
 
