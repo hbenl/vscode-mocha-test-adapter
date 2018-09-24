@@ -5,6 +5,8 @@ import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLo
 import { Minimatch } from 'minimatch';
 import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
+import { RunTestsParameters } from './worker/runTests';
+import { LoadTestsParameters } from './worker/loadTests';
 
 interface IDisposable {
 	dispose(): void;
@@ -111,13 +113,16 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		await new Promise<void>(resolve => {
 
+			const params: LoadTestsParameters = {
+				files: testFiles,
+				mochaOpts,
+				monkeyPatch,
+				logEnabled: this.log.enabled
+			}
 			const childProc = fork(
 				require.resolve('./worker/loadTests.js'),
 				[
-					JSON.stringify(testFiles),
-					JSON.stringify(mochaOpts),
-					JSON.stringify(monkeyPatch),
-					JSON.stringify(this.log.enabled)
+					JSON.stringify(params)
 				],
 				{
 					cwd: this.optsReader.getCwd(config),
@@ -197,13 +202,16 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		await new Promise<void>(resolve => {
 
+			const params: RunTestsParameters = {
+				files: testFiles,
+				testsToRun: tests,
+				mochaOpts,
+				logEnabled: this.log.enabled
+			};
 			this.runningTestProcess = fork(
 				require.resolve('./worker/runTests.js'),
-				[ 
-					JSON.stringify(testFiles),
-					JSON.stringify(tests),
-					JSON.stringify(mochaOpts),
-					JSON.stringify(this.log.enabled)
+				[
+					JSON.stringify(params)
 				],
 				{
 					cwd: this.optsReader.getCwd(config),

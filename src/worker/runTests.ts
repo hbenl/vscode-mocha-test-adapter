@@ -7,13 +7,17 @@ import { copyOwnProperties } from '../util';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : () => {};
 
+export interface RunTestsParameters {
+	files: string[];
+	testsToRun: string[];
+	mochaOpts: MochaOpts;
+	logEnabled: boolean;
+}
+
 let logEnabled = false;
 try {
 
-	const files = <string[]>JSON.parse(process.argv[2]);
-	const testsToRun = <string[]>JSON.parse(process.argv[3]);
-	const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
-	const logEnabled = <boolean>JSON.parse(process.argv[5]);
+	const {files, testsToRun, mochaOpts, logEnabled} = <RunTestsParameters>JSON.parse(process.argv[2]);
 
 	const Mocha: typeof import('mocha') = require(mochaOpts.mochaPath);
 

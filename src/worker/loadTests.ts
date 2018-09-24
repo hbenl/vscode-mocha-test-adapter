@@ -8,13 +8,19 @@ import { copyOwnProperties } from '../util';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
 
+export interface LoadTestsParameters {
+	files: string[];
+	mochaOpts: MochaOpts;
+	monkeyPatch: boolean;
+	logEnabled: boolean;
+}
+
 let logEnabled = false;
 try {
 
-	const files = <string[]>JSON.parse(process.argv[2]);
-	const mochaOpts = <MochaOpts>JSON.parse(process.argv[3]);
-	const monkeyPatch = <boolean>JSON.parse(process.argv[4]);
-	logEnabled = <boolean>JSON.parse(process.argv[5]);
+	const params = <LoadTestsParameters>JSON.parse(process.argv[2]);
+	const {files, mochaOpts, monkeyPatch} = params;
+	logEnabled = params.logEnabled;
 
 	const Mocha: typeof import('mocha') = require(mochaOpts.mochaPath);
 
