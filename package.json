@@ -51,6 +51,9 @@
     "@types/minimatch": "^3.0.3",
     "@types/mocha": "^5.2.5",
     "@types/stack-trace": "0.0.29",
+    "rollup": "^0.66.2",
+    "rollup-plugin-commonjs": "^9.1.8",
+    "rollup-plugin-node-resolve": "^3.4.0",
     "typescript": "^3.0.3",
     "vsce": "^1.48.0",
     "vscode": "^1.1.21"
