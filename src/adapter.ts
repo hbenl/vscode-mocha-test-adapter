@@ -118,7 +118,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				mochaOpts,
 				monkeyPatch,
 				logEnabled: this.log.enabled
-			}
+			};
 			const childProc = fork(
 				require.resolve('./worker/loadTests.js'),
 				[
