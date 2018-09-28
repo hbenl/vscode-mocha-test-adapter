@@ -41,6 +41,7 @@
     "escape-string-regexp": "^1.0.5",
     "minimatch": "^3.0.4",
     "mocha": "^5.2.0",
+    "split2": "^3.0.0",
     "stack-trace": "0.0.10",
     "tslib": "^1.9.3",
     "vscode-test-adapter-api": "^1.1.0",
@@ -50,6 +51,7 @@
     "@types/escape-string-regexp": "1.0.0",
     "@types/minimatch": "^3.0.3",
     "@types/mocha": "^5.2.5",
+    "@types/split2": "^2.1.6",
     "@types/stack-trace": "0.0.29",
     "typescript": "^3.0.3",
     "vsce": "^1.49.2",
@@ -155,6 +157,15 @@
           "description": "The port to use for debugging sessions",
           "type": "number",
           "default": 9229,
+          "scope": "resource"
+        },
+        "mochaExplorer.ipcPort": {
+          "description": "The port that worker processes use to send their results to VS Code. The default is to use node's IPC mechanism for child processes instead",
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
           "scope": "resource"
         },
         "mochaExplorer.logpanel": {
