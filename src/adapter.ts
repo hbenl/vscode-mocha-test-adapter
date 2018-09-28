@@ -104,8 +104,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		const config = this.optsReader.getConfiguration();
 		const testFiles = await this.optsReader.lookupFiles(config);
+		const nodePath = await this.optsReader.getNodePath(config);
+		const mochaPath = await this.optsReader.getMochaPath(config);
 		const mochaOpts = await this.optsReader.getMochaOpts(config);
-		const execPath = await this.optsReader.getNodePath(config);
 		const monkeyPatch = this.optsReader.getMonkeyPatch(config);
 
 		let testsLoaded = false;
@@ -116,6 +117,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				require.resolve('./worker/loadTests.js'),
 				[
 					JSON.stringify(testFiles),
+					JSON.stringify(mochaPath),
 					JSON.stringify(mochaOpts),
 					JSON.stringify(monkeyPatch),
 					JSON.stringify(this.log.enabled)
@@ -123,7 +125,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				{
 					cwd: this.optsReader.getCwd(config),
 					env: this.optsReader.getEnv(config),
-					execPath,
+					execPath: nodePath,
 					execArgv: [] // ['--inspect-brk=12345']
 				}
 			);
@@ -209,8 +211,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		const config = this.optsReader.getConfiguration();
 		const testFiles = await this.optsReader.lookupFiles(config);
+		const nodePath = await this.optsReader.getNodePath(config);
+		const mochaPath = await this.optsReader.getMochaPath(config);
 		const mochaOpts = await this.optsReader.getMochaOpts(config);
-		const execPath = await this.optsReader.getNodePath(config);
 
 		let childProcessFinished = false;
 
@@ -221,13 +224,14 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				[ 
 					JSON.stringify(testFiles),
 					JSON.stringify(tests),
+					JSON.stringify(mochaPath),
 					JSON.stringify(mochaOpts),
 					JSON.stringify(this.log.enabled)
 				],
 				{
 					cwd: this.optsReader.getCwd(config),
 					env: this.optsReader.getEnv(config),
-					execPath,
+					execPath: nodePath,
 					execArgv
 				}
 			);

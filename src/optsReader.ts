@@ -154,7 +154,6 @@ export class MochaOptsReader {
 		}
 
 		const mochaOpts = {
-			mochaPath: this.getMochaPath(config),
 			ui: this.mergeOpts<string>('ui', mochaOptsFromFile.ui, config),
 			timeout: this.mergeOpts<number>('timeout', mochaOptsFromFile.timeout, config),
 			retries: this.mergeOpts<number>('retries', mochaOptsFromFile.retries, config),

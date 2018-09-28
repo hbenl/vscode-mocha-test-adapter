@@ -12,10 +12,11 @@ try {
 
 	const files = <string[]>JSON.parse(process.argv[2]);
 	const testsToRun = <string[]>JSON.parse(process.argv[3]);
-	const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
-	const logEnabled = <boolean>JSON.parse(process.argv[5]);
+	const mochaPath = <string>JSON.parse(process.argv[4]);
+	const mochaOpts = <MochaOpts>JSON.parse(process.argv[5]);
+	const logEnabled = <boolean>JSON.parse(process.argv[6]);
 
-	const Mocha: typeof import('mocha') = require(mochaOpts.mochaPath);
+	const Mocha: typeof import('mocha') = require(mochaPath);
 
 	const regExp = testsToRun.map(RegExEscape).join('|');
 
