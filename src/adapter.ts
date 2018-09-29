@@ -328,11 +328,12 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		const config = this.optsReader.getConfiguration();
 		const debuggerPort = this.optsReader.getDebuggerPort(config);
+		const debuggerConfig = this.optsReader.getDebuggerConfig(config);
 
 		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${debuggerPort}` ]);
 
 		this.log.info('Starting the debug session');
-		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, {
+		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, debuggerConfig || {
 			name: 'Debug Mocha Tests',
 			type: 'node',
 			request: 'attach',

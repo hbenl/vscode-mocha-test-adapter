@@ -159,6 +159,15 @@
           "default": 9229,
           "scope": "resource"
         },
+        "mochaExplorer.debuggerConfig": {
+          "description": "The name of a launch configuration to use for debugging sessions",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
         "mochaExplorer.ipcPort": {
           "description": "The port that worker processes use to send their results to VS Code. The default is to use node's IPC mechanism for child processes instead",
           "type": [
