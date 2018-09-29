@@ -160,6 +160,15 @@
           "default": 9229,
           "scope": "resource"
         },
+        "mochaExplorer.debuggerConfig": {
+          "description": "The name of a launch configuration to use for debugging sessions",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
         "mochaExplorer.logpanel": {
           "description": "write diagnotic logs to an output panel",
           "type": "boolean",

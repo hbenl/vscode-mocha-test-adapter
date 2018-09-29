@@ -209,4 +209,8 @@ export class MochaOptsReader {
 	getDebuggerPort(config: vscode.WorkspaceConfiguration): number {
 		return config.get<number>('debuggerPort') || 9229;
 	}
+
+	getDebuggerConfig(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>('debuggerConfig') || undefined;
+	}
 }
