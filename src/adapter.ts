@@ -5,7 +5,7 @@ import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLo
 import { Minimatch } from 'minimatch';
 import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
-import { ErrorInfo, copyOwnProperties } from './util';
+import { ErrorInfo, copyOwnProperties, WorkerArgs } from './util';
 import { createServer } from './ipc/server';
 
 interface IDisposable {
@@ -169,14 +169,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			const childProc = fork(
 				require.resolve('./worker/loadTests.js'),
-				[
-					JSON.stringify(testFiles),
-					JSON.stringify(mochaPath),
-					JSON.stringify(mochaOpts),
-					JSON.stringify(monkeyPatch),
-					JSON.stringify(ipcPort || null),
-					JSON.stringify(this.log.enabled)
-				],
+				[ JSON.stringify(<WorkerArgs>{ 
+					testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled: this.log.enabled
+				}) ],
 				{
 					cwd: this.optsReader.getCwd(config),
 					env: this.optsReader.getEnv(config),
@@ -274,14 +269,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			this.runningTestProcess = fork(
 				require.resolve('./worker/runTests.js'),
-				[ 
-					JSON.stringify(testFiles),
-					JSON.stringify(tests),
-					JSON.stringify(mochaPath),
-					JSON.stringify(mochaOpts),
-					JSON.stringify(ipcPort || null),
-					JSON.stringify(this.log.enabled)
-				],
+				[ JSON.stringify(<WorkerArgs> {
+					testFiles, tests, mochaPath, mochaOpts, ipcPort, logEnabled: this.log.enabled
+				}) ],
 				{
 					cwd: this.optsReader.getCwd(config),
 					env: this.optsReader.getEnv(config),

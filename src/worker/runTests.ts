@@ -1,12 +1,12 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as RegExEscape from 'escape-string-regexp';
-import { MochaOpts } from '../opts';
 import ReporterFactory from './reporter';
-import { copyOwnProperties } from '../util';
+import { copyOwnProperties, WorkerArgs } from '../util';
 import { createClient } from '../ipc/client';
 
-const ipcPort = <number | null>JSON.parse(process.argv[6]);
+const { testFiles, tests, mochaPath, mochaOpts, ipcPort, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
+
 if (ipcPort) {
 	createClient(ipcPort).then(ipcClient => {
 		const sendMessage = (message: any) => ipcClient.sendMessage(message);
@@ -19,18 +19,11 @@ if (ipcPort) {
 
 function runTests(sendMessage: (message: any) => void, onFinished?: () => void) {
 
-	let logEnabled = false;
 	try {
-
-		const files = <string[]>JSON.parse(process.argv[2]);
-		const testsToRun = <string[]>JSON.parse(process.argv[3]);
-		const mochaPath = <string>JSON.parse(process.argv[4]);
-		const mochaOpts = <MochaOpts>JSON.parse(process.argv[5]);
-		const logEnabled = <boolean>JSON.parse(process.argv[7]);
 
 		const Mocha: typeof import('mocha') = require(mochaPath);
 
-		const regExp = testsToRun.map(RegExEscape).join('|');
+		const regExp = tests!.map(RegExEscape).join('|');
 
 		const cwd = process.cwd();
 		module.paths.push(cwd, path.join(cwd, 'node_modules'));
@@ -50,7 +43,7 @@ function runTests(sendMessage: (message: any) => void, onFinished?: () => void) 
 		mocha.timeout(mochaOpts.timeout);
 		mocha.suite.retries(mochaOpts.retries);
 
-		for (const file of files) {
+		for (const file of testFiles) {
 			mocha.addFile(file);
 		}
 

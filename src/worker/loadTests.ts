@@ -2,12 +2,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { MochaOpts } from '../opts';
 import { patchMocha } from './patchMocha';
-import { copyOwnProperties, ErrorInfo } from '../util';
+import { copyOwnProperties, ErrorInfo, WorkerArgs } from '../util';
 import { createClient } from '../ipc/client';
 
-const ipcPort = <number | null>JSON.parse(process.argv[6]);
+const { testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
+
 if (ipcPort) {
 	createClient(ipcPort).then(ipcClient => {
 		const sendMessage = (message: any) => ipcClient.sendMessage(message);
@@ -21,14 +21,7 @@ if (ipcPort) {
 
 function loadTests(sendMessage: (message: any) => void) {
 
-	let logEnabled = false;
 	try {
-
-		const files = <string[]>JSON.parse(process.argv[2]);
-		const mochaPath = <string>JSON.parse(process.argv[3]);
-		const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
-		const monkeyPatch = <boolean>JSON.parse(process.argv[5]);
-		logEnabled = <boolean>JSON.parse(process.argv[7]);
 
 		const Mocha: typeof import('mocha') = require(mochaPath);
 
@@ -54,7 +47,7 @@ function loadTests(sendMessage: (message: any) => void) {
 		mocha.ui(mochaOpts.ui);
 
 		if (logEnabled) sendMessage('Loading files');
-		for (const file of files) {
+		for (const file of testFiles) {
 			mocha.addFile(file);
 		}
 		mocha.loadFiles();
