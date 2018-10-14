@@ -66,7 +66,7 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "mochaExplorer configuration",
+      "title": "Mocha Test Explorer",
       "properties": {
         "mochaExplorer.files": {
           "description": "The glob describing the location of your test files (relative to the workspace folder)",
