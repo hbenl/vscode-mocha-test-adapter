@@ -38,6 +38,7 @@
     "hbenl.vscode-test-explorer"
   ],
   "dependencies": {
+    "diff": "^3.5.0",
     "escape-string-regexp": "^1.0.5",
     "minimatch": "^3.0.4",
     "mocha": "^5.2.0",
@@ -47,6 +48,7 @@
     "vscode-test-adapter-util": "^0.5.1"
   },
   "devDependencies": {
+    "@types/diff": "^3.5.1",
     "@types/escape-string-regexp": "1.0.0",
     "@types/minimatch": "^3.0.3",
     "@types/mocha": "^5.2.5",

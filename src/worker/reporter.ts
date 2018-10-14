@@ -1,5 +1,7 @@
 import * as path from 'path';
 import { parse as parseStackTrace } from 'stack-trace';
+import { stringify } from 'mocha/lib/utils';
+import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
 
 export default (sendMessage: (message: any) => void) => {
@@ -52,7 +54,7 @@ export default (sendMessage: (message: any) => void) => {
 				sendMessage(event);
 			});
 
-			runner.on('fail', (test: Mocha.ITest, err: Error) => {
+			runner.on('fail', (test: Mocha.ITest, err: Error & { actual?: any, expected?: any, showDiff?: boolean }) => {
 
 				let decorations: TestDecoration[] = [];
 				if (err.stack) {
@@ -69,11 +71,29 @@ export default (sendMessage: (message: any) => void) => {
 					}
 				}
 
+				let message = err.stack || err.message;
+
+				if ((err.showDiff !== false) && 
+					sameType(err.actual, err.expected) && 
+					(err.expected !== undefined)) {
+
+					const actualString = stringify(err.actual);
+					const expectedString = stringify(err.expected);
+					let diff = createPatch('string', actualString, expectedString, '', '');
+					diff = diff
+						.split('\n')
+						.splice(5)
+						.filter(line => !line.match(/\\ No newline/))
+						.join('\n');
+
+					message += '\n\n+ expected - actual\n\n' + diff;
+				}
+
 				const event: TestEvent = {
 					type: 'test',
 					test: `${test.file}: ${test.fullTitle()}`,
 					state: 'failed',
-					message: err.stack || err.message,
+					message,
 					decorations
 				};
 
@@ -92,4 +112,8 @@ export default (sendMessage: (message: any) => void) => {
 			});
 		}
 	}
+}
+
+function sameType(a: any, b: any): boolean {
+	return Object.prototype.toString.call(a) === Object.prototype.toString.call(b);
 }
