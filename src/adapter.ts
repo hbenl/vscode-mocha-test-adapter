@@ -82,11 +82,14 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			const filename = document.uri.fsPath;
 			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
-			const relativeGlob = this.optsReader.getTestFilesGlob(this.optsReader.getConfiguration());
+			const config = this.optsReader.getConfiguration();
+			const relativeGlob = this.optsReader.getTestFilesGlob(config);
 			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
 			const matcher = new Minimatch(absoluteGlob);
+			const mochaOptsFile = config.get<string>('optsFile');
+			const resolvedMochaOptsFile = mochaOptsFile ? path.resolve(this.workspaceFolder.uri.fsPath, mochaOptsFile) : undefined;
 
-			if (matcher.match(filename)) {
+			if (matcher.match(filename) || (filename === resolvedMochaOptsFile)) {
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
 				this.load();
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
