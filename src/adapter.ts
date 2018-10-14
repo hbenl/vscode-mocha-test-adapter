@@ -5,7 +5,7 @@ import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLo
 import { Minimatch } from 'minimatch';
 import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
-import { ErrorInfo } from './util';
+import { copyOwnProperties, ErrorInfo } from './util';
 
 interface IDisposable {
 	dispose(): void;
@@ -101,177 +101,191 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 	async load(): Promise<void> {
 
-		this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
+		try {
 
-		if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolder.uri.fsPath}`);
+			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
-		const config = this.optsReader.getConfiguration();
-		const testFiles = await this.optsReader.lookupFiles(config);
-		const nodePath = await this.optsReader.getNodePath(config);
-		const mochaPath = await this.optsReader.getMochaPath(config);
-		const mochaOpts = await this.optsReader.getMochaOpts(config);
-		const monkeyPatch = this.optsReader.getMonkeyPatch(config);
+			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolder.uri.fsPath}`);
 
-		let testsLoaded = false;
+			const config = this.optsReader.getConfiguration();
+			const testFiles = await this.optsReader.lookupFiles(config);
+			const nodePath = await this.optsReader.getNodePath(config);
+			const mochaPath = await this.optsReader.getMochaPath(config);
+			const mochaOpts = await this.optsReader.getMochaOpts(config);
+			const monkeyPatch = this.optsReader.getMonkeyPatch(config);
 
-		await new Promise<void>(resolve => {
+			let testsLoaded = false;
 
-			const childProc = fork(
-				require.resolve('./worker/loadTests.js'),
-				[
-					JSON.stringify(testFiles),
-					JSON.stringify(mochaPath),
-					JSON.stringify(mochaOpts),
-					JSON.stringify(monkeyPatch),
-					JSON.stringify(this.log.enabled)
-				],
-				{
-					cwd: this.optsReader.getCwd(config),
-					env: this.optsReader.getEnv(config),
-					execPath: nodePath,
-					execArgv: [] // ['--inspect-brk=12345']
-				}
-			);
+			await new Promise<void>(resolve => {
 
-			childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
+				const childProc = fork(
+					require.resolve('./worker/loadTests.js'),
+					[
+						JSON.stringify(testFiles),
+						JSON.stringify(mochaPath),
+						JSON.stringify(mochaOpts),
+						JSON.stringify(monkeyPatch),
+						JSON.stringify(this.log.enabled)
+					],
+					{
+						cwd: this.optsReader.getCwd(config),
+						env: this.optsReader.getEnv(config),
+						execPath: nodePath,
+						execArgv: [] // ['--inspect-brk=12345']
+					}
+				);
 
-				if (typeof info === 'string') {
+				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
-					if (this.log.enabled) this.log.info(`Worker: ${info}`);
+					if (typeof info === 'string') {
 
-				} else {
-
-					this.nodesById.clear();
-
-					if (info) {
-
-						if (info.type === 'suite') {
-
-							this.log.info('Received tests from worker');
-							info.id = `${this.workspaceFolder.uri.fsPath}: Mocha`;
-							info.label = 'Mocha';
-							this.collectNodesById(info);
-							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
-
-						} else { // info.type === 'error'
-
-							this.log.info('Received error from worker');
-							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
-
-						}
+						if (this.log.enabled) this.log.info(`Worker: ${info}`);
 
 					} else {
 
-						this.log.info('Worker found no tests');
-						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
+						this.nodesById.clear();
 
+						if (info) {
+
+							if (info.type === 'suite') {
+
+								this.log.info('Received tests from worker');
+								info.id = `${this.workspaceFolder.uri.fsPath}: Mocha`;
+								info.label = 'Mocha';
+								this.collectNodesById(info);
+								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
+
+							} else { // info.type === 'error'
+
+								this.log.info('Received error from worker');
+								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
+
+							}
+
+						} else {
+
+							this.log.info('Worker found no tests');
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
+
+						}
+
+						testsLoaded = true;
+						resolve();
 					}
+				});
 
-					testsLoaded = true;
-					resolve();
-				}
+				childProc.on('exit', () => {
+					this.log.info('Worker finished');
+					if (!testsLoaded) {
+						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+						resolve();
+					}
+				});
+
+				childProc.on('error', err => {
+					if (this.log.enabled) this.log.error(`Error from child process: ${JSON.stringify(copyOwnProperties(err))}`);
+					if (!testsLoaded) {
+						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: err.stack });
+						resolve();
+					}
+				});
 			});
 
-			childProc.on('exit', () => {
-				this.log.info('Worker finished');
-				if (!testsLoaded) {
-					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
-					resolve();
-				}
-			});
-
-			childProc.on('error', err => {
-				if (this.log.enabled) this.log.error(`Error from child process: ${err}`);
-				if (!testsLoaded) {
-					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
-					resolve();
-				}
-			});
-		});
+		} catch (err) {
+			if (this.log.enabled) this.log.error(`Error while loading tests: ${JSON.stringify(copyOwnProperties(err))}`);
+			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: err.stack });
+		}
 	}
 
 	async run(testsToRun: string[], execArgv: string[] = []): Promise<void> {
 
-		if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
+		try {
 
-		this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
+			if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
 
-		let tests: string[] = [];
-		for (const suiteOrTestId of testsToRun) {
-			const node = this.nodesById.get(suiteOrTestId);
-			if (node) {
-				this.collectTests(node, tests);
-			}
-		}
-		tests = tests.map(test => {
-			const separatorIndex = test.indexOf(': ');
-			if (separatorIndex >= 0) {
-				return test.substr(separatorIndex + 2);
-			} else {
-				return test;
-			}
-		});
+			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
 
-		const config = this.optsReader.getConfiguration();
-		const testFiles = await this.optsReader.lookupFiles(config);
-		const nodePath = await this.optsReader.getNodePath(config);
-		const mochaPath = await this.optsReader.getMochaPath(config);
-		const mochaOpts = await this.optsReader.getMochaOpts(config);
-
-		let childProcessFinished = false;
-
-		await new Promise<void>(resolve => {
-
-			this.runningTestProcess = fork(
-				require.resolve('./worker/runTests.js'),
-				[ 
-					JSON.stringify(testFiles),
-					JSON.stringify(tests),
-					JSON.stringify(mochaPath),
-					JSON.stringify(mochaOpts),
-					JSON.stringify(this.log.enabled)
-				],
-				{
-					cwd: this.optsReader.getCwd(config),
-					env: this.optsReader.getEnv(config),
-					execPath: nodePath,
-					execArgv
+			let tests: string[] = [];
+			for (const suiteOrTestId of testsToRun) {
+				const node = this.nodesById.get(suiteOrTestId);
+				if (node) {
+					this.collectTests(node, tests);
 				}
-			);
-
-			this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
-
-				if (typeof message === 'string') {
-
-					if (this.log.enabled) this.log.info(`Worker: ${message}`);
-
+			}
+			tests = tests.map(test => {
+				const separatorIndex = test.indexOf(': ');
+				if (separatorIndex >= 0) {
+					return test.substr(separatorIndex + 2);
 				} else {
-
-					if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
-					this.testStatesEmitter.fire(message);
+					return test;
 				}
 			});
 
-			this.runningTestProcess.on('exit', () => {
-				this.log.info('Worker finished');
-				this.runningTestProcess = undefined;
-				if (!childProcessFinished) {
-					childProcessFinished = true;
-					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-					resolve();
-				}
+			const config = this.optsReader.getConfiguration();
+			const testFiles = await this.optsReader.lookupFiles(config);
+			const nodePath = await this.optsReader.getNodePath(config);
+			const mochaPath = await this.optsReader.getMochaPath(config);
+			const mochaOpts = await this.optsReader.getMochaOpts(config);
+
+			let childProcessFinished = false;
+
+			await new Promise<void>(resolve => {
+
+				this.runningTestProcess = fork(
+					require.resolve('./worker/runTests.js'),
+					[ 
+						JSON.stringify(testFiles),
+						JSON.stringify(tests),
+						JSON.stringify(mochaPath),
+						JSON.stringify(mochaOpts),
+						JSON.stringify(this.log.enabled)
+					],
+					{
+						cwd: this.optsReader.getCwd(config),
+						env: this.optsReader.getEnv(config),
+						execPath: nodePath,
+						execArgv
+					}
+				);
+
+				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
+
+					if (typeof message === 'string') {
+
+						if (this.log.enabled) this.log.info(`Worker: ${message}`);
+
+					} else {
+
+						if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
+						this.testStatesEmitter.fire(message);
+					}
+				});
+
+				this.runningTestProcess.on('exit', () => {
+					this.log.info('Worker finished');
+					this.runningTestProcess = undefined;
+					if (!childProcessFinished) {
+						childProcessFinished = true;
+						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+						resolve();
+					}
+				});
+
+				this.runningTestProcess.on('error', err => {
+					if (this.log.enabled) this.log.error(`Error from child process: ${JSON.stringify(copyOwnProperties(err))}`);
+					this.runningTestProcess = undefined;
+					if (!childProcessFinished) {
+						childProcessFinished = true;
+						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+						resolve();
+					}
+				});
 			});
 
-			this.runningTestProcess.on('error', err => {
-				if (this.log.enabled) this.log.error(`Error from child process: ${err}`);
-				this.runningTestProcess = undefined;
-				if (!childProcessFinished) {
-					childProcessFinished = true;
-					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-					resolve();
-				}
-			});
-		});
+		} catch (err) {
+			if (this.log.enabled) this.log.error(`Error while running tests: ${JSON.stringify(copyOwnProperties(err))}`);
+			this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+		}
 	}
 
 	async debug(testsToRun: string[]): Promise<void> {
