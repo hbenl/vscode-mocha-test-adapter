@@ -5,7 +5,7 @@ function entry(input, output) {
 	return {
 		input,
 		// Rollup should not attempt to include these modules in the bundle
-        external: ['path', 'fs'],
+        external: ['path', 'fs', 'net'],
         output: [
             { file: output, format: 'cjs' },
         ],
@@ -16,6 +16,5 @@ function entry(input, output) {
 	};
 }
 export default [
-	entry('out/worker/loadTests.js', 'out/worker/loadTests-bundle.js'),
-	entry('out/worker/runTests.js', 'out/worker/runTests-bundle.js')
+	entry('out/worker/main.js', 'out/worker/bundle.js')
 ];

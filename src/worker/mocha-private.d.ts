@@ -16,7 +16,7 @@ declare namespace Mocha {
 	}
 }
 
-declare interface Mocha {
+declare interface PrivateMocha extends Mocha {
 	suite: Mocha.ISuite;
-	loadFiles(): void;
+    loadFiles(fn?: () => void): void;
 }

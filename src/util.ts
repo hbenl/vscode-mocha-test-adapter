@@ -1,6 +1,7 @@
 import { MochaOpts } from './opts';
 
 export interface WorkerArgs {
+	action: 'loadTests' | 'runTests';
 	testFiles: string[];
 	tests?: string[];
 	mochaPath: string;
