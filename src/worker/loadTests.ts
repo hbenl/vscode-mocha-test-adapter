@@ -2,69 +2,72 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { MochaOpts } from '../opts';
 import { patchMocha } from './patchMocha';
-import { copyOwnProperties } from '../util';
+import { copyOwnProperties, ErrorInfo, WorkerArgs } from '../util';
+import { createClient } from '../ipc/client';
 
-const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
+const { testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
 
-export interface LoadTestsParameters {
-	files: string[];
-	mochaOpts: MochaOpts;
-	monkeyPatch: boolean;
-	logEnabled: boolean;
+if (ipcPort) {
+	createClient(ipcPort).then(ipcClient => {
+		const sendMessage = (message: any) => ipcClient.sendMessage(message);
+		loadTests(sendMessage);
+		ipcClient.dispose();
+	});
+} else {
+	const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
+	loadTests(sendMessage);
 }
 
-let logEnabled = false;
-try {
+function loadTests(sendMessage: (message: any) => void) {
 
-	const params = <LoadTestsParameters>JSON.parse(process.argv[2]);
-	const {files, mochaOpts, monkeyPatch} = params;
-	logEnabled = params.logEnabled;
+	try {
 
-	const Mocha: typeof import('mocha') = require(mochaOpts.mochaPath);
+		const Mocha: typeof import('mocha') = require(mochaPath);
 
-	const cwd = process.cwd();
-	module.paths.push(cwd, path.join(cwd, 'node_modules'));
-	for (let req of mochaOpts.requires) {
+		const cwd = process.cwd();
+		module.paths.push(cwd, path.join(cwd, 'node_modules'));
+		for (let req of mochaOpts.requires) {
 
-		if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
-			req = path.resolve(req);
+			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
+				req = path.resolve(req);
+			}
+
+			if (logEnabled) sendMessage(`Trying require('${req}')`);
+			require(req);
 		}
 
-		if (logEnabled) sendMessage(`Trying require('${req}')`);
-		require(req);
+		const lineSymbol = Symbol('line number');
+		if (monkeyPatch) {
+			if (logEnabled) sendMessage('Patching Mocha');
+			patchMocha(Mocha, mochaOpts.ui, lineSymbol, logEnabled ? sendMessage : undefined);
+		}
+
+		const mocha = new Mocha();
+		mocha.ui(mochaOpts.ui);
+
+		if (logEnabled) sendMessage('Loading files');
+		for (const file of testFiles) {
+			mocha.addFile(file);
+		}
+		mocha.loadFiles();
+
+		if (logEnabled) sendMessage('Converting tests and suites');
+		const fileCache = new Map<string, string>();
+		const rootSuite = convertSuite(mocha.suite, lineSymbol, fileCache);
+
+		if (rootSuite.children.length > 0) {
+			sort(rootSuite);
+			sendMessage(rootSuite);
+		} else {
+			sendMessage(null);
+		}
+
+	} catch (err) {
+		if (logEnabled) sendMessage(`Caught error ${JSON.stringify(copyOwnProperties(err))}`);
+		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: err.stack });
+		throw err;
 	}
-
-	const lineSymbol = Symbol('line number');
-	if (monkeyPatch) {
-		if (logEnabled) sendMessage('Patching Mocha');
-		patchMocha(Mocha, mochaOpts.ui, lineSymbol, logEnabled ? sendMessage : undefined);
-	}
-
-	const mocha = new Mocha();
-	mocha.ui(mochaOpts.ui);
-
-	if (logEnabled) sendMessage('Loading files');
-	for (const file of files) {
-		mocha.addFile(file);
-	}
-	mocha.loadFiles();
-
-	if (logEnabled) sendMessage('Converting tests and suites');
-	const fileCache = new Map<string, string>();
-	const rootSuite = convertSuite(mocha.suite, lineSymbol, fileCache);
-
-	if (rootSuite.children.length > 0) {
-		sort(rootSuite);
-		sendMessage(rootSuite);
-	} else {
-		sendMessage(null);
-	}
-
-} catch (err) {
-	if (logEnabled) sendMessage(`Caught error ${JSON.stringify(copyOwnProperties(err))}`);
-	throw err;
 }
 
 

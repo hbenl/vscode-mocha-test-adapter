@@ -154,7 +154,6 @@ export class MochaOptsReader {
 		}
 
 		const mochaOpts = {
-			mochaPath: this.getMochaPath(config),
 			ui: this.mergeOpts<string>('ui', mochaOptsFromFile.ui, config),
 			timeout: this.mergeOpts<number>('timeout', mochaOptsFromFile.timeout, config),
 			retries: this.mergeOpts<number>('retries', mochaOptsFromFile.retries, config),
@@ -209,5 +208,13 @@ export class MochaOptsReader {
 
 	getDebuggerPort(config: vscode.WorkspaceConfiguration): number {
 		return config.get<number>('debuggerPort') || 9229;
+	}
+
+	getDebuggerConfig(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>('debuggerConfig') || undefined;
+	}
+
+	getIpcPort(config: vscode.WorkspaceConfiguration): number | undefined {
+		return config.get<number>('ipcPort') || undefined;
 	}
 }
