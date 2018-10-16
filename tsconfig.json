@@ -15,10 +15,7 @@
     "skipLibCheck": true
   },
   "include": [
-    "src/main.ts",
-    "src/worker/mocha-private.d.ts",
-    "src/worker/loadTests.ts",
-    "src/worker/runTests.ts"
+    "src"
   ]
 }
   
