@@ -9,7 +9,7 @@ export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => 
 
 	try {
 
-		const Mocha: typeof import('mocha') = require(mochaPath);
+		const Mocha: typeof import('mocha') = nodeRequire(mochaPath);
 
 		const regExp = tests!.map(RegExEscape).join('|');
 
@@ -22,7 +22,7 @@ export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => 
 			}
 
 			if (logEnabled) sendMessage(`Trying require('${req}')`);
-			require(req);
+			nodeRequire(req);
 		}
 
 		const mocha = new Mocha() as any as PrivateMocha;

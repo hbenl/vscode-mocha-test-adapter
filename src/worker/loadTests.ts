@@ -10,7 +10,7 @@ export function loadTests(workerArgs: WorkerArgs, sendMessage: (message: any) =>
 
 	try {
 
-		const Mocha: typeof import('mocha') = require(mochaPath);
+		const Mocha: typeof import('mocha') = nodeRequire(mochaPath);
 
 		const cwd = process.cwd();
 		module.paths.push(cwd, path.join(cwd, 'node_modules'));
