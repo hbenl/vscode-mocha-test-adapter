@@ -1,0 +1,16 @@
+{
+	"mochaExplorer.ipcWorkerRole": "server",
+	"mochaExplorer.ipcPort": 9226,
+	"mochaExplorer.debuggerPort": 9227,
+	"mochaExplorer.debuggerConfig": "mocha-explorer-debug",
+	"mochaExplorer.optsFile": "test/mocha.opts",
+	"mochaExplorer.files": "test/**/*.spec.{ts,js}",
+	// "mochaExplorer.require": "ts-node/register/transpile-only",
+	"mochaExplorer.logpanel": true,
+	"mochaExplorer.mochaPath": "node_modules/mocha",
+	"mochaExplorer.nodePath": "docker-compose",
+	"mochaExplorer.nodeRuntimeArgs": [
+		"exec", "-T", "mocha-test-runner",
+		"node",
+	],
+}

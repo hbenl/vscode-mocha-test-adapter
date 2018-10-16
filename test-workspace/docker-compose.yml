@@ -1,0 +1,14 @@
+version: '3.4'
+
+services:
+  mocha-test-runner:
+    image: circleci/node:8.11.3-stretch
+    ports:
+      # Mocha test adapter IPC
+      - '9226:9226'
+      # Node remote debugging
+      - '9227:9227'
+    # Never terminate so that we can `docker-compose up -d` and then `docker-compose exec ...`
+    command: ["bash", "-c", "sleep infinity"]
+    volumes:
+      - '.:/home/circleci'

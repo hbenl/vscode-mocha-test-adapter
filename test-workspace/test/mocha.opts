@@ -1,0 +1,2 @@
+-r ts-node/register/transpile-only
+test/**.spec.{ts,js}

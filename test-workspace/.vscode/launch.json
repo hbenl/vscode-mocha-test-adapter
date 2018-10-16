@@ -1,0 +1,54 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "debug my tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "docker-compose",
+            "runtimeArgs": [
+                "exec", "-T", "mocha-test-runner",
+                "node", "--inspect-brk=0.0.0.0:9227"
+            ],
+            "protocol": "inspector",
+            "port": 9227,
+            "timeout": 60000,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/home/circleci",
+            "sourceMapPathOverrides": {
+                "/home/circleci/*": "${workspaceRoot}/*"
+            },
+
+            // Map between .js and .ts locations so that breakpoints and stack
+            // traces show .ts locations
+            "sourceMaps": true,
+
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart",
+            "outFiles": [
+                "**/*.ts"
+            ]
+        },
+		{
+			"name": "mocha-explorer-debug",
+            "type": "node",
+            "request": "attach",
+            "protocol": "inspector",
+            "port": 9227,
+            "timeout": 60000,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/home/circleci",
+            "sourceMapPathOverrides": {
+                "/home/circleci/*": "${workspaceRoot}/*"
+            },
+			"smartStep": true,
+            "sourceMaps": true,
+
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart",
+            "outFiles": [
+                "**/*.ts"
+            ]
+        }
+	]
+}
