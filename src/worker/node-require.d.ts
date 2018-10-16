@@ -1,1 +1,4 @@
-declare const nodeRequire: typeof require;
+declare module 'nodeRequire' {
+	const nodeRequire: typeof require;
+	export = nodeRequire;
+}

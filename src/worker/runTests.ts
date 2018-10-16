@@ -1,11 +1,13 @@
 import * as path from 'path';
-import * as fs from 'fs';
 import * as RegExEscape from 'escape-string-regexp';
 import ReporterFactory from './reporter';
 import { copyOwnProperties, WorkerArgs } from '../util';
+import * as nodeRequire from 'nodeRequire';
+import * as resolve from 'resolve';
+import { WorkerPlugin } from './plugin';
 
-export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => void, onFinished?: () => void) {
-	const { testFiles, tests, mochaPath, mochaOpts, logEnabled } = workerArgs;
+export function runTests(workerArgs: WorkerArgs & {plugin: WorkerPlugin}, sendMessage: (message: any) => void, onFinished?: () => void) {
+	const { testFiles, tests, mochaPath, mochaOpts, logEnabled, plugin } = workerArgs;
 
 	try {
 
@@ -17,9 +19,11 @@ export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => 
 		module.paths.push(cwd, path.join(cwd, 'node_modules'));
 		for (let req of mochaOpts.requires) {
 
-			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
-				req = path.resolve(req);
-			}
+			req = resolve.sync(req, {
+				basedir: cwd,
+				// Always respect require hooks as soon as they are loaded (possibly installed by the preceding require call)
+				extensions: Object.keys(nodeRequire.extensions)
+			});
 
 			if (logEnabled) sendMessage(`Trying require('${req}')`);
 			nodeRequire(req);
@@ -36,7 +40,7 @@ export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => 
 		}
 
 		mocha.grep(regExp);
-		mocha.reporter(<any>ReporterFactory(sendMessage));
+		mocha.reporter(<any>ReporterFactory(plugin, sendMessage));
 
 		if (logEnabled) sendMessage('Running tests');
 

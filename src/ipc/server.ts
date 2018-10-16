@@ -1,11 +1,18 @@
 import * as net from 'net';
 import * as vscode from 'vscode';
-import * as split2 from 'split2';
 import { Log } from 'vscode-test-adapter-util';
+import { IpcEndpoint } from './common';
+import { Deferred } from './common';
 
-export async function createServer(port: number, handler: (msg: any) => void, log: Log): Promise<vscode.Disposable> {
+export type MinimalLog = Pick<Log, 'info'>;
+interface Server extends vscode.Disposable {
+	connection: Promise<IpcEndpoint>;
+}
+
+export async function createServer(port: number, handler: (msg: any) => void, log: MinimalLog): Promise<Server> {
 
 	const server = await createServerAndListen(port, log);
+	const connectionDeferred = Deferred<IpcEndpoint>();
 
 	server.on('connection', (socket: net.Socket) => {
 
@@ -15,16 +22,18 @@ export async function createServer(port: number, handler: (msg: any) => void, lo
 		// (this won't close the connection that was just established)
 		server.close();
 
-		socket.pipe(split2()).on('data', (data: string) => {
-			handler(JSON.parse(data));
-		});
+		const endpoint = new IpcEndpoint(socket);
+		endpoint.on('message', handler);
 
 		socket.on('end', () => {
 			log.info('IPC client disconnected from server');
 		});
+		connectionDeferred.resolve(endpoint);
 	});
 
 	return {
+		connection: connectionDeferred.promise,
+
 		dispose() {
 
 			log.info('Disposing IPC server');
@@ -33,11 +42,12 @@ export async function createServer(port: number, handler: (msg: any) => void, lo
 				log.info('Closing IPC server');
 				server.close();
 			}
+			connectionDeferred.reject('IPC server closed');
 		}
 	};
 }
 
-function createServerAndListen(port: number, log: Log): Promise<net.Server> {
+function createServerAndListen(port: number, log: MinimalLog): Promise<net.Server> {
 	return new Promise<net.Server>((resolve, reject) => {
 
 		function onListening() {

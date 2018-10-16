@@ -4,9 +4,12 @@ import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { patchMocha } from './patchMocha';
 import { copyOwnProperties, ErrorInfo, WorkerArgs } from '../util';
+import * as nodeRequire from 'nodeRequire';
+import * as resolve from 'resolve';
+import { WorkerPlugin } from './plugin';
 
-export function loadTests(workerArgs: WorkerArgs, sendMessage: (message: any) => void) {
-	const { testFiles, mochaPath, mochaOpts, monkeyPatch, logEnabled } = workerArgs;
+export function loadTests(workerArgs: WorkerArgs & {plugin: WorkerPlugin}, sendMessage: (message: any) => void) {
+	const { testFiles, mochaPath, mochaOpts, monkeyPatch, logEnabled, plugin } = workerArgs;
 
 	try {
 
@@ -16,12 +19,14 @@ export function loadTests(workerArgs: WorkerArgs, sendMessage: (message: any) =>
 		module.paths.push(cwd, path.join(cwd, 'node_modules'));
 		for (let req of mochaOpts.requires) {
 
-			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
-				req = path.resolve(req);
-			}
+			req = resolve.sync(req, {
+				basedir: cwd,
+				// Always respect require hooks as soon as they are loaded (possibly installed by the preceding require call)
+				extensions: Object.keys(nodeRequire.extensions)
+			});
 
 			if (logEnabled) sendMessage(`Trying require('${req}')`);
-			require(req);
+			nodeRequire(req);
 		}
 
 		const lineSymbol = Symbol('line number');
@@ -41,7 +46,7 @@ export function loadTests(workerArgs: WorkerArgs, sendMessage: (message: any) =>
 
 		if (logEnabled) sendMessage('Converting tests and suites');
 		const fileCache = new Map<string, string>();
-		const rootSuite = convertSuite(mocha.suite, lineSymbol, fileCache);
+		const rootSuite = convertSuite(plugin, mocha.suite, lineSymbol, fileCache);
 
 		if (rootSuite.children.length > 0) {
 			sort(rootSuite);
@@ -59,13 +64,14 @@ export function loadTests(workerArgs: WorkerArgs, sendMessage: (message: any) =>
 
 
 function convertSuite(
+	plugin: WorkerPlugin,
 	suite: Mocha.ISuite,
 	lineSymbol: symbol,
 	fileCache: Map<string, string>
 ): TestSuiteInfo {
 
-	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(suite, lineSymbol, fileCache));
-	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(test, lineSymbol, fileCache));
+	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(plugin, suite, lineSymbol, fileCache));
+	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(plugin, test, lineSymbol, fileCache));
 	const children = (<(TestSuiteInfo | TestInfo)[]>childSuites).concat(childTests);
 	let line = (<any>suite)[lineSymbol];
 	if (line === undefined) {
@@ -76,13 +82,14 @@ function convertSuite(
 		type: 'suite',
 		id: `${suite.file}: ${suite.fullTitle()}`,
 		label: suite.title,
-		file: suite.file,
+		file: plugin.convertAbsoluteRemotePathToLocal(suite.file!),
 		line,
 		children
 	};
 }
 
 function convertTest(
+	plugin: WorkerPlugin,
 	test: Mocha.ITest,
 	lineSymbol: symbol,
 	fileCache: Map<string, string>
@@ -97,7 +104,7 @@ function convertTest(
 		type: 'test',
 		id: `${test.file}: ${test.fullTitle()}`,
 		label: test.title,
-		file: test.file,
+		file: plugin.convertAbsoluteRemotePathToLocal(test.file!),
 		line,
 		skipped: test.pending
 	}

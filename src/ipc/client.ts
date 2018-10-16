@@ -1,32 +1,25 @@
 import * as net from 'net';
+import { IpcEndpoint as _IpcEndpoint, IpcEndpoint } from './common';
+import { MinimalLog } from './server';
 
-export class Client {
-
-	constructor(private readonly socket: net.Socket) {}
-
-	sendMessage(msg: any): void {
-		this.socket.write(JSON.stringify(msg) + '\n');
-	}
-
-	dispose(): void {
-		this.socket.end();
-	}
+export async function createClient(port: number, handler: (msg: any) => void, log: MinimalLog): Promise<IpcEndpoint> {
+	const socket = await createConnection(port, log);
+	const client = new IpcEndpoint(socket);
+	client.on('message', handler);
+	return client;
 }
 
-export async function createClient(port: number): Promise<Client> {
-	const socket = await createConnection(port);
-	return new Client(socket);
-}
-
-function createConnection(port: number): Promise<net.Socket> {
+function createConnection(port: number, log: MinimalLog): Promise<net.Socket> {
 	return new Promise<net.Socket>((resolve, reject) => {
 
 		function onConnect() {
+			log.info('IPC client connected to server');
 			socket.removeListener('error', onError);
 			resolve(socket);
 		}
 	
 		function onError(err: Error) {
+			log.info('IPC client error trying to connect to server: ' + err);
 			socket.removeListener('connect', onConnect);
 			reject(err);
 		}
@@ -35,5 +28,7 @@ function createConnection(port: number): Promise<net.Socket> {
 
 		socket.once('connect', onConnect);
 		socket.once('error', onError);
+
+		log.info('IPC client created; trying to connect to server');
 	});
 }

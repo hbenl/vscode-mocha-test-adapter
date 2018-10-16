@@ -7,7 +7,9 @@
       "name": "Mocha adapter",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
+		"--extensionDevelopmentPath=${workspaceFolder}",
+		// "--disable-extensions",
+		"${workspaceFolder}/test-workspace"
       ],
       "outFiles": [
         "${workspaceFolder}/out"

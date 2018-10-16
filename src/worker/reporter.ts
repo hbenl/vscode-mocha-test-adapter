@@ -1,8 +1,9 @@
 import * as path from 'path';
 import { parse as parseStackTrace } from 'stack-trace';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
+import { WorkerPlugin } from './plugin';
 
-export default (sendMessage: (message: any) => void) => {
+export default (plugin: WorkerPlugin, sendMessage: (message: any) => void) => {
 
 	return class Reporter {
 

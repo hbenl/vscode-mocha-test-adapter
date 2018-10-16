@@ -201,6 +201,12 @@ export class MochaOptsReader {
 		return nodePath;
 	}
 
+	async getNodeRuntimeArgs(config: vscode.WorkspaceConfiguration): Promise<Array<string>> {
+		let nodeRuntimeArgs = config.get<Array<string>>('nodeRuntimeArgs') || [];
+		if (this.log.enabled) this.log.debug(`Using nodeRuntimeArgs: ${JSON.stringify(nodeRuntimeArgs)}`);
+		return nodeRuntimeArgs;
+	}
+
 	getMonkeyPatch(config: vscode.WorkspaceConfiguration): boolean {
 		let monkeyPatch = config.get<boolean>('monkeyPatch');
 		return (monkeyPatch !== undefined) ? monkeyPatch : true;
@@ -217,4 +223,13 @@ export class MochaOptsReader {
 	getIpcPort(config: vscode.WorkspaceConfiguration): number | undefined {
 		return config.get<number>('ipcPort') || undefined;
 	}
+
+	getIpcWorkerRole(config: vscode.WorkspaceConfiguration): IpcWorkerRole {
+		return config.get<IpcWorkerRole>('ipcWorkerRole') || 'client';
+	}
+	getIpcWorkerPlugin(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get('ipcWorkerPlugin') || undefined;
+	}
 }
+
+export type IpcWorkerRole = 'client' | 'server';

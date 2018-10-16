@@ -4,7 +4,7 @@ const commonjs = require('rollup-plugin-commonjs');
 export default {
 	input: 'out/worker/main.js',
 	// Rollup should not attempt to include these modules in the bundle
-	external: ['path', 'fs', 'net', 'mocha'],
+	external: ['path', 'fs', 'net', 'mocha', 'events', 'buffer', 'util', 'stream', 'string_decoder'],
 	output: [
 		{
 			file: 'out/worker/bundle.js',
@@ -16,7 +16,10 @@ export default {
 		},
 	],
 	plugins: [
-		resolve(),
+		resolve({
+			// use node builtins; do not bundle a module by the same name from node_modules
+			preferBuiltins: true
+		}),
 		commonjs(),
 	]
 };

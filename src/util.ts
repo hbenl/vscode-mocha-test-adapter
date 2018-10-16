@@ -1,4 +1,5 @@
 import { MochaOpts } from './opts';
+import { IpcWorkerRole } from './optsReader';
 
 export interface WorkerArgs {
 	action: 'loadTests' | 'runTests';
@@ -8,6 +9,8 @@ export interface WorkerArgs {
 	mochaOpts: MochaOpts;
 	monkeyPatch?: boolean;
 	ipcPort?: number;
+	ipcWorkerRole: IpcWorkerRole;
+	pluginPath?: string;
 	logEnabled: boolean;
 }
 
