@@ -6,6 +6,7 @@ import { Log, TestAdapterRegistrar } from 'vscode-test-adapter-util';
 export async function activate(context: vscode.ExtensionContext) {
 
 	const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
+	const outputChannel = vscode.window.createOutputChannel('Mocha Tests');
 	const log = new Log('mochaExplorer', workspaceFolder, 'Mocha Explorer Log');
 
 	const testExplorerExtension = vscode.extensions.getExtension<TestHub>(testExplorerExtensionId);
@@ -17,7 +18,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		context.subscriptions.push(new TestAdapterRegistrar(
 			testHub,
-			(workspaceFolder) => new MochaAdapter(workspaceFolder, log),
+			(workspaceFolder) => new MochaAdapter(workspaceFolder, outputChannel, log),
 			log
 		));
 	}

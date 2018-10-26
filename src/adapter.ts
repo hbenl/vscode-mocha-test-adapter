@@ -48,6 +48,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 	constructor(
 		public readonly workspaceFolder: vscode.WorkspaceFolder,
+		private readonly outputChannel: vscode.OutputChannel,
 		private readonly log: Log
 	) {
 
@@ -231,6 +232,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			await new Promise<void>(resolve => {
 
+				let runningTest: string | undefined = undefined;
+
 				this.runningTestProcess = fork(
 					require.resolve('./worker/runTests.js'),
 					[ 
@@ -244,7 +247,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 						cwd: this.optsReader.getCwd(config),
 						env: this.optsReader.getEnv(config),
 						execPath: nodePath,
-						execArgv
+						execArgv,
+						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
 
@@ -257,9 +261,35 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					} else {
 
 						if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
+
 						this.testStatesEmitter.fire(message);
+
+						if (message.type === 'test') {
+							if (message.state === 'running') {
+								runningTest = (typeof message.test === 'string') ? message.test : message.test.id;
+							} else {
+								runningTest = undefined;
+							}
+						}
 					}
 				});
+
+				const processOutput = (data: Buffer | string) => {
+
+					this.outputChannel.append(data.toString());
+
+					if (runningTest) {
+						this.testStatesEmitter.fire(<TestEvent>{
+							type: 'test',
+							state: 'running',
+							test: runningTest,
+							message: data.toString()
+						});
+					}
+				}
+
+				this.runningTestProcess.stdout.on('data', processOutput);
+				this.runningTestProcess.stderr.on('data', processOutput);
 
 				this.runningTestProcess.on('exit', () => {
 					this.log.info('Worker finished');
