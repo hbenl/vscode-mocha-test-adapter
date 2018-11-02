@@ -4,26 +4,15 @@ import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { patchMocha } from './patchMocha';
 import { copyOwnProperties, ErrorInfo, WorkerArgs } from '../util';
-import { createClient } from '../ipc/client';
+import nodeRequire = require('./nodeRequire');
 
-const { testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
+export function loadTests(workerArgs: WorkerArgs, sendMessage: (message: any) => void, onFinished?: () => void) {
 
-if (ipcPort) {
-	createClient(ipcPort).then(ipcClient => {
-		const sendMessage = (message: any) => ipcClient.sendMessage(message);
-		loadTests(sendMessage);
-		ipcClient.dispose();
-	});
-} else {
-	const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
-	loadTests(sendMessage);
-}
-
-function loadTests(sendMessage: (message: any) => void) {
+	const { testFiles, mochaPath, mochaOpts, monkeyPatch, logEnabled } = workerArgs;
 
 	try {
 
-		const Mocha: typeof import('mocha') = require(mochaPath);
+		const Mocha: typeof import('mocha') = nodeRequire(mochaPath);
 
 		const cwd = process.cwd();
 		module.paths.push(cwd, path.join(cwd, 'node_modules'));
@@ -34,7 +23,7 @@ function loadTests(sendMessage: (message: any) => void) {
 			}
 
 			if (logEnabled) sendMessage(`Trying require('${req}')`);
-			require(req);
+			nodeRequire(req);
 		}
 
 		const lineSymbol = Symbol('line number');
@@ -61,6 +50,10 @@ function loadTests(sendMessage: (message: any) => void) {
 			sendMessage(rootSuite);
 		} else {
 			sendMessage(null);
+		}
+
+		if (onFinished) {
+			onFinished();
 		}
 
 	} catch (err) {

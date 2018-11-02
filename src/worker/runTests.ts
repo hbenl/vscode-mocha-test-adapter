@@ -3,25 +3,15 @@ import * as fs from 'fs';
 import * as RegExEscape from 'escape-string-regexp';
 import ReporterFactory from './reporter';
 import { copyOwnProperties, WorkerArgs } from '../util';
-import { createClient } from '../ipc/client';
+import nodeRequire = require('./nodeRequire');
 
-const { testFiles, tests, mochaPath, mochaOpts, ipcPort, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
+export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => void, onFinished?: () => void) {
 
-if (ipcPort) {
-	createClient(ipcPort).then(ipcClient => {
-		const sendMessage = (message: any) => ipcClient.sendMessage(message);
-		runTests(sendMessage, () => ipcClient.dispose());
-	});
-} else {
-	const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
-	runTests(sendMessage);
-}
-
-function runTests(sendMessage: (message: any) => void, onFinished?: () => void) {
+	const { testFiles, tests, mochaPath, mochaOpts, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
 
 	try {
 
-		const Mocha: typeof import('mocha') = require(mochaPath);
+		const Mocha: typeof import('mocha') = nodeRequire(mochaPath);
 
 		const regExp = tests!.map(RegExEscape).join('|');
 
@@ -34,7 +24,7 @@ function runTests(sendMessage: (message: any) => void, onFinished?: () => void) 
 			}
 
 			if (logEnabled) sendMessage(`Trying require('${req}')`);
-			require(req);
+			nodeRequire(req);
 		}
 
 		const mocha = new Mocha();
