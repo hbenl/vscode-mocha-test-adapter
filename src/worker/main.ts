@@ -1,8 +1,6 @@
 import * as net from 'net';
 import { WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { createConnection, receiveConnection, writeMessage } from 'vscode-test-adapter-remoting-util';
-import { loadTests } from './loadTests';
-import { runTests } from './runTests';
 
 const workerArgs = <WorkerArgs>JSON.parse(process.argv[2]);
 const { action, ipcPort, ipcHost, ipcRole } = workerArgs;
@@ -28,5 +26,9 @@ if (ipcPort) {
 }
 
 function doWorkerAction(sendMessage: (message: any) => void, onFinished?: () => void) {
-	({ loadTests, runTests })[action](workerArgs, sendMessage, onFinished);
+	if (action === 'runTests') {
+		require('./runTests').runTests(workerArgs, sendMessage, onFinished);
+	} else {
+		require('./loadTests').loadTests(workerArgs, sendMessage, onFinished);
+	}
 }

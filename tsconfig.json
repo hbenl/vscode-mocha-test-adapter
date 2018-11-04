@@ -17,6 +17,8 @@
   "include": [
     "src/main.ts",
     "src/worker/mocha-private.d.ts",
-    "src/worker/main.ts"
+    "src/worker/main.ts",
+    "src/worker/loadTests.ts",
+    "src/worker/runTests.ts"
   ]
 }
