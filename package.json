@@ -172,6 +172,11 @@
           "default": null,
           "scope": "resource"
         },
+        "mochaExplorer.adapterScript": {
+          "description": "use an adapter script to launch the worker script",
+          "type": "string",
+          "scope": "resource"
+        },
         "mochaExplorer.ipcPort": {
           "description": "The port that worker processes use to send their results to VS Code. The default is to use node's IPC mechanism for child processes instead",
           "type": [

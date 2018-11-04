@@ -217,4 +217,8 @@ export class MochaOptsReader {
 	getIpcPort(config: vscode.WorkspaceConfiguration): number | undefined {
 		return config.get<number>('ipcPort') || undefined;
 	}
+
+	getAdapterScript(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>('adapterScript') || undefined;
+	}
 }

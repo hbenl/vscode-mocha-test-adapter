@@ -112,6 +112,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		const mochaOpts = await this.optsReader.getMochaOpts(config);
 		const monkeyPatch = this.optsReader.getMonkeyPatch(config);
 		const ipcPort = this.optsReader.getIpcPort(config);
+		const adapterScript = this.optsReader.getAdapterScript(config);
 
 		let testsLoaded = false;
 
@@ -157,11 +158,17 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			};
 
+			let workerPath = require.resolve('./worker/main.js');
+			const workerArgs: WorkerArgs = { 
+				action: 'loadTests', testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled: this.log.enabled
+			};
+			if (adapterScript) {
+				workerArgs.workerPath = path.dirname(workerPath);
+				workerPath = path.resolve(this.workspaceFolder.uri.fsPath, adapterScript);
+			}
 			const childProc = fork(
-				require.resolve('./worker/main.js'),
-				[ JSON.stringify(<WorkerArgs>{ 
-					action: 'loadTests', testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled: this.log.enabled
-				}) ],
+				workerPath,
+				[ JSON.stringify(workerArgs) ],
 				{
 					cwd: this.optsReader.getCwd(config),
 					env: this.optsReader.getEnv(config),
@@ -237,6 +244,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		const mochaPath = await this.optsReader.getMochaPath(config);
 		const mochaOpts = await this.optsReader.getMochaOpts(config);
 		const ipcPort = this.optsReader.getIpcPort(config);
+		const adapterScript = this.optsReader.getAdapterScript(config);
 
 		let childProcessFinished = false;
 
@@ -256,11 +264,17 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			};
 
+			let workerPath = require.resolve('./worker/main.js');
+			const workerArgs: WorkerArgs = {
+				action: 'runTests', testFiles, tests, mochaPath, mochaOpts, ipcPort, logEnabled: this.log.enabled
+			};
+			if (adapterScript) {
+				workerArgs.workerPath = path.dirname(workerPath);
+				workerPath = path.resolve(this.workspaceFolder.uri.fsPath, adapterScript);
+			}
 			this.runningTestProcess = fork(
-				require.resolve('./worker/main.js'),
-				[ JSON.stringify(<WorkerArgs> {
-					action: 'runTests', testFiles, tests, mochaPath, mochaOpts, ipcPort, logEnabled: this.log.enabled
-				}) ],
+				workerPath,
+				[ JSON.stringify(workerArgs) ],
 				{
 					cwd: this.optsReader.getCwd(config),
 					env: this.optsReader.getEnv(config),

@@ -8,7 +8,7 @@ import nodeRequire = require('./nodeRequire');
 
 export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => void, onFinished?: () => void) {
 
-	const { testFiles, tests, mochaPath, mochaOpts, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
+	const { testFiles, tests, mochaPath, mochaOpts, logEnabled } = workerArgs;
 
 	try {
 
