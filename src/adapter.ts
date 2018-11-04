@@ -216,7 +216,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		});
 	}
 
-	async run(testsToRun: string[], execArgv: string[] = []): Promise<void> {
+	async run(testsToRun: string[], debuggerPort?: number): Promise<void> {
 
 		if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
 
@@ -271,6 +271,11 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			if (adapterScript) {
 				workerArgs.workerPath = path.dirname(workerPath);
 				workerPath = path.resolve(this.workspaceFolder.uri.fsPath, adapterScript);
+				workerArgs.debuggerPort = debuggerPort
+			}
+			const execArgv = [];
+			if (debuggerPort && !adapterScript) {
+				execArgv.push(`--inspect-brk=${debuggerPort}`);
 			}
 			this.runningTestProcess = fork(
 				workerPath,
@@ -334,7 +339,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		const debuggerPort = this.optsReader.getDebuggerPort(config);
 		const debuggerConfig = this.optsReader.getDebuggerConfig(config);
 
-		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${debuggerPort}` ]);
+		const testRunPromise = this.run(testsToRun, debuggerPort);
 
 		this.log.info('Starting the debug session');
 		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, debuggerConfig || {
