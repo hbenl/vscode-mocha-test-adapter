@@ -3,7 +3,8 @@ import * as fs from 'fs';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { patchMocha } from './patchMocha';
-import { copyOwnProperties, ErrorInfo, WorkerArgs } from '../util';
+import { WorkerArgs, ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
+import { copyOwnProperties } from '../util';
 import nodeRequire = require('./nodeRequire');
 
 export function loadTests(workerArgs: WorkerArgs, sendMessage: (message: any) => void, onFinished?: () => void) {

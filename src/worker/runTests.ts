@@ -2,7 +2,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as RegExEscape from 'escape-string-regexp';
 import ReporterFactory from './reporter';
-import { copyOwnProperties, WorkerArgs } from '../util';
+import { WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
+import { copyOwnProperties } from '../util';
 import nodeRequire = require('./nodeRequire');
 
 export function runTests(workerArgs: WorkerArgs, sendMessage: (message: any) => void, onFinished?: () => void) {

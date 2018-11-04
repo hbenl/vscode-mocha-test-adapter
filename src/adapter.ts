@@ -5,7 +5,8 @@ import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLo
 import { Minimatch } from 'minimatch';
 import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
-import { ErrorInfo, copyOwnProperties, WorkerArgs } from './util';
+import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
+import { copyOwnProperties } from './util';
 import { createServer } from './ipc/server';
 
 interface IDisposable {

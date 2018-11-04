@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { MochaOpts } from './opts';
+import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { copyOwnProperties } from './util';
 
