@@ -169,9 +169,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			}
 
 			const childProc = fork(
-				require.resolve('./worker/loadTests.js'),
+				require.resolve('./worker/main.js'),
 				[ JSON.stringify(<WorkerArgs>{ 
-					testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled: this.log.enabled
+					action: 'loadTests', testFiles, mochaPath, mochaOpts, monkeyPatch, ipcPort, logEnabled: this.log.enabled
 				}) ],
 				{
 					cwd: this.optsReader.getCwd(config),
@@ -269,9 +269,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			}
 
 			this.runningTestProcess = fork(
-				require.resolve('./worker/runTests.js'),
+				require.resolve('./worker/main.js'),
 				[ JSON.stringify(<WorkerArgs> {
-					testFiles, tests, mochaPath, mochaOpts, ipcPort, logEnabled: this.log.enabled
+					action: 'runTests', testFiles, tests, mochaPath, mochaOpts, ipcPort, logEnabled: this.log.enabled
 				}) ],
 				{
 					cwd: this.optsReader.getCwd(config),
