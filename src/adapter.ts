@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as net from 'net';
 import { ChildProcess, fork } from 'child_process';
 import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
@@ -7,7 +8,7 @@ import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
 import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { copyOwnProperties } from './util';
-import { createServer } from './ipc/server';
+import { receiveConnection, readMessages } from 'vscode-test-adapter-remoting-util';
 
 interface IDisposable {
 	dispose(): void;
@@ -156,18 +157,6 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			};
 
-			let ipcServer: vscode.Disposable | undefined;
-			if (ipcPort) {
-				try {
-					ipcServer = await createServer(ipcPort, handler, this.log);
-				} catch (err) {
-					this.log.error(`Couldn't establish IPC: ${JSON.stringify(copyOwnProperties(err))}`)
-					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `Couldn't establish IPC:\n${err.stack}` });
-					resolve();
-					return;
-				}
-			}
-
 			const childProc = fork(
 				require.resolve('./worker/main.js'),
 				[ JSON.stringify(<WorkerArgs>{ 
@@ -181,7 +170,18 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			);
 
-			if (!ipcServer) {
+			let ipcSocket: net.Socket | undefined;
+			if (ipcPort) {
+				try {
+					ipcSocket = await receiveConnection(ipcPort, { log: this.log });
+					readMessages(ipcSocket, handler);
+				} catch (err) {
+					this.log.error(`Couldn't establish IPC: ${JSON.stringify(copyOwnProperties(err))}`)
+					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `Couldn't establish IPC:\n${err.stack}` });
+					resolve();
+					return;
+				}
+			} else {
 				childProc.on('message', handler);
 			}
 
@@ -189,8 +189,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				this.log.info('Worker finished');
 				if (!testsLoaded) {
 					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
-					if (ipcServer) {
-						ipcServer.dispose();
+					if (ipcSocket) {
+						ipcSocket.end();
 					}
 					resolve();
 				}
@@ -200,8 +200,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				if (this.log.enabled) this.log.error(`Error from child process: ${JSON.stringify(copyOwnProperties(err))}`);
 				if (!testsLoaded) {
 					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: err.stack });
-					if (ipcServer) {
-						ipcServer.dispose();
+					if (ipcSocket) {
+						ipcSocket.end();
 					}
 					resolve();
 				}
@@ -256,18 +256,6 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			};
 
-			let ipcServer: vscode.Disposable | undefined;
-			if (ipcPort) {
-				try {
-					ipcServer = await createServer(ipcPort, handler, this.log);
-				} catch (err) {
-					this.log.error(`Couldn't establish IPC: ${JSON.stringify(copyOwnProperties(err))}`)
-					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-					resolve();
-					return;
-				}
-			}
-
 			this.runningTestProcess = fork(
 				require.resolve('./worker/main.js'),
 				[ JSON.stringify(<WorkerArgs> {
@@ -281,7 +269,18 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			);
 
-			if (!ipcServer) {
+			let ipcSocket: net.Socket | undefined;
+			if (ipcPort) {
+				try {
+					ipcSocket = await receiveConnection(ipcPort, { log: this.log });
+					readMessages(ipcSocket, handler);
+				} catch (err) {
+					this.log.error(`Couldn't establish IPC: ${JSON.stringify(copyOwnProperties(err))}`)
+					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+					resolve();
+					return;
+				}
+			} else {
 				this.runningTestProcess.on('message', handler);
 			}
 
@@ -291,8 +290,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				if (!childProcessFinished) {
 					childProcessFinished = true;
 					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-					if (ipcServer) {
-						ipcServer.dispose();
+					if (ipcSocket) {
+						ipcSocket.end();
 					}
 					resolve();
 				}
@@ -304,8 +303,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				if (!childProcessFinished) {
 					childProcessFinished = true;
 					this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-					if (ipcServer) {
-						ipcServer.dispose();
+					if (ipcSocket) {
+						ipcSocket.end();
 					}
 					resolve();
 				}
