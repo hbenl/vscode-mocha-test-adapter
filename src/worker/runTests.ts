@@ -18,7 +18,7 @@ try {
 
 	const Mocha: typeof import('mocha') = require(mochaPath);
 
-	const regExp = testsToRun.map(RegExEscape).join('|');
+	const regExp = new RegExp(testsToRun.map(RegExEscape).join('|'));
 
 	const cwd = process.cwd();
 	module.paths.push(cwd, path.join(cwd, 'node_modules'));

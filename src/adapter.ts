@@ -175,7 +175,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					}
 				});
 
-				childProc.on('exit', () => {
+				childProc.on('close', () => {
 					this.log.info('Worker finished');
 					if (!testsLoaded) {
 						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });

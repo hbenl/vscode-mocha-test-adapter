@@ -8,8 +8,20 @@
             "problemMatcher": [
                 "$tsc-watch"
             ],
-            "label": "Watch Mocha",
-            "auto": true
+            "label": "Watch Mocha"
+        },
+        {
+            "type": "npm",
+            "script": "watch",
+            "problemMatcher": "$tsc-watch",
+            "isBackground": true,
+            "presentation": {
+                "reveal": "never"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

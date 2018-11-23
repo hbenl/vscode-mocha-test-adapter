@@ -31,6 +31,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "rebuild": "npm run clean && npm run build",
+    "test": "npm run build && node ./node_modules/vscode/bin/test",
     "package": "vsce package",
     "publish": "vsce publish"
   },
