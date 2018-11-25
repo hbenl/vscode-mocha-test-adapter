@@ -130,7 +130,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					],
 					{
 						cwd: this.optsReader.getCwd(config),
-						env: this.optsReader.getEnv(config),
+						env: this.optsReader.getEnv(config, mochaOpts),
 						execPath: nodePath,
 						execArgv: [] // ['--inspect-brk=12345']
 					}
@@ -245,7 +245,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					],
 					{
 						cwd: this.optsReader.getCwd(config),
-						env: this.optsReader.getEnv(config),
+						env: this.optsReader.getEnv(config, mochaOpts),
 						execPath: nodePath,
 						execArgv,
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]

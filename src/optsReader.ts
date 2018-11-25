@@ -33,7 +33,7 @@ export class MochaOptsReader {
 		return testFiles;
 	}
 
-	getEnv(config: vscode.WorkspaceConfiguration): NodeJS.ProcessEnv {
+	getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): NodeJS.ProcessEnv {
 
 		const processEnv = process.env;
 		const configEnv: { [prop: string]: any } = config.get('env') || {};
@@ -41,6 +41,11 @@ export class MochaOptsReader {
 		if (this.log.enabled) this.log.debug(`Using environment variable config: ${JSON.stringify(configEnv)}`);
 
 		const resultEnv = { ...processEnv };
+
+		// workaround for esm not working when mocha is loaded programmatically (see #12)
+		if (mochaOpts.requires.indexOf('esm') >= 0) {
+			resultEnv['NYC_ROOT_ID'] = '';
+		}
 
 		for (const prop in configEnv) {
 			const val = configEnv[prop];
