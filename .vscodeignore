@@ -4,4 +4,5 @@ out/test/**
 package-lock.json
 tsconfig.json
 .vscode/**
+.vscode-test/**
 .gitignore
