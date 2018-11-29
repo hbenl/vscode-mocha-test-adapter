@@ -60,13 +60,15 @@ export default (sendMessage: (message: any) => void) => {
 				if (err.stack) {
 					const parsedStack = parseStackTrace(err);
 					for (const stackFrame of parsedStack) {
-						const filename = path.resolve(stackFrame.getFileName());
-						if (filename === test.file) {
-							decorations.push({
-								line: stackFrame.getLineNumber() - 1,
-								message: err.message
-							});
-							break;
+						const filename = stackFrame.getFileName();
+						if (typeof filename === 'string') {
+							if (path.resolve(filename) === test.file) {
+								decorations.push({
+									line: stackFrame.getLineNumber() - 1,
+									message: err.message
+								});
+								break;
+							}
 						}
 					}
 				}
