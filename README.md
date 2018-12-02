@@ -89,7 +89,7 @@ ID                                 | Command
 ## Troubleshooting
 If the Test view doesn't show your tests or anything else doesn't work as expected, you can turn on diagnostic logging using one of the following configuration options
 (note: in multi-root workspaces, these options are always taken from the first workspace folder):
-* `mochaExplorer.logpanel`: Write diagnotic logs to an output panel
+* `mochaExplorer.logpanel`: Write diagnostic logs to an output panel
 * `mochaExplorer.logfile`: Write diagnostic logs to the given file
 
 There is a [bug in Node 10.6.0 - 10.9.0](https://github.com/nodejs/node/issues/21671) that breaks this adapter.
