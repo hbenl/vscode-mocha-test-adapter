@@ -1,24 +1,18 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as RegExEscape from 'escape-string-regexp';
-import { MochaOpts } from '../opts';
 import ReporterFactory from './reporter';
-import { copyOwnProperties } from '../util';
+import { copyOwnProperties, WorkerArgs } from '../util';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : () => {};
 
-let logEnabled = false;
-try {
+const { testFiles, tests, mochaPath, mochaOpts, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
 
-	const files = <string[]>JSON.parse(process.argv[2]);
-	const testsToRun = <string[]>JSON.parse(process.argv[3]);
-	const mochaPath = <string>JSON.parse(process.argv[4]);
-	const mochaOpts = <MochaOpts>JSON.parse(process.argv[5]);
-	const logEnabled = <boolean>JSON.parse(process.argv[6]);
+try {
 
 	const Mocha: typeof import('mocha') = require(mochaPath);
 
-	const regExp = new RegExp(testsToRun.map(RegExEscape).join('|'));
+	const regExp = new RegExp(tests!.map(RegExEscape).join('|'));
 
 	const cwd = process.cwd();
 	module.paths.push(cwd, path.join(cwd, 'node_modules'));
@@ -38,7 +32,7 @@ try {
 	mocha.timeout(mochaOpts.timeout);
 	mocha.suite.retries(mochaOpts.retries);
 
-	for (const file of files) {
+	for (const file of testFiles) {
 		mocha.addFile(file);
 	}
 

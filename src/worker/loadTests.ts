@@ -2,20 +2,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { MochaOpts } from '../opts';
 import { patchMocha } from './patchMocha';
-import { copyOwnProperties, ErrorInfo } from '../util';
+import { copyOwnProperties, ErrorInfo, WorkerArgs } from '../util';
 
 const sendMessage = process.send ? (message: any) => process.send!(message) : console.log;
 
-let logEnabled = false;
-try {
+const { testFiles, mochaPath, mochaOpts, monkeyPatch, logEnabled } = <WorkerArgs>JSON.parse(process.argv[2]);
 
-	const files = <string[]>JSON.parse(process.argv[2]);
-	const mochaPath = <string>JSON.parse(process.argv[3]);
-	const mochaOpts = <MochaOpts>JSON.parse(process.argv[4]);
-	const monkeyPatch = <boolean>JSON.parse(process.argv[5]);
-	logEnabled = <boolean>JSON.parse(process.argv[6]);
+try {
 
 	const Mocha: typeof import('mocha') = require(mochaPath);
 
@@ -41,7 +35,7 @@ try {
 	mocha.ui(mochaOpts.ui);
 
 	if (logEnabled) sendMessage('Loading files');
-	for (const file of files) {
+	for (const file of testFiles) {
 		mocha.addFile(file);
 	}
 	mocha.loadFiles();
