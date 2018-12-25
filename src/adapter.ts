@@ -121,9 +121,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 				const childProc = fork(
 					require.resolve('./worker/loadTests.js'),
-					[ JSON.stringify(<WorkerArgs>{
-						testFiles, mochaPath, mochaOpts, monkeyPatch, logEnabled: this.log.enabled
-					}) ],
+					[],
 					{
 						cwd: this.optsReader.getCwd(config),
 						env: this.optsReader.getEnv(config, mochaOpts),
@@ -131,6 +129,10 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 						execArgv: [] // ['--inspect-brk=12345']
 					}
 				);
+
+				childProc.send(JSON.stringify(<WorkerArgs>{
+					testFiles, mochaPath, mochaOpts, monkeyPatch, logEnabled: this.log.enabled
+				}));
 
 				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
@@ -232,9 +234,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 				this.runningTestProcess = fork(
 					require.resolve('./worker/runTests.js'),
-					[ JSON.stringify(<WorkerArgs>{
-						testFiles, tests, mochaPath, mochaOpts, logEnabled: this.log.enabled
-					}) ],
+					[],
 					{
 						cwd: this.optsReader.getCwd(config),
 						env: this.optsReader.getEnv(config, mochaOpts),
@@ -243,6 +243,10 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
+
+				this.runningTestProcess.send(JSON.stringify(<WorkerArgs>{
+					testFiles, tests, mochaPath, mochaOpts, logEnabled: this.log.enabled
+				}) + ' '.repeat(1280*1024));
 
 				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
 
