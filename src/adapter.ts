@@ -19,7 +19,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		'mochaExplorer.mochaPath', 'mochaExplorer.monkeyPatch'
 	];
 	private static readonly autorunConfigKeys = [
-		'mochaExplorer.timeout', 'mochaExplorer.retries'
+		'mochaExplorer.timeout', 'mochaExplorer.retries', 'mochaExplorer.pruneFiles'
 	];
 
 	private optsReader: MochaOptsReader;
@@ -204,24 +204,36 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
 
-			let tests: string[] = [];
+			const config = this.optsReader.getConfiguration();
+
+			const testInfos: TestInfo[] = [];
 			for (const suiteOrTestId of testsToRun) {
 				const node = this.nodesById.get(suiteOrTestId);
 				if (node) {
-					this.collectTests(node, tests);
+					this.collectTests(node, testInfos);
 				}
 			}
-			tests = tests.map(test => {
-				const separatorIndex = test.indexOf(': ');
+			const tests = testInfos.map(test => {
+				const separatorIndex = test.id.indexOf(': ');
 				if (separatorIndex >= 0) {
-					return test.substr(separatorIndex + 2);
+					return test.id.substr(separatorIndex + 2);
 				} else {
-					return test;
+					return test.id;
 				}
 			});
 
-			const config = this.optsReader.getConfiguration();
-			const testFiles = await this.optsReader.lookupFiles(config);
+			let testFiles: string[] | undefined = undefined;
+			if (this.optsReader.getPruneFiles(config)) {
+				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
+				if (testFileSet.size > 0) {
+					testFiles = <string[]>[ ...testFileSet ];
+					if (this.log.enabled) this.log.debug(`Using test files ${JSON.stringify(testFiles)}`);
+				}
+			}
+			if (testFiles === undefined) {
+				testFiles = await this.optsReader.lookupFiles(config);
+			}
+
 			const nodePath = await this.optsReader.getNodePath(config);
 			const mochaPath = await this.optsReader.getMochaPath(config);
 			const mochaOpts = await this.optsReader.getMochaOpts(config);
@@ -246,7 +258,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 				this.runningTestProcess.send(JSON.stringify(<WorkerArgs>{
 					testFiles, tests, mochaPath, mochaOpts, logEnabled: this.log.enabled
-				}) + ' '.repeat(1280*1024));
+				}));
 
 				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
 
@@ -383,13 +395,13 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		}
 	}
 
-	private collectTests(info: TestSuiteInfo | TestInfo, tests: string[]): void {
+	private collectTests(info: TestSuiteInfo | TestInfo, tests: TestInfo[]): void {
 		if (info.type === 'suite') {
 			for (const child of info.children) {
 				this.collectTests(child, tests);
 			}
 		} else {
-			tests.push(info.id);
+			tests.push(info);
 		}
 	}
 }

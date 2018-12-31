@@ -218,4 +218,8 @@ export class MochaOptsReader {
 	getDebuggerConfig(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>('debuggerConfig') || undefined;
 	}
+
+	getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {
+		return config.get<boolean>('pruneFiles') || false;
+	}
 }

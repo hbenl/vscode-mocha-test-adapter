@@ -75,6 +75,12 @@
           "default": "test/**/*.js",
           "scope": "resource"
         },
+        "mochaExplorer.pruneFiles": {
+          "description": "Only load the test files needed for the current test run (the default is to load all configured files)",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
+        },
         "mochaExplorer.env": {
           "description": "Environment variables to be set when running the tests",
           "type": "object",
@@ -119,7 +125,7 @@
           "scope": "resource"
         },
         "mochaExplorer.exit": {
-          "description": "shutdown the Mocha process (using process.exit()) after the last test has been run",
+          "description": "Shutdown the Mocha process (using process.exit()) after the last test has been run",
           "type": "boolean",
           "default": false,
           "scope": "resource"
@@ -149,7 +155,7 @@
           "scope": "resource"
         },
         "mochaExplorer.monkeyPatch": {
-          "description": "apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites",
+          "description": "Apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites",
           "type": "boolean",
           "default": true,
           "scope": "resource"
@@ -170,12 +176,12 @@
           "scope": "resource"
         },
         "mochaExplorer.logpanel": {
-          "description": "write diagnotic logs to an output panel",
+          "description": "Write diagnotic logs to an output panel",
           "type": "boolean",
           "scope": "resource"
         },
         "mochaExplorer.logfile": {
-          "description": "write diagnostic logs to the given file",
+          "description": "Write diagnostic logs to the given file",
           "type": "string",
           "scope": "resource"
         }
