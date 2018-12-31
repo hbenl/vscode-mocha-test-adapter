@@ -2,13 +2,16 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Watch Mocha",
             "type": "typescript",
-            "tsconfig": "vscode-mocha-test-adapter/tsconfig.json",
+            "tsconfig": "tsconfig.json",
             "option": "watch",
             "problemMatcher": [
                 "$tsc-watch"
             ],
-            "label": "Watch Mocha"
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
         },
         {
             "type": "npm",
