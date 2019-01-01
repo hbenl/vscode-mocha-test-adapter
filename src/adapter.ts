@@ -1,8 +1,6 @@
-import * as path from 'path';
 import { ChildProcess, fork } from 'child_process';
 import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
-import { Minimatch } from 'minimatch';
 import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
 import { copyOwnProperties, ErrorInfo, WorkerArgs } from './util';
@@ -79,18 +77,12 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			}
 		}));
 
-		this.disposables.push(vscode.workspace.onDidSaveTextDocument(document => {
+		this.disposables.push(vscode.workspace.onDidSaveTextDocument(async document => {
 
 			const filename = document.uri.fsPath;
 			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
-			const config = this.optsReader.getConfiguration();
-			const relativeGlob = this.optsReader.getTestFilesGlob(config);
-			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
-			const matcher = new Minimatch(absoluteGlob);
-			const mochaOptsFile = config.get<string>('optsFile');
-			const resolvedMochaOptsFile = mochaOptsFile ? path.resolve(this.workspaceFolder.uri.fsPath, mochaOptsFile) : undefined;
 
-			if (matcher.match(filename) || (filename === resolvedMochaOptsFile)) {
+			if (await this.optsReader.isTestFile(filename)) {
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
 				this.load();
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
@@ -109,10 +101,11 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolder.uri.fsPath}`);
 
 			const config = this.optsReader.getConfiguration();
-			const testFiles = await this.optsReader.lookupFiles(config);
+			const mochaOptsAndFiles = await this.optsReader.readMochaOptsFile(config);
+			const testFiles = await this.optsReader.lookupFiles(config, mochaOptsAndFiles.globs, mochaOptsAndFiles.files);
 			const nodePath = await this.optsReader.getNodePath(config);
 			const mochaPath = await this.optsReader.getMochaPath(config);
-			const mochaOpts = await this.optsReader.getMochaOpts(config);
+			const mochaOpts = await this.optsReader.getMochaOpts(config, mochaOptsAndFiles.mochaOpts);
 			const monkeyPatch = this.optsReader.getMonkeyPatch(config);
 
 			let testsLoaded = false;
@@ -205,6 +198,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
 
 			const config = this.optsReader.getConfiguration();
+			const mochaOptsAndFiles = await this.optsReader.readMochaOptsFile(config);
 
 			const testInfos: TestInfo[] = [];
 			for (const suiteOrTestId of testsToRun) {
@@ -231,12 +225,12 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			}
 			if (testFiles === undefined) {
-				testFiles = await this.optsReader.lookupFiles(config);
+				testFiles = await this.optsReader.lookupFiles(config, mochaOptsAndFiles.globs, mochaOptsAndFiles.files);
 			}
 
 			const nodePath = await this.optsReader.getNodePath(config);
 			const mochaPath = await this.optsReader.getMochaPath(config);
-			const mochaOpts = await this.optsReader.getMochaOpts(config);
+			const mochaOpts = await this.optsReader.getMochaOpts(config, mochaOptsAndFiles.mochaOpts);
 
 			let childProcessFinished = false;
 

@@ -4,8 +4,56 @@ import * as vscode from 'vscode';
 import { MochaOpts } from './opts';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { copyOwnProperties } from './util';
+import { Minimatch } from 'minimatch';
+
+export interface MochaOptsAndFiles {
+	mochaOpts: Partial<MochaOpts>;
+	globs: string[];
+	files: string[];
+}
 
 export class MochaOptsReader {
+
+	private static readonly booleanOpts = [
+		'--allow-uncaught',
+		'--async-only', '-A',
+		'--bail', '-b',
+		'--check-leaks',
+		'--color', '--colors', '-c',
+		'--debug', '-d',
+		'--debug-brk',
+		'--delay',
+		'--diff',
+		'--es_staging',
+		'--exit',
+		'--expose-gc', '-gc',
+		'--forbid-only',
+		'--forbid-pending',
+		'--full-trace',
+		'--growl', '-G',
+		'--icu-data-dir',
+		'--inline-diffs',
+		'--inspect',
+		'--inspect-brk',
+		'--invert', '-i',
+		'--log-timer-events',
+		'--napi-modules',
+		'--no-colors', '-C',
+		'--no-deprecation',
+		'--no-timeouts',
+		'--no-warnings',
+		'--perf-basic-prof',
+		'--preserve-symlinks',
+		'--prof',
+		'--recursive',
+		'--sort', '-S',
+		'--throw-deprecation',
+		'--trace',
+		'--trace-deprecation',
+		'--trace-warnings',
+		'--use_strict',
+		'--watch', '-w'
+	];
 
 	constructor(
 		private readonly workspaceFolder: vscode.WorkspaceFolder,
@@ -16,21 +64,82 @@ export class MochaOptsReader {
 		return vscode.workspace.getConfiguration('mochaExplorer', this.workspaceFolder.uri);
 	}
 
-	getTestFilesGlob(config: vscode.WorkspaceConfiguration): string {
-		return config.get<string>('files') || 'test/**/*.js';
+	getTestFilesGlobs(config: vscode.WorkspaceConfiguration, globsFromOptsFile: string[]): string[] {
+
+		const globConfigValues = config.inspect<string>('files')!;
+		const globFromConfig =
+			globConfigValues.workspaceFolderValue ||
+			globConfigValues.workspaceValue ||
+			globConfigValues.globalValue;
+
+		if (globFromConfig) {
+			return [ globFromConfig ];
+		} else if (globsFromOptsFile.length > 0) {
+			return globsFromOptsFile;
+		} else {
+			return [ 'test/**/*.js' ]
+		}
 	}
 
-	async lookupFiles(config: vscode.WorkspaceConfiguration): Promise<string[]> {
+	async lookupFiles(
+		config: vscode.WorkspaceConfiguration,
+		globsFromOptsFile: string[],
+		filesFromOptsFile: string[]
+	): Promise<string[]> {
 
-		const testFilesGlob = this.getTestFilesGlob(config);
-		if (this.log.enabled) this.log.debug(`Looking for test files ${testFilesGlob} in ${this.workspaceFolder.uri.fsPath}`);
-		const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
+		const globs = this.getTestFilesGlobs(config, globsFromOptsFile);
+		if (this.log.enabled) this.log.debug(`Looking for test files ${JSON.stringify(globs)} in ${this.workspaceFolder.uri.fsPath}`);
 
-		const fileUris = await vscode.workspace.findFiles(relativePattern);
+		const testFiles: string[] = [];
+		for (const testFilesGlob of globs) {
+			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
+			const fileUris = await vscode.workspace.findFiles(relativePattern);
+			testFiles.push(...fileUris.map(uri => uri.fsPath));
+		}
 
-		const testFiles = fileUris.map(uri => uri.fsPath);
-		if (this.log.enabled) this.log.debug(`Found test files ${JSON.stringify(testFiles)}`);
-		return testFiles;
+		const resolvedFilesFromOptsFile = filesFromOptsFile
+			.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
+
+		if (this.log.enabled) {
+			this.log.debug(`Found test files ${JSON.stringify(testFiles)}`);
+			if (filesFromOptsFile.length > 0) {
+				this.log.debug(`Adding files ${JSON.stringify(resolvedFilesFromOptsFile)}`);
+			}
+		}
+
+		return resolvedFilesFromOptsFile.concat(testFiles);
+	}
+
+	async isTestFile(absolutePath: string): Promise<boolean> {
+
+		const config = this.getConfiguration();
+		const optsFile = config.get<string>('optsFile');
+		if (optsFile) {
+			const resolvedOptsFile = path.resolve(this.workspaceFolder.uri.fsPath, optsFile);
+			if (absolutePath === resolvedOptsFile) {
+				return true;
+			}
+		}
+
+		const mochaOptsAndFiles = await this.readMochaOptsFile(config);
+
+		const globs = this.getTestFilesGlobs(config, mochaOptsAndFiles.globs);
+		for (const relativeGlob of globs) {
+			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
+			const matcher = new Minimatch(absoluteGlob);
+			if (matcher.match(absolutePath)) {
+				return true;
+			}
+		}
+
+		for (const file of mochaOptsAndFiles.files) {
+			const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
+			if (absolutePath === resolvedFile) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): NodeJS.ProcessEnv {
@@ -67,17 +176,22 @@ export class MochaOptsReader {
 		return cwd;
 	}
 
-	async readMochaOptsFile(file: string): Promise<Partial<MochaOpts>> {
+	readMochaOptsFile(config: vscode.WorkspaceConfiguration): Promise<MochaOptsAndFiles> {
 
+		const file = config.get<string>('optsFile');
+		if (!file) {
+			return Promise.resolve({ mochaOpts: {}, globs: [], files: [] });
+		}
 		const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
 		if (this.log.enabled) this.log.debug(`Looking for mocha options in ${resolvedFile}`);
 
-		return new Promise<Partial<MochaOpts>>(resolve => {
+		return new Promise<MochaOptsAndFiles>(resolve => {
 			fs.readFile(resolvedFile, 'utf8', (err, data) => {
 
 				if (err) {
 					if (this.log.enabled) this.log.debug(`Couldn't read mocha.opts file: ${JSON.stringify(copyOwnProperties(err))}`);
-					resolve({});
+					resolve({ mochaOpts: {}, globs: [], files: [] });
+					return;
 				}
 
 				try {
@@ -88,6 +202,8 @@ export class MochaOptsReader {
 						.filter(Boolean)
 						.map(value => value.replace(/%20/g, ' '));
 
+					const globs = this.findPositionalArgs(opts);
+					const files = this.findOptValues(['--file'], opts);
 					const ui = this.findOptValue(['-u', '--ui'], opts);
 					const timeoutString = this.findOptValue(['-t', '--timeout'], opts);
 					const timeout = timeoutString ? Number.parseInt(timeoutString) : undefined;
@@ -97,13 +213,17 @@ export class MochaOptsReader {
 					const exit = (opts.indexOf('--exit') >= 0) ? true : undefined;
 
 					const mochaOpts = { ui, timeout, retries, requires, exit };
-					if (this.log.enabled) this.log.debug(`Options from mocha.opts file: ${JSON.stringify(mochaOpts)}`);
+					if (this.log.enabled) {
+						this.log.debug(`Options from mocha.opts file: ${JSON.stringify(mochaOpts)}`);
+						this.log.debug(`Globs from mocha.opts file: ${JSON.stringify(globs)}`);
+						this.log.debug(`Files from mocha.opts file: ${JSON.stringify(files)}`);
+					}
 
-					resolve(mochaOpts);
+					resolve({ mochaOpts, globs, files });
 
 				} catch (err) {
 					if (this.log.enabled) this.log.debug(`Couldn't parse mocha.opts file: ${JSON.stringify(copyOwnProperties(err))}`);
-					resolve({});
+					resolve({ mochaOpts: {}, globs: [], files: [] });
 				}
 			});
 		});
@@ -142,10 +262,24 @@ export class MochaOptsReader {
 		return values;
 	}
 
-	async getMochaOpts(config: vscode.WorkspaceConfiguration): Promise<MochaOpts> {
+	findPositionalArgs(haystack: string[]): string[] {
 
-		const mochaOptsFile = config.get<string>('optsFile')!;
-		const mochaOptsFromFile = mochaOptsFile ? await this.readMochaOptsFile(mochaOptsFile) : {};
+		const args: string[] = [];
+
+		for (let i = 0; i < haystack.length; i++) {
+			if (haystack[i].startsWith('-')) {
+				if (MochaOptsReader.booleanOpts.indexOf(haystack[i]) < 0) {
+					i++;
+				}
+			} else {
+				args.push(haystack[i]);
+			}
+		}
+
+		return args;
+	}
+
+	async getMochaOpts(config: vscode.WorkspaceConfiguration, mochaOptsFromFile: Partial<MochaOpts>): Promise<MochaOpts> {
 
 		let requires = this.mergeOpts<string | string[]>('require', mochaOptsFromFile.requires, config);
 		if (typeof requires === 'string') {
