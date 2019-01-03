@@ -1,8 +1,9 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as util from 'util';
 import * as RegExEscape from 'escape-string-regexp';
 import ReporterFactory from './reporter';
-import { copyOwnProperties, WorkerArgs } from '../util';
+import { WorkerArgs } from '../util';
 
 if (process.send) {
 	process.once('message', workerArgs => runTests(workerArgs, msg => process.send!(msg)));
@@ -57,7 +58,7 @@ function runTests(workerArgs: string, sendMessage: (message: any) => void) {
 		mocha.run(mochaOpts.exit ? () => process.exit() : undefined);
 
 	} catch (err) {
-		if (_logEnabled) sendMessage(`Caught error ${JSON.stringify(copyOwnProperties(err))}`);
+		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
 		throw err;
 	}
 }

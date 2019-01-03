@@ -1,9 +1,9 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as util from 'util';
 import * as vscode from 'vscode';
 import { MochaOpts } from './opts';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
-import { copyOwnProperties } from './util';
 import { Minimatch } from 'minimatch';
 
 export interface MochaOptsAndFiles {
@@ -189,7 +189,7 @@ export class MochaOptsReader {
 			fs.readFile(resolvedFile, 'utf8', (err, data) => {
 
 				if (err) {
-					if (this.log.enabled) this.log.debug(`Couldn't read mocha.opts file: ${JSON.stringify(copyOwnProperties(err))}`);
+					if (this.log.enabled) this.log.debug(`Couldn't read mocha.opts file: ${util.inspect(err)}`);
 					resolve({ mochaOpts: {}, globs: [], files: [] });
 					return;
 				}
@@ -222,7 +222,7 @@ export class MochaOptsReader {
 					resolve({ mochaOpts, globs, files });
 
 				} catch (err) {
-					if (this.log.enabled) this.log.debug(`Couldn't parse mocha.opts file: ${JSON.stringify(copyOwnProperties(err))}`);
+					if (this.log.enabled) this.log.debug(`Couldn't parse mocha.opts file: ${util.inspect(err)}`);
 					resolve({ mochaOpts: {}, globs: [], files: [] });
 				}
 			});

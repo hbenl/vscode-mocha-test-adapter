@@ -1,9 +1,10 @@
 import { ChildProcess, fork } from 'child_process';
+import * as util from 'util';
 import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
 import { MochaOptsReader } from './optsReader';
-import { copyOwnProperties, ErrorInfo, WorkerArgs } from './util';
+import { ErrorInfo, WorkerArgs } from './util';
 
 interface IDisposable {
 	dispose(): void;
@@ -175,7 +176,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				});
 
 				childProc.on('error', err => {
-					if (this.log.enabled) this.log.error(`Error from child process: ${JSON.stringify(copyOwnProperties(err))}`);
+					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
 					if (!testsLoaded) {
 						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: err.stack });
 						resolve();
@@ -184,7 +185,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			});
 
 		} catch (err) {
-			if (this.log.enabled) this.log.error(`Error while loading tests: ${JSON.stringify(copyOwnProperties(err))}`);
+			if (this.log.enabled) this.log.error(`Error while loading tests: ${util.inspect(err)}`);
 			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: err.stack });
 		}
 	}
@@ -304,7 +305,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				});
 
 				this.runningTestProcess.on('error', err => {
-					if (this.log.enabled) this.log.error(`Error from child process: ${JSON.stringify(copyOwnProperties(err))}`);
+					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
 					this.runningTestProcess = undefined;
 					if (!childProcessFinished) {
 						childProcessFinished = true;
@@ -315,7 +316,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			});
 
 		} catch (err) {
-			if (this.log.enabled) this.log.error(`Error while running tests: ${JSON.stringify(copyOwnProperties(err))}`);
+			if (this.log.enabled) this.log.error(`Error while running tests: ${util.inspect(err)}`);
 			this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
 		}
 	}

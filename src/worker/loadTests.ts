@@ -1,9 +1,10 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as util from 'util';
 import * as RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { patchMocha } from './patchMocha';
-import { copyOwnProperties, ErrorInfo, WorkerArgs } from '../util';
+import { ErrorInfo, WorkerArgs } from '../util';
 
 if (process.send) {
 	process.once('message', workerArgs => loadTests(workerArgs, msg => process.send!(msg)));
@@ -65,7 +66,7 @@ function loadTests(workerArgs: string, sendMessage: (message: any) => void) {
 		}
 
 	} catch (err) {
-		if (_logEnabled) sendMessage(`Caught error ${JSON.stringify(copyOwnProperties(err))}`);
+		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
 		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: err.stack });
 		throw err;
 	}
