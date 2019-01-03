@@ -189,7 +189,13 @@ export class MochaOptsReader {
 			fs.readFile(resolvedFile, 'utf8', (err, data) => {
 
 				if (err) {
-					if (this.log.enabled) this.log.debug(`Couldn't read mocha.opts file: ${util.inspect(err)}`);
+					if (this.log.enabled) {
+						if (err.code === 'ENOENT') {
+							this.log.debug('Couldn\'t read mocha.opts file');
+						} else {
+							this.log.debug(`Couldn't read mocha.opts file: ${util.inspect(err)}`);
+						}
+					}
 					resolve({ mochaOpts: {}, globs: [], files: [] });
 					return;
 				}
