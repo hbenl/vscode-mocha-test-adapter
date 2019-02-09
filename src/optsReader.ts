@@ -3,8 +3,7 @@ import * as fs from 'fs';
 import * as util from 'util';
 import * as vscode from 'vscode';
 import { MochaOpts } from './opts';
-import { detectNodePath, Log } from 'vscode-test-adapter-util';
-import { Minimatch } from 'minimatch';
+import { Log } from 'vscode-test-adapter-util';
 
 export interface MochaOptsAndFiles {
 	mochaOpts: Partial<MochaOpts>;
@@ -60,125 +59,13 @@ export class MochaOptsReader {
 		private readonly log: Log
 	) {}
 
-	getConfiguration(): vscode.WorkspaceConfiguration {
-		return vscode.workspace.getConfiguration('mochaExplorer', this.workspaceFolder.uri);
-	}
-
-	getTestFilesGlobs(config: vscode.WorkspaceConfiguration, globsFromOptsFile: string[]): string[] {
-
-		const globConfigValues = config.inspect<string>('files')!;
-		const globFromConfig =
-			globConfigValues.workspaceFolderValue ||
-			globConfigValues.workspaceValue ||
-			globConfigValues.globalValue;
-
-		if (globFromConfig) {
-			return [ globFromConfig ];
-		} else if (globsFromOptsFile.length > 0) {
-			return globsFromOptsFile;
-		} else {
-			return [ 'test/**/*.js' ]
-		}
-	}
-
-	async lookupFiles(
-		config: vscode.WorkspaceConfiguration,
-		globsFromOptsFile: string[],
-		filesFromOptsFile: string[]
-	): Promise<string[]> {
-
-		const globs = this.getTestFilesGlobs(config, globsFromOptsFile);
-		if (this.log.enabled) this.log.debug(`Looking for test files ${JSON.stringify(globs)} in ${this.workspaceFolder.uri.fsPath}`);
-
-		const testFiles: string[] = [];
-		for (const testFilesGlob of globs) {
-			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
-			const fileUris = await vscode.workspace.findFiles(relativePattern);
-			testFiles.push(...fileUris.map(uri => uri.fsPath));
-		}
-
-		const resolvedFilesFromOptsFile = filesFromOptsFile
-			.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
-
-		if (this.log.enabled) {
-			this.log.debug(`Found test files ${JSON.stringify(testFiles)}`);
-			if (filesFromOptsFile.length > 0) {
-				this.log.debug(`Adding files ${JSON.stringify(resolvedFilesFromOptsFile)}`);
-			}
-		}
-
-		return resolvedFilesFromOptsFile.concat(testFiles);
-	}
-
-	async isTestFile(absolutePath: string): Promise<boolean> {
-
-		const config = this.getConfiguration();
-		const optsFile = config.get<string>('optsFile');
-		if (optsFile) {
-			const resolvedOptsFile = path.resolve(this.workspaceFolder.uri.fsPath, optsFile);
-			if (absolutePath === resolvedOptsFile) {
-				return true;
-			}
-		}
-
-		const mochaOptsAndFiles = await this.readMochaOptsFile(config);
-
-		const globs = this.getTestFilesGlobs(config, mochaOptsAndFiles.globs);
-		for (const relativeGlob of globs) {
-			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
-			const matcher = new Minimatch(absoluteGlob);
-			if (matcher.match(absolutePath)) {
-				return true;
-			}
-		}
-
-		for (const file of mochaOptsAndFiles.files) {
-			const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
-			if (absolutePath === resolvedFile) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): NodeJS.ProcessEnv {
-
-		const processEnv = process.env;
-		const configEnv: { [prop: string]: any } = config.get('env') || {};
-
-		if (this.log.enabled) this.log.debug(`Using environment variable config: ${JSON.stringify(configEnv)}`);
-
-		const resultEnv = { ...processEnv };
-
-		// workaround for esm not working when mocha is loaded programmatically (see #12)
-		if (mochaOpts.requires.indexOf('esm') >= 0) {
-			resultEnv['NYC_ROOT_ID'] = '';
-		}
-
-		for (const prop in configEnv) {
-			const val = configEnv[prop];
-			if ((val === undefined) || (val === null)) {
-				delete resultEnv.prop;
-			} else {
-				resultEnv[prop] = String(val);
-			}
-		}
-
-		return resultEnv;
-	}
-
-	getCwd(config: vscode.WorkspaceConfiguration): string {
-		const dirname = this.workspaceFolder.uri.fsPath;
-		const configCwd = config.get<string>('cwd');
-		const cwd = configCwd ? path.resolve(dirname, configCwd) : dirname;
-		if (this.log.enabled) this.log.debug(`Using working directory: ${cwd}`);
-		return cwd;
+	getMochaOptsFile(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>('optsFile');
 	}
 
 	readMochaOptsFile(config: vscode.WorkspaceConfiguration): Promise<MochaOptsAndFiles> {
 
-		const file = config.get<string>('optsFile');
+		const file = this.getMochaOptsFile(config);
 		if (!file) {
 			return Promise.resolve({ mochaOpts: {}, globs: [], files: [] });
 		}
@@ -235,7 +122,7 @@ export class MochaOptsReader {
 		});
 	}
 
-	findOptValue(needles: string[], haystack: string[]): string | undefined {
+	private findOptValue(needles: string[], haystack: string[]): string | undefined {
 
 		let index: number | undefined;
 		for (const needle of needles) {
@@ -252,7 +139,7 @@ export class MochaOptsReader {
 		}
 	}
 
-	findOptValues(needles: string[], haystack: string[]): string[] {
+	private findOptValues(needles: string[], haystack: string[]): string[] {
 
 		const values: string[] = [];
 
@@ -268,7 +155,7 @@ export class MochaOptsReader {
 		return values;
 	}
 
-	findPositionalArgs(haystack: string[]): string[] {
+	private findPositionalArgs(haystack: string[]): string[] {
 
 		const args: string[] = [];
 
@@ -283,83 +170,5 @@ export class MochaOptsReader {
 		}
 
 		return args;
-	}
-
-	async getMochaOpts(config: vscode.WorkspaceConfiguration, mochaOptsFromFile: Partial<MochaOpts>): Promise<MochaOpts> {
-
-		let requires = this.mergeOpts<string | string[]>('require', mochaOptsFromFile.requires, config);
-		if (typeof requires === 'string') {
-			if (requires.length > 0) {
-				requires = [ requires ];
-			} else {
-				requires = [];
-			}
-		} else if (typeof requires === 'undefined') {
-			requires = [];
-		}
-
-		const mochaOpts = {
-			ui: this.mergeOpts<string>('ui', mochaOptsFromFile.ui, config),
-			timeout: this.mergeOpts<number>('timeout', mochaOptsFromFile.timeout, config),
-			retries: this.mergeOpts<number>('retries', mochaOptsFromFile.retries, config),
-			requires,
-			exit: this.mergeOpts<boolean>('exit', mochaOptsFromFile.exit, config)
-		}
-
-		if (this.log.enabled) this.log.debug(`Using Mocha options: ${JSON.stringify(mochaOpts)}`);
-
-		return mochaOpts;
-	}
-
-	mergeOpts<T>(configKey: string, fileConfigValue: T | undefined, config: vscode.WorkspaceConfiguration): T {
-
-		const vsCodeConfigValues = config.inspect<T>(configKey)!;
-
-		if (vsCodeConfigValues.workspaceFolderValue !== undefined) {
-			return vsCodeConfigValues.workspaceFolderValue;
-		} else if (vsCodeConfigValues.workspaceValue !== undefined) {
-			return vsCodeConfigValues.workspaceValue;
-		} else if (vsCodeConfigValues.globalValue !== undefined) {
-			return vsCodeConfigValues.globalValue;
-		} else if (fileConfigValue !== undefined) {
-			return fileConfigValue;
-		} else {
-			return vsCodeConfigValues.defaultValue!;
-		}
-	}
-
-	getMochaPath(config: vscode.WorkspaceConfiguration): string {
-		let mochaPath = config.get<string | null>('mochaPath');
-		if (mochaPath) {
-			return path.resolve(this.workspaceFolder.uri.fsPath, mochaPath);
-		} else {
-			return require.resolve('mocha');
-		}
-	}
-
-	async getNodePath(config: vscode.WorkspaceConfiguration): Promise<string | undefined> {
-		let nodePath = config.get<string | null>('nodePath') || undefined;
-		if (nodePath === 'default') {
-			nodePath = await detectNodePath();
-		}
-		if (this.log.enabled) this.log.debug(`Using nodePath: ${nodePath}`);
-		return nodePath;
-	}
-
-	getMonkeyPatch(config: vscode.WorkspaceConfiguration): boolean {
-		let monkeyPatch = config.get<boolean>('monkeyPatch');
-		return (monkeyPatch !== undefined) ? monkeyPatch : true;
-	}
-
-	getDebuggerPort(config: vscode.WorkspaceConfiguration): number {
-		return config.get<number>('debuggerPort') || 9229;
-	}
-
-	getDebuggerConfig(config: vscode.WorkspaceConfiguration): string | undefined {
-		return config.get<string>('debuggerConfig') || undefined;
-	}
-
-	getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {
-		return config.get<boolean>('pruneFiles') || false;
 	}
 }

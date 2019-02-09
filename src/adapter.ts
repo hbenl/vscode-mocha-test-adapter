@@ -3,25 +3,16 @@ import * as util from 'util';
 import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
-import { MochaOptsReader } from './optsReader';
+import { ConfigReader } from './configReader';
 import { ErrorInfo, WorkerArgs } from './util';
 
-interface IDisposable {
+export interface IDisposable {
 	dispose(): void;
 }
 
 export class MochaAdapter implements TestAdapter, IDisposable {
 
-	private static readonly reloadConfigKeys = [
-		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env', 'mochaExplorer.ui',
-		'mochaExplorer.require', 'mochaExplorer.optsFile', 'mochaExplorer.nodePath',
-		'mochaExplorer.mochaPath', 'mochaExplorer.monkeyPatch'
-	];
-	private static readonly autorunConfigKeys = [
-		'mochaExplorer.timeout', 'mochaExplorer.retries', 'mochaExplorer.pruneFiles'
-	];
-
-	private optsReader: MochaOptsReader;
+	private configReader: ConfigReader;
 
 	private disposables: IDisposable[] = [];
 
@@ -51,46 +42,13 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		private readonly log: Log
 	) {
 
-		this.optsReader = new MochaOptsReader(workspaceFolder, log);
+		this.configReader = new ConfigReader(workspaceFolder, () => this.load(), () => this.autorunEmitter.fire(), log);
+		this.disposables.push(this.configReader);
 
 		this.disposables.push(this.testsEmitter);
 		this.disposables.push(this.testStatesEmitter);
 		this.disposables.push(this.autorunEmitter);
 
-		this.disposables.push(vscode.workspace.onDidChangeConfiguration(configChange => {
-
-			this.log.info('Configuration changed');
-
-			for (const configKey of MochaAdapter.reloadConfigKeys) {
-				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
-					if (this.log.enabled) this.log.info(`Reloading because ${configKey} changed`);
-					this.load();
-					return;
-				}
-			}
-
-			for (const configKey of MochaAdapter.autorunConfigKeys) {
-				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
-					if (this.log.enabled) this.log.info(`Sending autorun event because ${configKey} changed`);
-					this.autorunEmitter.fire();
-					return;
-				}
-			}
-		}));
-
-		this.disposables.push(vscode.workspace.onDidSaveTextDocument(async document => {
-
-			const filename = document.uri.fsPath;
-			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
-
-			if (await this.optsReader.isTestFile(filename)) {
-				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				this.load();
-			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
-				this.log.info('Sending autorun event');
-				this.autorunEmitter.fire();
-			}
-		}));
 	}
 
 	async load(): Promise<void> {
@@ -101,13 +59,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolder.uri.fsPath}`);
 
-			const config = this.optsReader.getConfiguration();
-			const mochaOptsAndFiles = await this.optsReader.readMochaOptsFile(config);
-			const testFiles = await this.optsReader.lookupFiles(config, mochaOptsAndFiles.globs, mochaOptsAndFiles.files);
-			const nodePath = await this.optsReader.getNodePath(config);
-			const mochaPath = await this.optsReader.getMochaPath(config);
-			const mochaOpts = await this.optsReader.getMochaOpts(config, mochaOptsAndFiles.mochaOpts);
-			const monkeyPatch = this.optsReader.getMonkeyPatch(config);
+			const config = await this.configReader.currentConfig;
 
 			let testsLoaded = false;
 
@@ -117,15 +69,19 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					require.resolve('./worker/loadTests.js'),
 					[],
 					{
-						cwd: this.optsReader.getCwd(config),
-						env: this.optsReader.getEnv(config, mochaOpts),
-						execPath: nodePath,
+						cwd: config.cwd,
+						env: config.env,
+						execPath: config.nodePath,
 						execArgv: [] // ['--inspect-brk=12345']
 					}
 				);
 
 				childProc.send(JSON.stringify(<WorkerArgs>{
-					testFiles, mochaPath, mochaOpts, monkeyPatch, logEnabled: this.log.enabled
+					testFiles: config.files,
+					mochaPath: config.mochaPath,
+					mochaOpts: config.mochaOpts,
+					monkeyPatch: config.monkeyPatch,
+					logEnabled: this.log.enabled
 				}));
 
 				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
@@ -198,8 +154,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
 
-			const config = this.optsReader.getConfiguration();
-			const mochaOptsAndFiles = await this.optsReader.readMochaOptsFile(config);
+			const config = await this.configReader.currentConfig;
 
 			const testInfos: TestInfo[] = [];
 			for (const suiteOrTestId of testsToRun) {
@@ -218,7 +173,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			});
 
 			let testFiles: string[] | undefined = undefined;
-			if (this.optsReader.getPruneFiles(config)) {
+			if (config.pruneFiles) {
 				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
 				if (testFileSet.size > 0) {
 					testFiles = <string[]>[ ...testFileSet ];
@@ -226,12 +181,8 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 				}
 			}
 			if (testFiles === undefined) {
-				testFiles = await this.optsReader.lookupFiles(config, mochaOptsAndFiles.globs, mochaOptsAndFiles.files);
+				testFiles = config.files;
 			}
-
-			const nodePath = await this.optsReader.getNodePath(config);
-			const mochaPath = await this.optsReader.getMochaPath(config);
-			const mochaOpts = await this.optsReader.getMochaOpts(config, mochaOptsAndFiles.mochaOpts);
 
 			let childProcessFinished = false;
 
@@ -243,16 +194,20 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 					require.resolve('./worker/runTests.js'),
 					[],
 					{
-						cwd: this.optsReader.getCwd(config),
-						env: this.optsReader.getEnv(config, mochaOpts),
-						execPath: nodePath,
+						cwd: config.cwd,
+						env: config.env,
+						execPath: config.nodePath,
 						execArgv,
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
 
 				this.runningTestProcess.send(JSON.stringify(<WorkerArgs>{
-					testFiles, tests, mochaPath, mochaOpts, logEnabled: this.log.enabled
+					testFiles,
+					tests,
+					mochaPath: config.mochaPath,
+					mochaOpts: config.mochaOpts,
+					logEnabled: this.log.enabled
 				}));
 
 				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
@@ -325,18 +280,16 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		if (this.log.enabled) this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
 
-		const config = this.optsReader.getConfiguration();
-		const debuggerPort = this.optsReader.getDebuggerPort(config);
-		const debuggerConfig = this.optsReader.getDebuggerConfig(config);
+		const config = await this.configReader.currentConfig;
 
-		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${debuggerPort}` ]);
+		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${config.debuggerPort}` ]);
 
 		this.log.info('Starting the debug session');
-		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, debuggerConfig || {
+		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, config.debuggerConfig || {
 			name: 'Debug Mocha Tests',
 			type: 'node',
 			request: 'attach',
-			port: debuggerPort,
+			port: config.debuggerPort,
 			protocol: 'inspector',
 			timeout: 30000,
 			stopOnEntry: false
