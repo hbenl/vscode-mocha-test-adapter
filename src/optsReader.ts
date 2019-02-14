@@ -73,7 +73,7 @@ export class MochaOptsReader {
 			globConfigValues.globalValue;
 
 		if (globFromConfig) {
-			return [ globFromConfig ];
+			return [ globFromConfig, ...globsFromOptsFile ];
 		} else if (globsFromOptsFile.length > 0) {
 			return globsFromOptsFile;
 		} else {
