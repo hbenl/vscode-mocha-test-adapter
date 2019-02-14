@@ -163,6 +163,9 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 						}
 
 						testsLoaded = true;
+						if (mochaOpts.exit) {
+							childProc.kill();
+						}
 						resolve();
 					}
 				});
