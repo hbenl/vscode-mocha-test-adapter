@@ -3,53 +3,47 @@ import * as util from 'util';
 import * as vscode from 'vscode';
 import { TestAdapter, TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
-import { ConfigReader } from './configReader';
+import { ConfigReader, AdapterConfig } from './configReader';
 import { ErrorInfo, WorkerArgs } from './util';
 
 export interface IDisposable {
 	dispose(): void;
 }
 
-export class MochaAdapter implements TestAdapter, IDisposable {
+export interface IEventEmitter<T> {
+	fire(event: T): void;
+}
 
-	private configReader: ConfigReader;
+export interface IOutputChannel {
+	append(msg: string): void;
+}
 
-	private disposables: IDisposable[] = [];
+export interface IConfigReader {
+	readonly config: Promise<AdapterConfig>;
+}
 
-	private readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
-	private readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
-	private readonly autorunEmitter = new vscode.EventEmitter<void>();
+export abstract class MochaAdapterCore {
 
-	private nodesById = new Map<string, TestSuiteInfo | TestInfo>();
+	protected abstract readonly workspaceFolderPath: string;
+
+	protected abstract readonly configReader: ConfigReader;
+	
+	protected abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
+	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
+	protected abstract readonly autorunEmitter: IEventEmitter<void>;
+
+	protected abstract startDebugging(config: AdapterConfig): Promise<boolean>;
+	protected abstract activeDebugSession: any;
+	protected abstract onDidTerminateDebugSession(cb: (session: any) => any): IDisposable;
+
+	protected readonly nodesById = new Map<string, TestSuiteInfo | TestInfo>();
 
 	private runningTestProcess: ChildProcess | undefined;
 
-	get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> {
-		return this.testsEmitter.event;
-	}
-
-	get testStates(): vscode.Event<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent> {
-		return this.testStatesEmitter.event;
-	}
-
-	get autorun(): vscode.Event<void> {
-		return this.autorunEmitter.event;
-	}
-
 	constructor(
-		public readonly workspaceFolder: vscode.WorkspaceFolder,
-		private readonly outputChannel: vscode.OutputChannel,
-		private readonly log: Log
-	) {
-
-		this.configReader = new ConfigReader(workspaceFolder, () => this.load(), () => this.autorunEmitter.fire(), log);
-		this.disposables.push(this.configReader);
-
-		this.disposables.push(this.testsEmitter);
-		this.disposables.push(this.testStatesEmitter);
-		this.disposables.push(this.autorunEmitter);
-
-	}
+		protected readonly outputChannel: IOutputChannel,
+		protected readonly log: Log
+	) {}
 
 	async load(): Promise<void> {
 
@@ -57,7 +51,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
-			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolder.uri.fsPath}`);
+			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
 			const config = await this.configReader.currentConfig;
 
@@ -99,7 +93,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 							if (info.type === 'suite') {
 
 								this.log.info('Received tests from worker');
-								info.id = `${this.workspaceFolder.uri.fsPath}: Mocha`;
+								info.id = `${this.workspaceFolderPath}: Mocha`;
 								info.label = 'Mocha';
 								this.collectNodesById(info);
 								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
@@ -153,7 +147,7 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 		try {
 
-			if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
+			if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolderPath}`);
 
 			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
 
@@ -281,22 +275,14 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 
 	async debug(testsToRun: string[]): Promise<void> {
 
-		if (this.log.enabled) this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolder.uri.fsPath}`);
+		if (this.log.enabled) this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolderPath}`);
 
 		const config = await this.configReader.currentConfig;
 
 		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${config.debuggerPort}` ]);
 
 		this.log.info('Starting the debug session');
-		const debugSessionStarted = await vscode.debug.startDebugging(this.workspaceFolder, config.debuggerConfig || {
-			name: 'Debug Mocha Tests',
-			type: 'node',
-			request: 'attach',
-			port: config.debuggerPort,
-			protocol: 'inspector',
-			timeout: 30000,
-			stopOnEntry: false
-		});
+		const debugSessionStarted = await this.startDebugging(config);
 
 		if (!debugSessionStarted) {
 			this.log.error('Failed starting the debug session - aborting');
@@ -304,14 +290,14 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			return;
 		}
 
-		const currentSession = vscode.debug.activeDebugSession;
+		const currentSession = this.activeDebugSession;
 		if (!currentSession) {
 			this.log.error('No active debug session - aborting');
 			this.cancel();
 			return;
 		}
 
-		const subscription = vscode.debug.onDidTerminateDebugSession((session) => {
+		const subscription = this.onDidTerminateDebugSession((session) => {
 			if (currentSession != session) return;
 			this.log.info('Debug session ended');
 			this.cancel(); // terminate the test run
@@ -326,15 +312,6 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 			this.log.info('Killing running test process');
 			this.runningTestProcess.kill();
 		}
-	}
-
-	dispose(): void {
-		this.cancel();
-		for (const disposable of this.disposables) {
-			disposable.dispose();
-		}
-		this.disposables = [];
-		this.nodesById.clear();
 	}
 
 	private collectNodesById(info: TestSuiteInfo | TestInfo): void {
@@ -354,5 +331,77 @@ export class MochaAdapter implements TestAdapter, IDisposable {
 		} else {
 			tests.push(info);
 		}
+	}
+}
+
+export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisposable {
+
+	protected readonly configReader: ConfigReader;
+
+	private disposables: IDisposable[] = [];
+
+	protected readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
+	protected readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
+	protected readonly autorunEmitter = new vscode.EventEmitter<void>();
+
+	get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> {
+		return this.testsEmitter.event;
+	}
+
+	get testStates(): vscode.Event<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent> {
+		return this.testStatesEmitter.event;
+	}
+
+	get autorun(): vscode.Event<void> {
+		return this.autorunEmitter.event;
+	}
+
+	protected get workspaceFolderPath(): string {
+		return this.workspaceFolder.uri.fsPath;
+	}
+
+	protected get activeDebugSession(): vscode.DebugSession | undefined {
+		return vscode.debug.activeDebugSession;
+	}
+
+	constructor(
+		public readonly workspaceFolder: vscode.WorkspaceFolder,
+		outputChannel: vscode.OutputChannel,
+		log: Log
+	) {
+		super(outputChannel, log);
+
+		this.configReader = new ConfigReader(workspaceFolder, () => this.load(), () => this.autorunEmitter.fire(), log);
+		this.disposables.push(this.configReader);
+
+		this.disposables.push(this.testsEmitter);
+		this.disposables.push(this.testStatesEmitter);
+		this.disposables.push(this.autorunEmitter);
+
+	}
+
+	protected async startDebugging(config: AdapterConfig): Promise<boolean> {
+		return await vscode.debug.startDebugging(this.workspaceFolder, config.debuggerConfig || {
+			name: 'Debug Mocha Tests',
+			type: 'node',
+			request: 'attach',
+			port: config.debuggerPort,
+			protocol: 'inspector',
+			timeout: 30000,
+			stopOnEntry: false
+		});
+	}
+
+	protected onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
+		return vscode.debug.onDidTerminateDebugSession(cb);
+	}
+
+	dispose(): void {
+		this.cancel();
+		for (const disposable of this.disposables) {
+			disposable.dispose();
+		}
+		this.disposables = [];
+		this.nodesById.clear();
 	}
 }
