@@ -5,7 +5,7 @@
   "icon": "img/icon.png",
   "author": "Holger Benl <hbenl@evandor.de>",
   "publisher": "hbenl",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "license": "MIT",
   "homepage": "https://github.com/hbenl/vscode-mocha-test-adapter",
   "repository": {
@@ -39,24 +39,24 @@
     "hbenl.vscode-test-explorer"
   ],
   "dependencies": {
-    "diff": "^3.5.0",
+    "diff": "^4.0.1",
     "escape-string-regexp": "^1.0.5",
     "minimatch": "^3.0.4",
     "mocha": "^5.2.0",
     "stack-trace": "0.0.10",
     "tslib": "^1.9.3",
-    "vscode-test-adapter-api": "^1.1.0",
-    "vscode-test-adapter-util": "^0.5.1"
+    "vscode-test-adapter-api": "^1.2.0",
+    "vscode-test-adapter-util": "^0.6.1"
   },
   "devDependencies": {
-    "@types/diff": "^3.5.2",
+    "@types/diff": "^4.0.1",
     "@types/escape-string-regexp": "1.0.0",
     "@types/minimatch": "^3.0.3",
-    "@types/mocha": "^5.2.5",
+    "@types/mocha": "^5.2.6",
     "@types/stack-trace": "0.0.29",
-    "typescript": "^3.1.6",
-    "vsce": "^1.53.2",
-    "vscode": "^1.1.22"
+    "typescript": "^3.3.3",
+    "vsce": "^1.57.0",
+    "vscode": "^1.1.29"
   },
   "engines": {
     "vscode": "^1.23.0"
