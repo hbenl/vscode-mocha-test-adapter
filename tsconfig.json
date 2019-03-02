@@ -19,7 +19,6 @@
     "src/worker/mocha-private.d.ts",
     "src/worker/loadTests.ts",
     "src/worker/runTests.ts",
-    "src/test/**/*.ts"
+    "src/test/*.test.ts"
   ]
 }
-  
