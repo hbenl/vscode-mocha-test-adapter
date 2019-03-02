@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IDisposable } from './adapter'; 
+import { IDisposable } from './core'; 
 import { MochaOpts } from './opts';
 import { MochaOptsReader } from './optsReader';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
