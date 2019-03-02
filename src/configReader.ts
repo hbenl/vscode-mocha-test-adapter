@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { IDisposable } from './core'; 
 import { MochaOpts } from './opts';
-import { MochaOptsReader } from './optsReader';
+import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { Minimatch } from 'minimatch';
 
@@ -92,8 +92,18 @@ export class ConfigReader implements IDisposable {
 
 		const config = vscode.workspace.getConfiguration('mochaExplorer', this.workspaceFolder.uri);
 
-		const optsReader = new MochaOptsReader(this.workspaceFolder, this.log);
-		const optsFromFile = await optsReader.readMochaOptsFile(config);
+		let optsFromFile: MochaOptsAndFiles;
+		const file = this.getMochaOptsFile(config);
+		if (file) {
+
+			const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
+			const optsReader = new MochaOptsReader(this.log);
+			optsFromFile = await optsReader.readMochaOptsFile(resolvedFile);
+
+		} else {
+			optsFromFile = { mochaOpts: {}, globs: [], files: [] };
+		}
+
 		const mochaOpts = await this.getMochaOpts(config, optsFromFile.mochaOpts);
 
 		return {
@@ -107,9 +117,13 @@ export class ConfigReader implements IDisposable {
 			debuggerConfig: this.getDebuggerConfig(config),
 			mochaOpts,
 			files: await this.lookupFiles(config, optsFromFile.globs, optsFromFile.files),
-			mochaOptsFile: optsReader.getMochaOptsFile(config),
+			mochaOptsFile: this.getMochaOptsFile(config),
 			globs: this.getTestFilesGlobs(config, optsFromFile.globs)
 		}
+	}
+
+	private getMochaOptsFile(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>('optsFile');
 	}
 
 	private getTestFilesGlobs(config: vscode.WorkspaceConfiguration, globsFromOptsFile: string[]): string[] {

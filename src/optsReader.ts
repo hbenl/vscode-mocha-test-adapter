@@ -1,7 +1,5 @@
-import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
-import * as vscode from 'vscode';
 import { MochaOpts } from './opts';
 import { Log } from 'vscode-test-adapter-util';
 
@@ -55,25 +53,15 @@ export class MochaOptsReader {
 	];
 
 	constructor(
-		private readonly workspaceFolder: vscode.WorkspaceFolder,
 		private readonly log: Log
 	) {}
 
-	getMochaOptsFile(config: vscode.WorkspaceConfiguration): string | undefined {
-		return config.get<string>('optsFile');
-	}
+	readMochaOptsFile(file: string): Promise<MochaOptsAndFiles> {
 
-	readMochaOptsFile(config: vscode.WorkspaceConfiguration): Promise<MochaOptsAndFiles> {
-
-		const file = this.getMochaOptsFile(config);
-		if (!file) {
-			return Promise.resolve({ mochaOpts: {}, globs: [], files: [] });
-		}
-		const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
-		if (this.log.enabled) this.log.debug(`Looking for mocha options in ${resolvedFile}`);
+		if (this.log.enabled) this.log.debug(`Looking for mocha options in ${file}`);
 
 		return new Promise<MochaOptsAndFiles>(resolve => {
-			fs.readFile(resolvedFile, 'utf8', (err, data) => {
+			fs.readFile(file, 'utf8', (err, data) => {
 
 				if (err) {
 					if (this.log.enabled) {
