@@ -1,9 +1,8 @@
 import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
-import { Log } from 'vscode-test-adapter-util';
 import { ErrorInfo, WorkerArgs } from './util';
-import { AdapterConfig, ConfigReader } from './configReader';
+import { AdapterConfig } from './configReader';
 
 export interface IDisposable {
 	dispose(): void;
@@ -18,14 +17,22 @@ export interface IOutputChannel {
 }
 
 export interface IConfigReader {
-	readonly config: Promise<AdapterConfig>;
+	readonly currentConfig: Promise<AdapterConfig>;
+}
+
+export interface ILog {
+	readonly enabled: boolean;
+	debug(...msg: any[]): void;
+	info(...msg: any[]): void;
+	warn(...msg: any[]): void;
+	error(...msg: any[]): void;
 }
 
 export abstract class MochaAdapterCore {
 
 	protected abstract readonly workspaceFolderPath: string;
 
-	protected abstract readonly configReader: ConfigReader;
+	protected abstract readonly configReader: IConfigReader;
 	
 	protected abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
 	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
@@ -41,7 +48,7 @@ export abstract class MochaAdapterCore {
 
 	constructor(
 		protected readonly outputChannel: IOutputChannel,
-		protected readonly log: Log
+		protected readonly log: ILog
 	) {}
 
 	async load(): Promise<void> {

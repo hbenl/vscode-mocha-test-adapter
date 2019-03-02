@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IDisposable } from './core'; 
+import { IDisposable, IConfigReader } from './core'; 
 import { MochaOpts } from './opts';
 import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
@@ -26,7 +26,7 @@ export interface AdapterConfig {
 	globs: string[];
 }
 
-export class ConfigReader implements IDisposable {
+export class ConfigReader implements IConfigReader, IDisposable {
 
 	private static readonly reloadConfigKeys = [
 		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env', 'mochaExplorer.ui',
