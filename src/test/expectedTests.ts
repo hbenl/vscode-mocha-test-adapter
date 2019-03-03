@@ -130,7 +130,7 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 		{
 			"type": "test",
 			"test": dynamicTestFilePath + ": Suite #3 Test #3.1",
-			"state": "passed"
+			"state": "skipped"
 		},
 		{
 			"type": "test",
