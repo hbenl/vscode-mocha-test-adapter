@@ -6,7 +6,12 @@ import { MochaOpts } from '../opts';
 import { MochaOptsReader } from '../optsReader';
 import { AdapterConfig } from '../configReader';
 
-export async function createTestMochaAdapter(workspaceName: string): Promise<TestMochaAdapter> {
+export async function createTestMochaAdapter(
+	workspaceName: string,
+	opts?: {
+		monkeyPatch?: boolean
+	}
+): Promise<TestMochaAdapter> {
 
 	const workspaceFolderPath = path.resolve(__dirname, 'workspaces/' + workspaceName);
 	const optsFilePath = path.join(workspaceFolderPath, 'test/mocha.opts');
@@ -24,6 +29,8 @@ export async function createTestMochaAdapter(workspaceName: string): Promise<Tes
 	const absoluteGlob = path.resolve(workspaceFolderPath, relativeGlob);
 	const files = await findFiles(absoluteGlob);
 
+	const monkeyPatch = (opts && (opts.monkeyPatch !== undefined)) ? opts.monkeyPatch : true;
+
 	const config = {
 
 		nodePath: undefined,
@@ -31,7 +38,7 @@ export async function createTestMochaAdapter(workspaceName: string): Promise<Tes
 		cwd: workspaceFolderPath,
 		env: {},
 
-		monkeyPatch: true,
+		monkeyPatch,
 		pruneFiles: false,
 
 		debuggerPort: 9229,
