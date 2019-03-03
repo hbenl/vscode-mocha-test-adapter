@@ -68,6 +68,15 @@ export class TestMochaAdapter extends MochaAdapterCore {
 		super(new TestOutputChannel(), new TestLog());
 	}
 
+	getTestLoadFinishedEvent(): TestLoadFinishedEvent | undefined {
+		for (const testLoadEvent of this.testsEmitter.events) {
+			if (testLoadEvent.type === 'finished') {
+				return testLoadEvent;
+			}
+		}
+		return undefined;
+	}
+
 	getLoadedTests(): TestSuiteInfo | undefined {
 		for (const testLoadEvent of this.testsEmitter.events) {
 			if (testLoadEvent.type === 'finished') {
