@@ -9,7 +9,8 @@ import { AdapterConfig } from '../configReader';
 export async function createTestMochaAdapter(
 	workspaceName: string,
 	opts?: {
-		monkeyPatch?: boolean
+		monkeyPatch?: boolean,
+		env?: NodeJS.ProcessEnv
 	}
 ): Promise<TestMochaAdapter> {
 
@@ -30,13 +31,14 @@ export async function createTestMochaAdapter(
 	const files = await findFiles(absoluteGlob);
 
 	const monkeyPatch = (opts && (opts.monkeyPatch !== undefined)) ? opts.monkeyPatch : true;
+	const env = (opts && opts.env) ? opts.env : {};
 
 	const config = {
 
 		nodePath: undefined,
 		mochaPath: require.resolve('mocha'),
 		cwd: workspaceFolderPath,
-		env: {},
+		env,
 
 		monkeyPatch,
 		pruneFiles: false,
