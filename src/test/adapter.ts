@@ -1,11 +1,28 @@
 import * as path from 'path';
+import { Glob } from 'glob';
 import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo } from 'vscode-test-adapter-api';
 import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputChannel, ILog } from '../core';
+import { MochaOpts } from '../opts';
+import { MochaOptsReader } from '../optsReader';
 import { AdapterConfig } from '../configReader';
 
-export function createTestMochaAdapter(workspaceName: string, testFiles: string[]): TestMochaAdapter {
+export async function createTestMochaAdapter(workspaceName: string): Promise<TestMochaAdapter> {
 
-	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
+	const workspaceFolderPath = path.resolve(__dirname, 'workspaces/' + workspaceName);
+	const optsFilePath = path.join(workspaceFolderPath, 'test/mocha.opts');
+
+	const optsReader = new MochaOptsReader(new TestLog());
+	const mochaOptsAndFiles = await optsReader.readMochaOptsFile(optsFilePath);
+	const mochaOpts: MochaOpts = {
+		ui: mochaOptsAndFiles.mochaOpts.ui || 'bdd',
+		timeout: mochaOptsAndFiles.mochaOpts.timeout || 1000,
+		retries: mochaOptsAndFiles.mochaOpts.retries || 0,
+		requires: mochaOptsAndFiles.mochaOpts.requires || [],
+		exit: mochaOptsAndFiles.mochaOpts.exit || false
+	};
+	const relativeGlob = mochaOptsAndFiles.globs[0] || 'test/**/*.js';
+	const absoluteGlob = path.resolve(workspaceFolderPath, relativeGlob);
+	const files = await findFiles(absoluteGlob);
 
 	const config = {
 
@@ -20,17 +37,11 @@ export function createTestMochaAdapter(workspaceName: string, testFiles: string[
 		debuggerPort: 9229,
 		debuggerConfig: undefined,
 
-		mochaOpts: {
-			ui: 'bdd',
-			requires: [],
-			retries: 0,
-			timeout: 1000,
-			exit: false
-		},
-		files: testFiles.map(file => path.join(workspaceFolderPath, file)),
+		mochaOpts,
+		files,
 
-		mochaOptsFile: undefined,
-		globs: []
+		mochaOptsFile: optsFilePath,
+		globs: mochaOptsAndFiles.globs
 	};
 
 	return new TestMochaAdapter(workspaceFolderPath, new TestConfigReader(config));
@@ -109,4 +120,16 @@ class TestLog implements ILog {
 	}
 	error(...msg: any[]): void {
 	}
+}
+
+async function findFiles(glob: string): Promise<string[]> {
+	return new Promise<string[]>((resolve, reject) => {
+		new Glob(glob, (err, files) => {
+			if (err) {
+				reject(err);
+			} else {
+				resolve(files);
+			}
+		})
+	})
 }

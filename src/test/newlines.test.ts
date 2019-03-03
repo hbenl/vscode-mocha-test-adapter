@@ -7,7 +7,7 @@ describe("Newlines in test titles", function () {
 	// verify that tests whose titles contain '\n' are loaded and run properly
 	it("should be handled properly", async function() {
 
-		const adapter = createTestMochaAdapter('javascript', [ 'test/newlines.js' ]);
+		const adapter = await createTestMochaAdapter('javascript/newlines');
 
 		// load tests
 		await adapter.load();

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as util from 'util';
 import { MochaOpts } from './opts';
-import { Log } from 'vscode-test-adapter-util';
+import { ILog } from './core';
 
 export interface MochaOptsAndFiles {
 	mochaOpts: Partial<MochaOpts>;
@@ -53,7 +53,7 @@ export class MochaOptsReader {
 	];
 
 	constructor(
-		private readonly log: Log
+		private readonly log: ILog
 	) {}
 
 	readMochaOptsFile(file: string): Promise<MochaOptsAndFiles> {
