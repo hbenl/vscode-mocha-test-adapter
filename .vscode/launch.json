@@ -18,20 +18,6 @@
       "request": "attach",
       "name": "Mocha worker",
       "processId": "${command:PickProcess}"
-    },
-    {
-      "name": "Extension Tests",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-          "--extensionDevelopmentPath=${workspaceFolder}",
-          "--extensionTestsPath=${workspaceFolder}/out/test"
-      ],
-      "outFiles": [
-          "${workspaceFolder}/out/test/**/*.js"
-      ],
-      "preLaunchTask": "npm: watch"
     }
   ]
 }
