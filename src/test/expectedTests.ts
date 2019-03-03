@@ -3,9 +3,10 @@ import { TestSuiteInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEven
 
 export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 
+	const extension = (workspaceName === 'typescript') ? 'ts' : 'js'
 	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
-	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.js');
-	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.js');
+	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extension);
+	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extension);
 
 	return {
 		"type": "suite",
@@ -101,9 +102,10 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 
 export function getExpectedTestRunEvents(workspaceName: string): (TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent)[] {
 
+	const extension = (workspaceName === 'typescript') ? 'ts' : 'js'
 	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
-	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.js');
-	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.js');
+	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extension);
+	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extension);
 
 	return [
 		{
@@ -187,7 +189,7 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 					"message": "1 == 2"
 				}
 			],
-			"message": "AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static.js:10:10)\n\n+ expected - actual\n\n-1\n+2\n"
+			"message": "AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static." + extension + ":10:10)\n\n+ expected - actual\n\n-1\n+2\n"
 		},
 		{
 			"type": "test",
