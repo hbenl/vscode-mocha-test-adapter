@@ -81,6 +81,15 @@ export class TestMochaAdapter extends MochaAdapterCore {
 		return this.testStatesEmitter.events;
 	}
 
+	getTestsThatWereRun(): string[] {
+		return this.getTestRunEvents()
+			.filter(event => ((event.type === 'test') && (event.state === 'running')))
+			.map(event => {
+				const id = (event as TestEvent).test as string;
+				return id.substr(id.indexOf(':') + 2);
+			});
+	}
+
 	protected startDebugging(config: AdapterConfig): Promise<boolean> {
 		return Promise.resolve(false);
 	}
