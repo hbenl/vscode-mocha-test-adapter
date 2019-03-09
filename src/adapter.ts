@@ -51,7 +51,8 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 	}
 
 	protected async startDebugging(config: AdapterConfig): Promise<boolean> {
-		return await vscode.debug.startDebugging(this.workspaceFolder, config.debuggerConfig || {
+
+		const result = await vscode.debug.startDebugging(this.workspaceFolder, config.debuggerConfig || {
 			name: 'Debug Mocha Tests',
 			type: 'node',
 			request: 'attach',
@@ -60,6 +61,11 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 			timeout: 30000,
 			stopOnEntry: false
 		});
+
+		// workaround for Microsoft/vscode#70125
+		await new Promise(resolve => setImmediate(resolve));
+
+		return result;
 	}
 
 	protected onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
