@@ -10,7 +10,8 @@ export async function createTestMochaAdapter(
 	workspaceName: string,
 	opts?: {
 		monkeyPatch?: boolean,
-		env?: NodeJS.ProcessEnv
+		env?: NodeJS.ProcessEnv,
+		pruneFiles?: boolean
 	}
 ): Promise<TestMochaAdapter> {
 
@@ -32,6 +33,7 @@ export async function createTestMochaAdapter(
 
 	const monkeyPatch = (opts && (opts.monkeyPatch !== undefined)) ? opts.monkeyPatch : true;
 	const env = (opts && opts.env) ? opts.env : {};
+	const pruneFiles = (opts && opts.pruneFiles) || false;
 
 	const config = {
 
@@ -41,7 +43,7 @@ export async function createTestMochaAdapter(
 		env,
 
 		monkeyPatch,
-		pruneFiles: false,
+		pruneFiles,
 
 		debuggerPort: 9229,
 		debuggerConfig: undefined,
@@ -101,6 +103,10 @@ export class TestMochaAdapter extends MochaAdapterCore {
 			});
 	}
 
+	getMessages(): string[] {
+		return (this.outputChannel as TestOutputChannel).messages;
+	}
+
 	protected startDebugging(config: AdapterConfig): Promise<boolean> {
 		return Promise.resolve(false);
 	}
@@ -133,7 +139,11 @@ export class TestEventCollector<T> implements IEventEmitter<T> {
 }
 
 class TestOutputChannel implements IOutputChannel {
+
+	readonly messages: string[] = [];
+
 	append(msg: string): void {
+		this.messages.push(msg);
 	}
 }
 
