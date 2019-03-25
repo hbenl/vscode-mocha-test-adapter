@@ -1,0 +1,12 @@
+--file first.js
+--ui tdd
+-t 1000
+--retries 2
+--recursive
+--exit
+--require ts-node/register
+test/*.ts
+--colors
+--require setup.js
+-w
+test*.js

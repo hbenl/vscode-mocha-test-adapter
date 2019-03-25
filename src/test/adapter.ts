@@ -147,7 +147,7 @@ class TestOutputChannel implements IOutputChannel {
 	}
 }
 
-class TestLog implements ILog {
+export class TestLog implements ILog {
 	readonly enabled = false;
 	debug(...msg: any[]): void {
 	}
