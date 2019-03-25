@@ -42,28 +42,30 @@
     "diff": "^4.0.1",
     "escape-string-regexp": "^1.0.5",
     "minimatch": "^3.0.4",
-    "mocha": "^5.2.0",
+    "mocha": "^6.0.2",
     "stack-trace": "0.0.10",
     "tslib": "^1.9.3",
-    "vscode-test-adapter-api": "^1.2.0",
-    "vscode-test-adapter-util": "^0.6.1"
+    "vscode-test-adapter-api": "^1.6.0",
+    "vscode-test-adapter-util": "^0.6.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.3.4",
-    "@babel/preset-env": "^7.3.4",
-    "@babel/register": "^7.0.0",
-    "@types/diff": "^4.0.1",
+    "@babel/core": "^7.4.0",
+    "@babel/preset-env": "^7.4.2",
+    "@babel/register": "^7.4.0",
+    "@types/diff": "^4.0.2",
     "@types/escape-string-regexp": "1.0.0",
     "@types/glob": "^7.1.1",
     "@types/minimatch": "^3.0.3",
     "@types/mocha": "^5.2.6",
+    "@types/node": "^10.14.3",
     "@types/stack-trace": "0.0.29",
-    "esm": "^3.2.9",
+    "esm": "^3.2.20",
     "glob": "^7.1.3",
-    "ts-node": "^8.0.2",
-    "typescript": "^3.3.3",
-    "vsce": "^1.57.0",
-    "vscode": "^1.1.29"
+    "rimraf": "^2.6.3",
+    "ts-node": "^8.0.3",
+    "typescript": "^3.3.4000",
+    "vsce": "^1.59.0",
+    "vscode": "^1.1.33"
   },
   "engines": {
     "vscode": "^1.23.0"
