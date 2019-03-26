@@ -140,7 +140,7 @@
           "scope": "resource"
         },
         "mochaExplorer.optsFile": {
-          "description": "The location of the mocha.opts file (relative to the workspace folder)",
+          "description": "The location of the mocha.opts file (relative to the workspace folder). If you set this option, the mocha.opts file will be parsed using a legacy parser and all other mocha configuration files will be ignored. Otherwise, all mocha configuration files will be parsed using mocha's parser.",
           "type": "string",
           "default": "test/mocha.opts",
           "scope": "resource"

@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as util from 'util';
+import { fork } from 'child_process';
 import { MochaOpts } from './opts';
 import { ILog } from './core';
 
@@ -66,7 +67,7 @@ export class MochaOptsReader {
 				if (err) {
 					if (this.log.enabled) {
 						if (err.code === 'ENOENT') {
-							this.log.debug('Couldn\'t read mocha.opts file');
+							this.log.debug('Couldn\'t find mocha.opts file');
 						} else {
 							this.log.debug(`Couldn't read mocha.opts file: ${util.inspect(err)}`);
 						}
@@ -108,6 +109,55 @@ export class MochaOptsReader {
 				}
 			});
 		});
+	}
+
+	async readOptsUsingMocha(cwd: string): Promise<MochaOptsAndFiles> {
+
+		const options = await new Promise<any>((resolve, reject) => {
+
+			const childProc = fork(
+				require.resolve('../out/worker/loadConfig.js'),
+				[],
+				{ cwd, execArgv: [] }
+			);
+	
+			let finished = false;
+
+			childProc.once('message', (options: {}) => {
+				if (!finished) {
+					finished = true;
+					resolve(options);
+				}
+			});
+
+			childProc.once('close', (code, signal) => {
+				if (!finished) {
+					this.log.error(`Couldn't load options using mocha: child process exited with code ${code} and signal ${signal}`);
+					finished = true;
+					reject();
+				}
+			});
+
+			childProc.once('error', (err) => {
+				if (!finished) {
+					this.log.error(`Couldn't load options using mocha: error from child process ${err}`);
+					finished = true;
+					reject();
+				}
+			});
+		});
+
+		return {
+			files: options.file || [],
+			globs: options._ || [],
+			mochaOpts: {
+				ui: options.ui,
+				requires: options.require,
+				timeout: options.timeout,
+				retries: options.retries,
+				exit: options.exit
+			}
+		}
 	}
 
 	private findOptValue(needles: string[], haystack: string[]): string | undefined {

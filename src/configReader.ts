@@ -91,39 +91,53 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private async readConfig(): Promise<AdapterConfig> {
 
 		const config = vscode.workspace.getConfiguration('mochaExplorer', this.workspaceFolder.uri);
+		const cwd = this.getCwd(config);
 
-		let optsFromFile: MochaOptsAndFiles;
+		let optsFromFiles: MochaOptsAndFiles;
+		const optsReader = new MochaOptsReader(this.log);
 		const file = this.getMochaOptsFile(config);
 		if (file) {
 
 			const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
-			const optsReader = new MochaOptsReader(this.log);
-			optsFromFile = await optsReader.readMochaOptsFile(resolvedFile);
+			optsFromFiles = await optsReader.readMochaOptsFile(resolvedFile);
 
 		} else {
-			optsFromFile = { mochaOpts: {}, globs: [], files: [] };
+
+			optsFromFiles = await optsReader.readOptsUsingMocha(cwd);
+
 		}
 
-		const mochaOpts = await this.getMochaOpts(config, optsFromFile.mochaOpts);
+		const mochaOpts = await this.getMochaOpts(config, optsFromFiles.mochaOpts);
 
 		return {
 			nodePath: await this.getNodePath(config),
 			mochaPath: this.getMochaPath(config),
-			cwd: this.getCwd(config),
+			cwd,
 			env: this.getEnv(config, mochaOpts),
 			monkeyPatch: this.getMonkeyPatch(config),
 			pruneFiles: this.getPruneFiles(config),
 			debuggerPort: this.getDebuggerPort(config),
 			debuggerConfig: this.getDebuggerConfig(config),
 			mochaOpts,
-			files: await this.lookupFiles(config, optsFromFile.globs, optsFromFile.files),
+			files: await this.lookupFiles(config, optsFromFiles.globs, optsFromFiles.files),
 			mochaOptsFile: this.getMochaOptsFile(config),
-			globs: this.getTestFilesGlobs(config, optsFromFile.globs)
+			globs: this.getTestFilesGlobs(config, optsFromFiles.globs)
 		}
 	}
 
 	private getMochaOptsFile(config: vscode.WorkspaceConfiguration): string | undefined {
-		return config.get<string>('optsFile');
+
+		const configValues = config.inspect<string>('optsFile')!;
+
+		if (configValues.workspaceFolderValue !== undefined) {
+			return configValues.workspaceFolderValue;
+		} else if (configValues.workspaceValue !== undefined) {
+			return configValues.workspaceValue;
+		} else if (configValues.globalValue !== undefined) {
+			return configValues.globalValue;
+		} else {
+			return undefined;
+		}
 	}
 
 	private getTestFilesGlobs(config: vscode.WorkspaceConfiguration, globsFromOptsFile: string[]): string[] {

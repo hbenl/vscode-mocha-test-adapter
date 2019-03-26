@@ -24,3 +24,7 @@ declare interface Mocha {
 declare module "mocha/lib/utils" {
 	function stringify(value: any): string;
 }
+
+declare module "mocha/lib/cli/options" {
+	function loadOptions(argv?: string | string[]): {};
+}
