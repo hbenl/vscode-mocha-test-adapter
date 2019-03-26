@@ -197,6 +197,13 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			}
 		}
 
+		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'package.json' ]) {
+			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
+			if (absolutePath === resolvedConfigFile) {
+				return true;
+			}
+		}
+
 		const globs = config.globs;
 		for (const relativeGlob of globs) {
 			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
