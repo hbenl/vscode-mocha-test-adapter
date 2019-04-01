@@ -67,7 +67,7 @@ function loadTests(workerArgs: string, sendMessage: (message: any) => void) {
 
 	} catch (err) {
 		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
-		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: err.stack });
+		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
 		throw err;
 	}
 }

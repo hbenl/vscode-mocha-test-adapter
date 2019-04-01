@@ -137,7 +137,7 @@ export abstract class MochaAdapterCore {
 				childProc.on('error', err => {
 					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
 					if (!testsLoaded) {
-						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: err.stack });
+						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
 						resolve();
 					}
 				});
@@ -145,7 +145,7 @@ export abstract class MochaAdapterCore {
 
 		} catch (err) {
 			if (this.log.enabled) this.log.error(`Error while loading tests: ${util.inspect(err)}`);
-			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: err.stack });
+			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
 		}
 	}
 
