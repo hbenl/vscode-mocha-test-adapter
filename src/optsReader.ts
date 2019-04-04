@@ -132,17 +132,19 @@ export class MochaOptsReader {
 
 			childProc.once('close', (code, signal) => {
 				if (!finished) {
-					this.log.error(`Couldn't load options using mocha: child process exited with code ${code} and signal ${signal}`);
+					const msg = `Couldn't load options using mocha: child process exited with code ${code} and signal ${signal}`;
+					this.log.error(msg);
 					finished = true;
-					reject();
+					reject(new Error(msg));
 				}
 			});
 
 			childProc.once('error', (err) => {
 				if (!finished) {
-					this.log.error(`Couldn't load options using mocha: error from child process ${err}`);
+					const msg = `Couldn't load options using mocha: error from child process ${util.inspect(err)}`;
+					this.log.error(msg);
 					finished = true;
-					reject();
+					reject(new Error(msg));
 				}
 			});
 		});
