@@ -8,6 +8,7 @@ describe("Test files that keep the node process alive", function() {
 		const adapter = await createTestMochaAdapter('javascript/exit-load');
 
 		await adapter.load();
+		await new Promise(resolve => setTimeout(resolve, 10));
 
 		await throwIfWorkerProcessIsRunning();
 	});
@@ -21,6 +22,8 @@ describe("Test files that keep the node process alive", function() {
 		await adapter.load();
 		const rootSuite = adapter.getLoadedTests();
 		await adapter.run([ rootSuite!.id ]);
+
+		await throwIfWorkerProcessIsRunning();
 	});
 });
 
