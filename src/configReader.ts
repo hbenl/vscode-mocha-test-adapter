@@ -25,6 +25,7 @@ export interface AdapterConfig {
 	files: string[];
 
 	mochaOptsFile: string | undefined;
+	envFile: string | undefined;
 	globs: string[];
 }
 
@@ -33,7 +34,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private static readonly reloadConfigKeys = [
 		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env', 'mochaExplorer.ui',
 		'mochaExplorer.require', 'mochaExplorer.optsFile', 'mochaExplorer.nodePath',
-		'mochaExplorer.mochaPath', 'mochaExplorer.monkeyPatch'
+		'mochaExplorer.mochaPath', 'mochaExplorer.monkeyPatch', 'mochaExplorer.envPath'
 	];
 	private static readonly autorunConfigKeys = [
 		'mochaExplorer.timeout', 'mochaExplorer.retries', 'mochaExplorer.pruneFiles'
@@ -118,6 +119,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		const mochaOpts = await this.getMochaOpts(config, optsFromFiles.mochaOpts);
 
+		const envFile = this.getEnvFile(config);
+
 		return {
 			nodePath: await this.getNodePath(config),
 			mochaPath: this.getMochaPath(config),
@@ -130,6 +133,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			mochaOpts,
 			files: await this.lookupFiles(config, optsFromFiles.globs, optsFromFiles.files),
 			mochaOptsFile,
+			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs)
 		}
 	}
@@ -208,6 +212,14 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		if (optsFile) {
 			const resolvedOptsFile = path.resolve(this.workspaceFolder.uri.fsPath, optsFile);
 			if (absolutePath === resolvedOptsFile) {
+				return true;
+			}
+		}
+
+		const envFile = config.envFile;
+		if (envFile) {
+			const resolvedEnvFile = path.resolve(this.workspaceFolder.uri.fsPath, envFile);
+			if (absolutePath === resolvedEnvFile) {
 				return true;
 			}
 		}
@@ -355,6 +367,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {
 		return config.get<boolean>('pruneFiles') || false;
+	}
+
+	private getEnvFile(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>('envPath') || undefined;
 	}
 
 	dispose(): void {

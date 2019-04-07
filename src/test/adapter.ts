@@ -52,6 +52,7 @@ export async function createTestMochaAdapter(
 		files,
 
 		mochaOptsFile: optsFilePath,
+		envFile: undefined,
 		globs: mochaOptsAndFiles.globs
 	};
 
