@@ -94,12 +94,14 @@ export class TestMochaAdapter extends MochaAdapterCore {
 		return this.testStatesEmitter.events;
 	}
 
-	getTestsThatWereRun(): string[] {
+	getTestsThatWereRun(): { id: string, result: 'passed' | 'failed' | 'skipped' | 'errored' }[] {
 		return this.getTestRunEvents()
-			.filter(event => ((event.type === 'test') && (event.state === 'running')))
+			.filter(event => ((event.type === 'test') && (event.state !== 'running')))
 			.map(event => {
-				const id = (event as TestEvent).test as string;
-				return id.substr(id.indexOf(':') + 2);
+				let id = (event as TestEvent).test as string;
+				id = id.substr(id.indexOf(':') + 2);
+				const result = (event as TestEvent).state as 'passed' | 'failed' | 'skipped' | 'errored';
+				return { id, result };
 			});
 	}
 

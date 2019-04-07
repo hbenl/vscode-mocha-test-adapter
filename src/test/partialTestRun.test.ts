@@ -13,8 +13,9 @@ describe("Specifying tests to be run", function() {
 		await adapter.run([ rootSuite!.children[1].id ]);
 
 		assert.deepStrictEqual(adapter.getTestsThatWereRun(), [
-			'Suite #1 Test #1.1',
-			'Suite #1 Test #1.2'
+			{ id: 'Suite #1 Test #1.1', result: 'passed' },
+			{ id: 'Suite #1 Test #1.2', result: 'failed' },
+			{ id: 'Suite #1 Test #1.3', result: 'skipped' }
 		]);
 	});
 
@@ -28,8 +29,9 @@ describe("Specifying tests to be run", function() {
 		await adapter.run(testIds);
 
 		assert.deepStrictEqual(adapter.getTestsThatWereRun(), [
-			'Suite #1 Test #1.1',
-			'Suite #1 Test #1.2'
+			{ id: 'Suite #1 Test #1.1', result: 'passed' },
+			{ id: 'Suite #1 Test #1.2', result: 'failed' },
+			{ id: 'Suite #1 Test #1.3', result: 'skipped' }
 		]);
 	});
 });
