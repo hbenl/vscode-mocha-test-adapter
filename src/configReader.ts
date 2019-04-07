@@ -1,10 +1,12 @@
 import * as path from 'path';
+import { readFile } from './util';
 import * as vscode from 'vscode';
+import { Minimatch } from 'minimatch';
+import { parse as dotenvParse } from 'dotenv';
+import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { IDisposable, IConfigReader } from './core'; 
 import { MochaOpts } from './opts';
 import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
-import { detectNodePath, Log } from 'vscode-test-adapter-util';
-import { Minimatch } from 'minimatch';
 
 export interface AdapterConfig {
 
@@ -114,7 +116,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			nodePath: await this.getNodePath(config),
 			mochaPath: this.getMochaPath(config),
 			cwd,
-			env: this.getEnv(config, mochaOpts),
+			env: await this.getEnv(config, mochaOpts),
 			monkeyPatch: this.getMonkeyPatch(config),
 			pruneFiles: this.getPruneFiles(config),
 			debuggerPort: this.getDebuggerPort(config),
@@ -230,14 +232,16 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return false;
 	}
 
-	private getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): NodeJS.ProcessEnv {
+	private async getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): Promise<NodeJS.ProcessEnv> {
 
 		const processEnv = process.env;
-		const configEnv: { [prop: string]: any } = config.get('env') || {};
+		const configEnv: { [prop: string]: string } = config.get('env') || {};
+		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(configEnv)}`);
 
-		if (this.log.enabled) this.log.debug(`Using environment variable config: ${JSON.stringify(configEnv)}`);
+		const envPath: string | undefined = config.get<string>('envPath');
+		if (envPath && this.log.enabled) this.log.debug(`Reading environment variables from ${envPath}`);
 
-		const resultEnv = { ...processEnv };
+		let resultEnv = { ...processEnv };
 
 		// workaround for esm not working when mocha is loaded programmatically (see #12)
 		if (mochaOpts.requires.indexOf('esm') >= 0) {
@@ -251,6 +255,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			} else {
 				resultEnv[prop] = String(val);
 			}
+		}
+
+		if (envPath) {
+			const dotenvFile = await readFile(path.resolve(this.workspaceFolder.uri.fsPath, envPath));
+			resultEnv = { ...dotenvParse(dotenvFile), ...resultEnv };
 		}
 
 		return resultEnv;

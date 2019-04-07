@@ -40,6 +40,7 @@
   ],
   "dependencies": {
     "diff": "^4.0.1",
+    "dotenv": "^7.0.0",
     "escape-string-regexp": "^1.0.5",
     "minimatch": "^3.0.4",
     "mocha": "^6.0.2",
@@ -53,6 +54,7 @@
     "@babel/preset-env": "^7.4.2",
     "@babel/register": "^7.4.0",
     "@types/diff": "^4.0.2",
+    "@types/dotenv": "^6.1.1",
     "@types/escape-string-regexp": "1.0.0",
     "@types/glob": "^7.1.1",
     "@types/minimatch": "^3.0.3",
@@ -104,6 +106,15 @@
             "type": "string"
           },
           "default": {},
+          "scope": "resource"
+        },
+        "mochaExplorer.envPath": {
+          "description": "Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
           "scope": "resource"
         },
         "mochaExplorer.cwd": {

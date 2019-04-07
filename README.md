@@ -64,6 +64,7 @@ Property                        | Description
 --------------------------------|---------------------------------------------------------------
 `mochaExplorer.files`           | The glob(s) describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`)
 `mochaExplorer.env`             | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`)
+`mochaExplorer.envPath`         | Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests
 `mochaExplorer.cwd`             | The working directory where mocha is run (relative to the workspace folder)
 `mochaExplorer.nodePath`        | The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
 `mochaExplorer.mochaPath`       | The path to the mocha package to use (relative to the workspace folder). By default (or if this option is set to `null`) it uses a bundled version of mocha, to use the one installed in your project's `node_modules` folder, set this option to `"node_modules/mocha"`
