@@ -143,18 +143,24 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getTestFilesGlobs(config: vscode.WorkspaceConfiguration, globsFromOptsFile: string[]): string[] {
 
-		const globConfigValues = config.inspect<string>('files')!;
-		const globFromConfig =
+		const globConfigValues = config.inspect<string | string[]>('files')!;
+		let globFromConfig =
 			globConfigValues.workspaceFolderValue ||
 			globConfigValues.workspaceValue ||
 			globConfigValues.globalValue; // ?
 
 		if (globFromConfig) {
-			return [ globFromConfig, ...globsFromOptsFile ];
+
+			if (typeof globFromConfig === 'string') {
+				globFromConfig = [ globFromConfig ];
+			}
+
+			return [ ...globFromConfig, ...globsFromOptsFile ];
+
 		} else if (globsFromOptsFile.length > 0) {
 			return globsFromOptsFile;
 		} else {
-			return [ globConfigValues.defaultValue! ]; // globalValue?
+			return [ globConfigValues.defaultValue as string ]; // globalValue?
 		}
 	}
 

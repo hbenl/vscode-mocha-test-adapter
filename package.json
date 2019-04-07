@@ -80,8 +80,14 @@
       "title": "Mocha Test Explorer",
       "properties": {
         "mochaExplorer.files": {
-          "description": "The glob describing the location of your test files (relative to the workspace folder)",
-          "type": "string",
+          "description": "The glob(s) describing the location of your test files (relative to the workspace folder)",
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
           "default": "test/**/*.js",
           "scope": "resource"
         },
