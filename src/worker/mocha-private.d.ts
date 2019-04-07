@@ -18,7 +18,6 @@ declare namespace Mocha {
 
 declare interface Mocha {
 	suite: Mocha.ISuite;
-	loadFiles(): void;
 }
 
 declare module "mocha/lib/utils" {

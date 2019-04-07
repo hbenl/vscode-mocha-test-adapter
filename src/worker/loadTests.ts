@@ -52,11 +52,28 @@ function loadTests(workerArgs: string, sendMessage: (message: any) => void) {
 		for (const file of testFiles) {
 			mocha.addFile(file);
 		}
-		mocha.loadFiles();
+
+		mocha.grep('$^');
+		mocha.run(() => processTests(mocha.suite, lineSymbol, sendMessage, _logEnabled));
+
+	} catch (err) {
+		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
+		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
+		throw err;
+	}
+}
+
+function processTests(
+	suite: Mocha.ISuite,
+	lineSymbol: symbol,
+	sendMessage: (message: any) => void,
+	logEnabled: boolean
+): void {
+	try {
 
 		if (logEnabled) sendMessage('Converting tests and suites');
 		const fileCache = new Map<string, string>();
-		const rootSuite = convertSuite(mocha.suite, lineSymbol, fileCache);
+		const rootSuite = convertSuite(suite, lineSymbol, fileCache);
 
 		if (rootSuite.children.length > 0) {
 			sort(rootSuite);
@@ -66,7 +83,7 @@ function loadTests(workerArgs: string, sendMessage: (message: any) => void) {
 		}
 
 	} catch (err) {
-		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
+		if (logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
 		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
 		throw err;
 	}
