@@ -10,11 +10,29 @@ export default (sendMessage: (message: any) => void) => {
 
 		constructor(runner: Mocha.IRunner) {
 
+			const startTimes = new Map<string, number>();
+
+			function getElapsedTime(id: string): string | undefined {
+
+				if (startTimes.has(id)) {
+
+					const elapsed = Date.now() - startTimes.get(id)!;
+					startTimes.delete(id);
+					return `${elapsed}ms`;
+
+				} else {
+					return undefined;
+				}
+			}
+
 			runner.on('suite', (suite: Mocha.ISuite) => {
+
+				const suiteId = `${suite.file}: ${suite.fullTitle()}`;
+				startTimes.set(suiteId, Date.now());
 
 				const event: TestSuiteEvent = {
 					type: 'suite',
-					suite: `${suite.file}: ${suite.fullTitle()}`,
+					suite: suiteId,
 					state: 'running'
 				};
 
@@ -23,10 +41,14 @@ export default (sendMessage: (message: any) => void) => {
 
 			runner.on('suite end', (suite: Mocha.ISuite) => {
 
+				const suiteId = `${suite.file}: ${suite.fullTitle()}`;
+				const description = getElapsedTime(suiteId);
+
 				const event: TestSuiteEvent = {
 					type: 'suite',
-					suite: `${suite.file}: ${suite.fullTitle()}`,
-					state: 'completed'
+					suite: suiteId,
+					state: 'completed',
+					description
 				};
 
 				sendMessage(event);
@@ -34,9 +56,12 @@ export default (sendMessage: (message: any) => void) => {
 
 			runner.on('test', (test: Mocha.ITest) => {
 
+				const testId = `${test.file}: ${test.fullTitle()}`;
+				startTimes.set(testId, Date.now());
+
 				const event: TestEvent = {
 					type: 'test',
-					test: `${test.file}: ${test.fullTitle()}`,
+					test: testId,
 					state: 'running'
 				};
 
@@ -45,16 +70,23 @@ export default (sendMessage: (message: any) => void) => {
 
 			runner.on('pass', (test: Mocha.ITest) => {
 
+				const testId = `${test.file}: ${test.fullTitle()}`;
+				const description = getElapsedTime(testId);
+
 				const event: TestEvent = {
 					type: 'test',
-					test: `${test.file}: ${test.fullTitle()}`,
-					state: 'passed'
+					test: testId,
+					state: 'passed',
+					description
 				};
 
 				sendMessage(event);
 			});
 
 			runner.on('fail', (test: Mocha.ITest, err: Error & { actual?: any, expected?: any, showDiff?: boolean }) => {
+
+				const testId = `${test.file}: ${test.fullTitle()}`;
+				const description = getElapsedTime(testId);
 
 				let decorations: TestDecoration[] = [];
 				if (err.stack) {
@@ -96,7 +128,8 @@ export default (sendMessage: (message: any) => void) => {
 					test: `${test.file}: ${test.fullTitle()}`,
 					state: 'failed',
 					message,
-					decorations
+					decorations,
+					description
 				};
 
 				sendMessage(event);
@@ -104,10 +137,14 @@ export default (sendMessage: (message: any) => void) => {
 
 			runner.on('pending', (test: Mocha.ITest) => {
 
+				const testId = `${test.file}: ${test.fullTitle()}`;
+				startTimes.delete(testId);
+
 				const event: TestEvent = {
 					type: 'test',
-					test: `${test.file}: ${test.fullTitle()}`,
-					state: 'skipped'
+					test: testId,
+					state: 'skipped',
+					description: ''
 				};
 
 				sendMessage(event);
