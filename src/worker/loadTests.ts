@@ -76,7 +76,6 @@ function processTests(
 		const rootSuite = convertSuite(suite, lineSymbol, fileCache);
 
 		if (rootSuite.children.length > 0) {
-			sort(rootSuite);
 			sendMessage(rootSuite);
 		} else {
 			sendMessage(null);
@@ -155,21 +154,4 @@ function findLineContaining(needle: string, haystack: string | undefined): numbe
 	if (index < 0) return undefined;
 
 	return haystack.substr(0, index).split('\n').length - 1;
-}
-
-function sort(suite: TestSuiteInfo): void {
-
-	suite.children.sort((a, b) => {
-		if ((a.line !== undefined) && (b.line !== undefined) && (a.line !== b.line)) {
-			return a.line - b.line;
-		} else {
-			return a.label.localeCompare(b.label);
-		}
-	});
-
-	for (const child of suite.children) {
-		if (child.type === 'suite') {
-			sort(child);
-		}
-	}
 }
