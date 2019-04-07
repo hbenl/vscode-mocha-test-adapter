@@ -138,6 +138,7 @@ export class TestEventCollector<T> implements IEventEmitter<T> {
 	readonly events: T[] = [];
 
 	fire(event: T): void {
+		delete (event as any).description;
 		this.events.push(event);
 	}
 }
