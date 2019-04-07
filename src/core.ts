@@ -17,6 +17,7 @@ export interface IOutputChannel {
 }
 
 export interface IConfigReader {
+	reloadConfig(): void;
 	readonly currentConfig: Promise<AdapterConfig>;
 }
 
@@ -59,6 +60,7 @@ export abstract class MochaAdapterCore {
 
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
+			this.configReader.reloadConfig();
 			const config = await this.configReader.currentConfig;
 
 			let testsLoaded = false;

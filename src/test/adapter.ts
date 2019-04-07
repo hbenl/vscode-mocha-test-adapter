@@ -129,6 +129,8 @@ export class TestConfigReader implements IConfigReader {
 	constructor(initialConfig: AdapterConfig) {
 		this.config = initialConfig;
 	}
+
+	reloadConfig(): void {}
 }
 
 export class TestEventCollector<T> implements IEventEmitter<T> {

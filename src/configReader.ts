@@ -41,8 +41,13 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private disposables: IDisposable[] = [];
 
-	private _currentConfig: Promise<AdapterConfig>;
-	get currentConfig(): Promise<AdapterConfig> { return this._currentConfig; }
+	private _currentConfig: Promise<AdapterConfig> | undefined;
+	get currentConfig(): Promise<AdapterConfig> { 
+		if (this._currentConfig === undefined) {
+			this._currentConfig = this.readConfig();
+		}
+		return this._currentConfig;
+	}
 
 	constructor(
 		private readonly workspaceFolder: vscode.WorkspaceFolder,
@@ -50,7 +55,6 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		retire: () => void,
 		private readonly log: Log
 	) {
-		this._currentConfig = this.readConfig();
 
 		this.disposables.push(vscode.workspace.onDidChangeConfiguration(configChange => {
 
@@ -59,7 +63,6 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			for (const configKey of ConfigReader.reloadConfigKeys) {
 				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
 					if (this.log.enabled) this.log.info(`Reloading because ${configKey} changed`);
-					this._currentConfig = this.readConfig();
 					load();
 					return;
 				}
@@ -81,13 +84,16 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 			if (await this.isTestFile(filename)) {
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				this._currentConfig = this.readConfig();
 				load();
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
 				this.log.info('Sending autorun event');
 				retire();
 			}
 		}));
+	}
+
+	reloadConfig(): void {
+		this._currentConfig = this.readConfig();
 	}
 
 	private async readConfig(): Promise<AdapterConfig> {
