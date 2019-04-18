@@ -7,6 +7,7 @@ import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { IDisposable, IConfigReader } from './core'; 
 import { MochaOpts } from './opts';
 import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
+import { configKeys, OnChange, configSection } from './configKeys';
 
 export interface AdapterConfig {
 
@@ -31,19 +32,10 @@ export interface AdapterConfig {
 
 export class ConfigReader implements IConfigReader, IDisposable {
 
-	private static readonly reloadConfigKeys = [
-		'mochaExplorer.files', 'mochaExplorer.cwd', 'mochaExplorer.env', 'mochaExplorer.ui',
-		'mochaExplorer.require', 'mochaExplorer.optsFile', 'mochaExplorer.nodePath',
-		'mochaExplorer.mochaPath', 'mochaExplorer.monkeyPatch', 'mochaExplorer.envPath'
-	];
-	private static readonly autorunConfigKeys = [
-		'mochaExplorer.timeout', 'mochaExplorer.retries', 'mochaExplorer.pruneFiles'
-	];
-
 	private disposables: IDisposable[] = [];
 
 	private _currentConfig: Promise<AdapterConfig> | undefined;
-	get currentConfig(): Promise<AdapterConfig> { 
+	get currentConfig(): Promise<AdapterConfig> {
 		if (this._currentConfig === undefined) {
 			this._currentConfig = this.readConfig();
 		}
@@ -61,20 +53,25 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 			this.log.info('Configuration changed');
 
-			for (const configKey of ConfigReader.reloadConfigKeys) {
-				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
-					if (this.log.enabled) this.log.info(`Reloading because ${configKey} changed`);
-					load();
-					return;
-				}
+			let configKey: string | undefined;
+
+			if (configKey = this.configChangeRequires(configChange, 'reloadTests')) {
+				if (this.log.enabled) this.log.info(`Reloading because ${configKey} changed`);
+				load();
+				return;
 			}
 
-			for (const configKey of ConfigReader.autorunConfigKeys) {
-				if (configChange.affectsConfiguration(configKey, this.workspaceFolder.uri)) {
-					if (this.log.enabled) this.log.info(`Sending autorun event because ${configKey} changed`);
-					retire();
-					return;
-				}
+			if (configKey = this.configChangeRequires(configChange, 'retire')) {
+				if (this.log.enabled) this.log.info(`Sending autorun event because ${configKey} changed`);
+				this.reloadConfig();
+				retire();
+				return;
+			}
+
+			if (configKey = this.configChangeRequires(configChange, 'reloadConfig')) {
+				if (this.log.enabled) this.log.info(`Reloading configuration because ${configKey} changed`);
+				this.reloadConfig();
+				return;
 			}
 		}));
 
@@ -99,7 +96,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private async readConfig(): Promise<AdapterConfig> {
 
-		const config = vscode.workspace.getConfiguration('mochaExplorer', this.workspaceFolder.uri);
+		const config = vscode.workspace.getConfiguration(configSection, this.workspaceFolder.uri);
 		const cwd = this.getCwd(config);
 
 		let optsFromFiles: MochaOptsAndFiles;
@@ -140,7 +137,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getMochaOptsFile(config: vscode.WorkspaceConfiguration): string | undefined {
 
-		const configValues = config.inspect<string>('optsFile')!;
+		const configValues = config.inspect<string>(configKeys.optsFile.key)!;
 
 		if (configValues.workspaceFolderValue !== undefined) {
 			return configValues.workspaceFolderValue;
@@ -155,7 +152,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getTestFilesGlobs(config: vscode.WorkspaceConfiguration, globsFromOptsFile: string[]): string[] {
 
-		const globConfigValues = config.inspect<string | string[]>('files')!;
+		const globConfigValues = config.inspect<string | string[]>(configKeys.files.key)!;
 		let globFromConfig =
 			globConfigValues.workspaceFolderValue ||
 			globConfigValues.workspaceValue ||
@@ -253,10 +250,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private async getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): Promise<NodeJS.ProcessEnv> {
 
 		const processEnv = process.env;
-		const configEnv: { [prop: string]: string } = config.get('env') || {};
+		const configEnv: { [prop: string]: string } = config.get(configKeys.env.key) || {};
 		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(configEnv)}`);
 
-		const envPath: string | undefined = config.get<string>('envPath');
+		const envPath: string | undefined = config.get<string>(configKeys.envPath.key);
 		if (envPath && this.log.enabled) this.log.debug(`Reading environment variables from ${envPath}`);
 
 		let resultEnv = { ...processEnv };
@@ -285,7 +282,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getCwd(config: vscode.WorkspaceConfiguration): string {
 		const dirname = this.workspaceFolder.uri.fsPath;
-		const configCwd = config.get<string>('cwd');
+		const configCwd = config.get<string>(configKeys.cwd.key);
 		const cwd = configCwd ? path.resolve(dirname, configCwd) : dirname;
 		if (this.log.enabled) this.log.debug(`Using working directory: ${cwd}`);
 		return cwd;
@@ -293,7 +290,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private async getMochaOpts(config: vscode.WorkspaceConfiguration, mochaOptsFromFile: Partial<MochaOpts>): Promise<MochaOpts> {
 
-		let requires = this.mergeOpts<string | string[]>('require', mochaOptsFromFile.requires, config);
+		let requires = this.mergeOpts<string | string[]>(configKeys.require.key, mochaOptsFromFile.requires, config);
 		if (typeof requires === 'string') {
 			if (requires.length > 0) {
 				requires = [ requires ];
@@ -305,11 +302,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		const mochaOpts = {
-			ui: this.mergeOpts<string>('ui', mochaOptsFromFile.ui, config),
-			timeout: this.mergeOpts<number>('timeout', mochaOptsFromFile.timeout, config),
-			retries: this.mergeOpts<number>('retries', mochaOptsFromFile.retries, config),
+			ui: this.mergeOpts<string>(configKeys.ui.key, mochaOptsFromFile.ui, config),
+			timeout: this.mergeOpts<number>(configKeys.timeout.key, mochaOptsFromFile.timeout, config),
+			retries: this.mergeOpts<number>(configKeys.retries.key, mochaOptsFromFile.retries, config),
 			requires,
-			exit: this.mergeOpts<boolean>('exit', mochaOptsFromFile.exit, config)
+			exit: this.mergeOpts<boolean>(configKeys.exit.key, mochaOptsFromFile.exit, config)
 		}
 
 		if (this.log.enabled) this.log.debug(`Using Mocha options: ${JSON.stringify(mochaOpts)}`);
@@ -335,7 +332,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	}
 
 	private getMochaPath(config: vscode.WorkspaceConfiguration): string {
-		let mochaPath = config.get<string | null>('mochaPath');
+		let mochaPath = config.get<string | null>(configKeys.mochaPath.key);
 		if (mochaPath) {
 			return path.resolve(this.workspaceFolder.uri.fsPath, mochaPath);
 		} else {
@@ -344,7 +341,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	}
 
 	private async getNodePath(config: vscode.WorkspaceConfiguration): Promise<string | undefined> {
-		let nodePath = config.get<string | null>('nodePath') || undefined;
+		let nodePath = config.get<string | null>(configKeys.nodePath.key) || undefined;
 		if (nodePath === 'default') {
 			nodePath = await detectNodePath();
 		}
@@ -353,24 +350,35 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	}
 
 	private getMonkeyPatch(config: vscode.WorkspaceConfiguration): boolean {
-		let monkeyPatch = config.get<boolean>('monkeyPatch');
+		let monkeyPatch = config.get<boolean>(configKeys.monkeyPatch.key);
 		return (monkeyPatch !== undefined) ? monkeyPatch : true;
 	}
 
 	private getDebuggerPort(config: vscode.WorkspaceConfiguration): number {
-		return config.get<number>('debuggerPort') || 9229;
+		return config.get<number>(configKeys.debuggerPort.key) || 9229;
 	}
 
 	private getDebuggerConfig(config: vscode.WorkspaceConfiguration): string | undefined {
-		return config.get<string>('debuggerConfig') || undefined;
+		return config.get<string>(configKeys.debuggerConfig.key) || undefined;
 	}
 
 	private getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {
-		return config.get<boolean>('pruneFiles') || false;
+		return config.get<boolean>(configKeys.pruneFiles.key) || false;
 	}
 
 	private getEnvFile(config: vscode.WorkspaceConfiguration): string | undefined {
-		return config.get<string>('envPath') || undefined;
+		return config.get<string>(configKeys.envPath.key) || undefined;
+	}
+
+	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {
+
+		for (const configKeyInfo of Object.values(configKeys)) {
+			if ((configKeyInfo.onChange === action) && configChange.affectsConfiguration(configKeyInfo.fullKey, this.workspaceFolder.uri)) {
+				return configKeyInfo.fullKey;
+			}
+		}
+
+		return undefined;
 	}
 
 	dispose(): void {
