@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
-import * as RegExpEscape from 'escape-string-regexp';
+import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { patchMocha } from './patchMocha';
 import { ErrorInfo, WorkerArgs } from '../util';

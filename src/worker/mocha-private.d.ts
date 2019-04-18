@@ -17,7 +17,7 @@ declare namespace Mocha {
 }
 
 declare interface Mocha {
-	suite: Mocha.ISuite;
+	suite: Mocha.Suite;
 }
 
 declare module "mocha/lib/utils" {

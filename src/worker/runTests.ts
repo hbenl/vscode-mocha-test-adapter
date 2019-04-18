@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
-import * as RegExEscape from 'escape-string-regexp';
+import RegExEscape from 'escape-string-regexp';
 import ReporterFactory from './reporter';
 import { WorkerArgs } from '../util';
 
