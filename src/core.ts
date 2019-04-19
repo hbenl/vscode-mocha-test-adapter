@@ -39,8 +39,7 @@ export abstract class MochaAdapterCore {
 	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
 	protected abstract readonly retireEmitter: IEventEmitter<RetireEvent>;
 
-	protected abstract startDebugging(config: AdapterConfig): Promise<boolean>;
-	protected abstract activeDebugSession: any;
+	protected abstract startDebugging(config: AdapterConfig): Promise<any>;
 	protected abstract onDidTerminateDebugSession(cb: (session: any) => any): IDisposable;
 
 	protected readonly nodesById = new Map<string, TestSuiteInfo | TestInfo>();
@@ -318,23 +317,17 @@ export abstract class MochaAdapterCore {
 		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${config.debuggerPort}` ]);
 
 		this.log.info('Starting the debug session');
-		const debugSessionStarted = await this.startDebugging(config);
-
-		if (!debugSessionStarted) {
-			this.log.error('Failed starting the debug session - aborting');
-			this.cancel();
-			return;
-		}
-
-		const currentSession = this.activeDebugSession;
-		if (!currentSession) {
-			this.log.error('No active debug session - aborting');
+		let debugSession: any;
+		try {
+			debugSession = await this.startDebugging(config);
+		} catch (err) {
+			this.log.error('Failed starting the debug session - aborting', err);
 			this.cancel();
 			return;
 		}
 
 		const subscription = this.onDidTerminateDebugSession((session) => {
-			if (currentSession != session) return;
+			if (debugSession != session) return;
 			this.log.info('Debug session ended');
 			this.cancel(); // terminate the test run
 			subscription.dispose();

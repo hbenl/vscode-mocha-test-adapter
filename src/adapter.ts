@@ -30,10 +30,6 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 		return this.workspaceFolder.uri.fsPath;
 	}
 
-	protected get activeDebugSession(): vscode.DebugSession | undefined {
-		return vscode.debug.activeDebugSession;
-	}
-
 	constructor(
 		public readonly workspaceFolder: vscode.WorkspaceFolder,
 		workspaceState: vscode.Memento,
@@ -67,22 +63,45 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 		this.load();
 	}
 
-	protected async startDebugging(config: AdapterConfig): Promise<boolean> {
+	protected async startDebugging(config: AdapterConfig): Promise<vscode.DebugSession> {
 
-		const result = await vscode.debug.startDebugging(this.workspaceFolder, config.debuggerConfig || {
-			name: 'Debug Mocha Tests',
+		const debuggerConfigName = config.debuggerConfig || 'Debug Mocha Tests';
+		const debuggerConfig = config.debuggerConfig || {
+			name: debuggerConfigName,
 			type: 'node',
 			request: 'attach',
 			port: config.debuggerPort,
 			protocol: 'inspector',
 			timeout: 30000,
 			stopOnEntry: false
+		};
+
+		const debugSessionPromise = new Promise<vscode.DebugSession>((resolve, reject) => {
+
+			let subscription: vscode.Disposable | undefined;
+			subscription = vscode.debug.onDidStartDebugSession(debugSession => {
+				if ((debugSession.name === debuggerConfigName) && subscription) {
+					resolve(debugSession);
+					subscription.dispose();
+					subscription = undefined;
+				}
+			});
+
+			setTimeout(() => {
+				if (subscription) {
+					reject(new Error('Debug session failed to start within 5 seconds'));
+					subscription.dispose();
+					subscription = undefined;
+				}
+			}, 5000);
 		});
 
-		// workaround for Microsoft/vscode#70125
-		await new Promise(resolve => setImmediate(resolve));
-
-		return result;
+		const started = await vscode.debug.startDebugging(this.workspaceFolder, debuggerConfig);
+		if (started) {
+			return await debugSessionPromise;
+		} else {
+			throw new Error('Debug session couldn\'t be started');
+		}
 	}
 
 	protected onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
