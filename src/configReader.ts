@@ -47,8 +47,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	constructor(
 		private readonly workspaceFolder: vscode.WorkspaceFolder,
 		private readonly workspaceState: vscode.Memento,
-		load: () => void,
-		retire: () => void,
+		load: (changedFiles?: string[]) => Promise<void>,
+		retire: (tests?: string[]) => void,
 		private readonly log: Log
 	) {
 
@@ -87,7 +87,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 			if (await this.isTestFile(filename)) {
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				load();
+				load([ filename ]);
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
 				this.log.info('Sending autorun event');
 				retire();

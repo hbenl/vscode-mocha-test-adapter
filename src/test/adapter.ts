@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { Glob } from 'glob';
-import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo } from 'vscode-test-adapter-api';
+import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, RetireEvent } from 'vscode-test-adapter-api';
 import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputChannel, ILog } from '../core';
 import { MochaOpts } from '../opts';
 import { MochaOptsReader } from '../optsReader';
@@ -68,7 +68,7 @@ export class TestMochaAdapter extends MochaAdapterCore {
 		protected readonly configReader: IConfigReader,
 		protected readonly testsEmitter = new TestEventCollector<TestLoadStartedEvent | TestLoadFinishedEvent>(),
 		protected readonly testStatesEmitter = new TestEventCollector<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>(),
-		protected readonly autorunEmitter = new TestEventCollector<void>()
+		protected readonly retireEmitter = new TestEventCollector<RetireEvent>()
 	) {
 		super(new TestOutputChannel(), new TestLog());
 	}

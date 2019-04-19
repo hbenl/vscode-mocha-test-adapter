@@ -1,7 +1,7 @@
 import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
-import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
-import { ErrorInfo, WorkerArgs } from './util';
+import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
+import { ErrorInfo, WorkerArgs, findTests } from './util';
 import { AdapterConfig } from './configReader';
 
 export interface IDisposable {
@@ -37,7 +37,7 @@ export abstract class MochaAdapterCore {
 	
 	protected abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
 	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
-	protected abstract readonly autorunEmitter: IEventEmitter<void>;
+	protected abstract readonly retireEmitter: IEventEmitter<RetireEvent>;
 
 	protected abstract startDebugging(config: AdapterConfig): Promise<boolean>;
 	protected abstract activeDebugSession: any;
@@ -52,7 +52,7 @@ export abstract class MochaAdapterCore {
 		protected readonly log: ILog
 	) {}
 
-	async load(): Promise<void> {
+	async load(changedFiles?: string[]): Promise<void> {
 
 		try {
 
@@ -112,6 +112,17 @@ export abstract class MochaAdapterCore {
 								info.label = 'Mocha';
 								this.collectNodesById(info);
 								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
+
+								if (changedFiles) {
+
+									const changedTests = findTests(info, { tests: 
+										info => ((info.file !== undefined) && (changedFiles.indexOf(info.file) >= 0))
+									});
+									this.retireEmitter.fire({ tests: [ ...changedTests ].map(info => info.id) })
+
+								} else {
+									this.retireEmitter.fire({});
+								}
 
 							} else { // info.type === 'error'
 

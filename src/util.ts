@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { MochaOpts } from './opts';
+import { TestInfo, TestSuiteInfo } from 'vscode-test-adapter-api';
 
 export interface WorkerArgs {
 	testFiles: string[];
@@ -31,4 +32,29 @@ export function readFile(path: string): Promise<string> {
 			}
 		})
 	});
+}
+
+export function* findTests(
+	info: TestInfo | TestSuiteInfo,
+	filter: {
+		tests: (info: TestInfo) => boolean,
+		suites?: (info: TestSuiteInfo) => boolean
+	}
+): IterableIterator<TestInfo> {
+
+	if (info.type === 'suite') {
+
+		if (!filter.suites || filter.suites(info)) {
+			for (const child of info.children) {
+				yield* findTests(child, filter);
+			}
+		}
+
+	} else {
+
+		if (!filter.tests || filter.tests(info)) {
+			yield info;
+		}
+
+	}
 }

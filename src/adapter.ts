@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TestAdapter, TestEvent, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent } from 'vscode-test-adapter-api';
+import { TestAdapter, TestEvent, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
 import { ConfigReader, AdapterConfig } from './configReader';
 import { MochaAdapterCore, IDisposable } from './core';
@@ -12,7 +12,7 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 
 	protected readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
 	protected readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
-	protected readonly autorunEmitter = new vscode.EventEmitter<void>();
+	protected readonly retireEmitter = new vscode.EventEmitter<RetireEvent>();
 
 	get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> {
 		return this.testsEmitter.event;
@@ -22,8 +22,8 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 		return this.testStatesEmitter.event;
 	}
 
-	get autorun(): vscode.Event<void> {
-		return this.autorunEmitter.event;
+	get retire(): vscode.Event<RetireEvent> {
+		return this.retireEmitter.event;
 	}
 
 	protected get workspaceFolderPath(): string {
@@ -42,12 +42,18 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 	) {
 		super(outputChannel, log);
 
-		this.configReader = new ConfigReader(workspaceFolder, workspaceState, () => this.load(), () => this.autorunEmitter.fire(), log);
+		this.configReader = new ConfigReader(
+			workspaceFolder,
+			workspaceState,
+			(changedFiles?: string[]) => this.load(changedFiles),
+			(tests?: string[]) => this.retireEmitter.fire({ tests }),
+			log
+		);
 		this.disposables.push(this.configReader);
 
 		this.disposables.push(this.testsEmitter);
 		this.disposables.push(this.testStatesEmitter);
-		this.disposables.push(this.autorunEmitter);
+		this.disposables.push(this.retireEmitter);
 
 	}
 
