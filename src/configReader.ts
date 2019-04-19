@@ -1,10 +1,10 @@
 import * as path from 'path';
-import { readFile } from './util';
+import { readFile, fileExists } from './util';
 import * as vscode from 'vscode';
 import { Minimatch } from 'minimatch';
 import { parse as dotenvParse } from 'dotenv';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
-import { IDisposable, IConfigReader } from './core'; 
+import { IDisposable, IConfigReader } from './core';
 import { MochaOpts } from './opts';
 import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
 import { configKeys, OnChange, configSection } from './configKeys';
@@ -34,8 +34,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private disposables: IDisposable[] = [];
 
-	private _currentConfig: Promise<AdapterConfig> | undefined;
-	get currentConfig(): Promise<AdapterConfig> {
+	private _currentConfig: Promise<AdapterConfig | undefined> | undefined;
+	get currentConfig(): Promise<AdapterConfig | undefined> {
 		if (this._currentConfig === undefined) {
 			this._currentConfig = this.readConfig();
 		}
@@ -44,6 +44,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	constructor(
 		private readonly workspaceFolder: vscode.WorkspaceFolder,
+		private readonly workspaceState: vscode.Memento,
 		load: () => void,
 		retire: () => void,
 		private readonly log: Log
@@ -94,9 +95,14 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		this._currentConfig = this.readConfig();
 	}
 
-	private async readConfig(): Promise<AdapterConfig> {
+	private async readConfig(): Promise<AdapterConfig | undefined> {
 
 		const config = vscode.workspace.getConfiguration(configSection, this.workspaceFolder.uri);
+
+		if (!await this.checkEnabled(config)) {
+			return undefined;
+		}
+
 		const cwd = this.getCwd(config);
 
 		let optsFromFiles: MochaOptsAndFiles;
@@ -133,6 +139,66 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs)
 		}
+	}
+
+	private async checkEnabled(config: vscode.WorkspaceConfiguration): Promise<boolean> {
+
+		if (this.workspaceFolder.uri.scheme !== 'file') {
+			return false;
+		}
+
+		const key = `enable ${this.workspaceFolder.uri.fsPath}`;
+
+		const enabledState = this.workspaceState.get<boolean>(key);
+		if (enabledState !== undefined) {
+			return enabledState;
+		}
+
+		for (const configKey in configKeys) {
+			const configValues = config.inspect(configKey);
+			if (configValues && (configValues.workspaceFolderValue !== undefined)) {
+				await this.workspaceState.update(key, true);
+				return true;
+			}
+		}
+
+		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'test/mocha.opts' ]) {
+			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
+			if (await fileExists(resolvedConfigFile)) {
+				await this.workspaceState.update(key, true);
+				return true;
+			}
+		}
+
+		try {
+			const packageJson = JSON.parse(await readFile(path.resolve(this.workspaceFolder.uri.fsPath, 'package.json')));
+			if (packageJson.mocha ||
+				(packageJson.dependencies && packageJson.dependencies.mocha) ||
+				(packageJson.devDependencies && packageJson.devDependencies.mocha)) {
+				await this.workspaceState.update(key, true);
+				return true;
+			}
+		} catch (err) {
+		}
+
+		const relativePattern = new vscode.RelativePattern(this.workspaceFolder, 'test/**/*.js');
+		const fileUris = await vscode.workspace.findFiles(relativePattern);
+		if (fileUris.length > 0) {
+
+			let msg = `The workspace folder ${this.workspaceFolder.name} contains test files, but I'm not sure if they should be run using Mocha. `;
+			msg += 'Do you want to enable Mocha Test Explorer for this workspace folder?';
+			const userChoice = await vscode.window.showInformationMessage(msg, 'Enable', 'Disable');
+
+			if (userChoice === 'Enable') {
+				await this.workspaceState.update(key, true);
+				return true;
+			} else if (userChoice === 'Disable') {
+				await this.workspaceState.update(key, false);
+				return false;
+			}
+		}
+
+		return false;
 	}
 
 	private getMochaOptsFile(config: vscode.WorkspaceConfiguration): string | undefined {
@@ -204,7 +270,20 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private async isTestFile(absolutePath: string): Promise<boolean> {
 
+		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'package.json' ]) {
+			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
+			if (absolutePath === resolvedConfigFile) {
+				return true;
+			}
+		}
+
 		const config = await this.currentConfig;
+
+		if (!config) {
+			const testFolderPath = path.resolve(this.workspaceFolder.uri.fsPath, 'test');
+			return absolutePath.startsWith(testFolderPath);
+		}
+
 		const optsFile = config.mochaOptsFile;
 		if (optsFile) {
 			const resolvedOptsFile = path.resolve(this.workspaceFolder.uri.fsPath, optsFile);
@@ -217,13 +296,6 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		if (envFile) {
 			const resolvedEnvFile = path.resolve(this.workspaceFolder.uri.fsPath, envFile);
 			if (absolutePath === resolvedEnvFile) {
-				return true;
-			}
-		}
-
-		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'package.json' ]) {
-			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
-			if (absolutePath === resolvedConfigFile) {
 				return true;
 			}
 		}

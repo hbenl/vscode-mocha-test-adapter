@@ -36,12 +36,13 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 
 	constructor(
 		public readonly workspaceFolder: vscode.WorkspaceFolder,
+		workspaceState: vscode.Memento,
 		outputChannel: vscode.OutputChannel,
 		log: Log
 	) {
 		super(outputChannel, log);
 
-		this.configReader = new ConfigReader(workspaceFolder, () => this.load(), () => this.autorunEmitter.fire(), log);
+		this.configReader = new ConfigReader(workspaceFolder, workspaceState, () => this.load(), () => this.autorunEmitter.fire(), log);
 		this.disposables.push(this.configReader);
 
 		this.disposables.push(this.testsEmitter);

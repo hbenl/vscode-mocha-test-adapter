@@ -18,7 +18,7 @@ export interface IOutputChannel {
 
 export interface IConfigReader {
 	reloadConfig(): void;
-	readonly currentConfig: Promise<AdapterConfig>;
+	readonly currentConfig: Promise<AdapterConfig | undefined>;
 }
 
 export interface ILog {
@@ -56,12 +56,18 @@ export abstract class MochaAdapterCore {
 
 		try {
 
-			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
 			this.configReader.reloadConfig();
 			const config = await this.configReader.currentConfig;
+
+			if (!config) {
+				this.log.info('Adapter disabled for this folder, loading cancelled');
+				this.nodesById.clear();
+				return;
+			}
+
+			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
 			let testsLoaded = false;
 
@@ -157,9 +163,14 @@ export abstract class MochaAdapterCore {
 
 			if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolderPath}`);
 
-			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
-
 			const config = await this.configReader.currentConfig;
+
+			if (!config) {
+				this.log.info('Adapter disabled for this folder, running cancelled');
+				return;
+			}
+
+			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
 
 			const testInfos: TestInfo[] = [];
 			for (const suiteOrTestId of testsToRun) {
@@ -286,6 +297,11 @@ export abstract class MochaAdapterCore {
 		if (this.log.enabled) this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolderPath}`);
 
 		const config = await this.configReader.currentConfig;
+
+		if (!config) {
+			this.log.info('Adapter disabled for this folder, debugging cancelled');
+			return;
+		}
 
 		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${config.debuggerPort}` ]);
 

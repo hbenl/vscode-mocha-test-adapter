@@ -15,6 +15,12 @@ export interface ErrorInfo {
 	errorMessage: string;
 }
 
+export function fileExists(path: string): Promise<boolean> {
+	return new Promise<boolean>(resolve => {
+		fs.access(path, err => resolve(!err));
+	});
+}
+
 export function readFile(path: string): Promise<string> {
 	return new Promise<string>((resolve, reject) => {
 		fs.readFile(path, 'utf8', (err, data) => {

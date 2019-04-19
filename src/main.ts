@@ -19,7 +19,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		context.subscriptions.push(new TestAdapterRegistrar(
 			testHub,
-			(workspaceFolder) => new MochaAdapter(workspaceFolder, outputChannel, log),
+			(workspaceFolder) => new MochaAdapter(workspaceFolder, context.workspaceState, outputChannel, log),
 			log
 		));
 	}
