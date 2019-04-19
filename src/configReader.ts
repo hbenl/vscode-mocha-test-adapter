@@ -270,6 +270,14 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private async isTestFile(absolutePath: string): Promise<boolean> {
 
+		if (!absolutePath.startsWith(this.workspaceFolder.uri.fsPath)) {
+			return false;
+		}
+		const settingsPath = path.resolve(this.workspaceFolder.uri.fsPath, '.vscode/settings.json');
+		if (absolutePath === settingsPath) {
+			return false;
+		}
+
 		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'package.json' ]) {
 			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
 			if (absolutePath === resolvedConfigFile) {
