@@ -51,6 +51,16 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 
 	}
 
+	async enable(): Promise<void> {
+		await this.configReader.enableAdapter();
+		this.load();
+	}
+
+	async disable(): Promise<void> {
+		await this.configReader.disableAdapter();
+		this.load();
+	}
+
 	protected async startDebugging(config: AdapterConfig): Promise<boolean> {
 
 		const result = await vscode.debug.startDebugging(this.workspaceFolder, config.debuggerConfig || {

@@ -17,10 +17,68 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		const testHub = testExplorerExtension.exports;
 
-		context.subscriptions.push(new TestAdapterRegistrar(
+		const registrar = new TestAdapterRegistrar(
 			testHub,
 			(workspaceFolder) => new MochaAdapter(workspaceFolder, context.workspaceState, outputChannel, log),
 			log
-		));
+		);
+		context.subscriptions.push(registrar);
+
+		context.subscriptions.push(
+			vscode.commands.registerCommand('mochaExplorer.enable', () => enableAdapter(registrar))
+		);
+
+		context.subscriptions.push(
+			vscode.commands.registerCommand('mochaExplorer.disable', () => disableAdapter(registrar))
+		);
+	}
+}
+
+async function enableAdapter(
+	registrar: TestAdapterRegistrar<MochaAdapter>
+): Promise<void> {
+
+	const workspaceFolder = await chooseWorkspaceFolder('Select the workspace folder for which you want to enable Mocha Test Explorer');
+	if (workspaceFolder) {
+		const adapter = registrar.getAdapter(workspaceFolder);
+		if (adapter) {
+			adapter.enable();
+		}
+	}
+}
+
+async function disableAdapter(
+	registrar: TestAdapterRegistrar<MochaAdapter>
+): Promise<void> {
+
+	const workspaceFolder = await chooseWorkspaceFolder('Select the workspace folder for which you want to disable Mocha Test Explorer');
+	if (workspaceFolder) {
+		const adapter = registrar.getAdapter(workspaceFolder);
+		if (adapter) {
+			adapter.disable();
+		}
+	}
+}
+
+async function chooseWorkspaceFolder(msg: string): Promise<vscode.WorkspaceFolder | undefined> {
+
+	const workspaceFolders = vscode.workspace.workspaceFolders;
+	if (workspaceFolders && workspaceFolders.length > 0) {
+
+		if (workspaceFolders.length === 1) {
+
+			return workspaceFolders[0];
+
+		} else {
+
+			const workspaceFolderName = await vscode.window.showQuickPick(
+				workspaceFolders.map(wsf => wsf.name),
+				{ placeHolder: msg }
+			);
+			return workspaceFolders.find(wsf => (wsf.name === workspaceFolderName));
+
+		}
+	} else {
+		return undefined;
 	}
 }

@@ -58,16 +58,17 @@ export abstract class MochaAdapterCore {
 
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
+			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
+
 			this.configReader.reloadConfig();
 			const config = await this.configReader.currentConfig;
 
 			if (!config) {
 				this.log.info('Adapter disabled for this folder, loading cancelled');
 				this.nodesById.clear();
+				this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
 				return;
 			}
-
-			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
 			let testsLoaded = false;
 

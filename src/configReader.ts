@@ -34,6 +34,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private disposables: IDisposable[] = [];
 
+	private enabledStateKey: string;
+
 	private _currentConfig: Promise<AdapterConfig | undefined> | undefined;
 	get currentConfig(): Promise<AdapterConfig | undefined> {
 		if (this._currentConfig === undefined) {
@@ -49,6 +51,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		retire: () => void,
 		private readonly log: Log
 	) {
+
+		this.enabledStateKey = `enable ${this.workspaceFolder.uri.fsPath}`;
 
 		this.disposables.push(vscode.workspace.onDidChangeConfiguration(configChange => {
 
@@ -93,6 +97,14 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	reloadConfig(): void {
 		this._currentConfig = this.readConfig();
+	}
+
+	async enableAdapter(): Promise<void> {
+		await this.workspaceState.update(this.enabledStateKey, true);
+	}
+
+	async disableAdapter(): Promise<void> {
+		await this.workspaceState.update(this.enabledStateKey, false);
 	}
 
 	private async readConfig(): Promise<AdapterConfig | undefined> {
@@ -147,9 +159,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			return false;
 		}
 
-		const key = `enable ${this.workspaceFolder.uri.fsPath}`;
-
-		const enabledState = this.workspaceState.get<boolean>(key);
+		const enabledState = this.workspaceState.get<boolean>(this.enabledStateKey);
 		if (enabledState !== undefined) {
 			return enabledState;
 		}
@@ -157,7 +167,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		for (const configKey in configKeys) {
 			const configValues = config.inspect(configKey);
 			if (configValues && (configValues.workspaceFolderValue !== undefined)) {
-				await this.workspaceState.update(key, true);
+				await this.enableAdapter();
 				return true;
 			}
 		}
@@ -165,7 +175,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'test/mocha.opts' ]) {
 			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
 			if (await fileExists(resolvedConfigFile)) {
-				await this.workspaceState.update(key, true);
+				await this.enableAdapter();
 				return true;
 			}
 		}
@@ -175,7 +185,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			if (packageJson.mocha ||
 				(packageJson.dependencies && packageJson.dependencies.mocha) ||
 				(packageJson.devDependencies && packageJson.devDependencies.mocha)) {
-				await this.workspaceState.update(key, true);
+				await this.enableAdapter();
 				return true;
 			}
 		} catch (err) {
@@ -190,10 +200,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			const userChoice = await vscode.window.showInformationMessage(msg, 'Enable', 'Disable');
 
 			if (userChoice === 'Enable') {
-				await this.workspaceState.update(key, true);
+				await this.enableAdapter();
 				return true;
 			} else if (userChoice === 'Disable') {
-				await this.workspaceState.update(key, false);
+				await this.disableAdapter();
 				return false;
 			}
 		}

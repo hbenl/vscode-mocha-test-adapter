@@ -212,6 +212,16 @@
           "scope": "resource"
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "mochaExplorer.enable",
+        "title": "Mocha Test Explorer: Enable for a workspace folder"
+      },
+      {
+        "command": "mochaExplorer.disable",
+        "title": "Mocha Test Explorer: Disable for a workspace folder"
+      }
+    ]
   }
 }
