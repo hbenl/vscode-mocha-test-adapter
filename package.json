@@ -215,11 +215,11 @@
     },
     "commands": [
       {
-        "command": "mochaExplorer.enable",
+        "command": "mocha-explorer.enable",
         "title": "Mocha Test Explorer: Enable for a workspace folder"
       },
       {
-        "command": "mochaExplorer.disable",
+        "command": "mocha-explorer.disable",
         "title": "Mocha Test Explorer: Disable for a workspace folder"
       }
     ]

@@ -82,6 +82,8 @@ The following commands are available in VS Code's command palette, use the ID to
 
 ID                                 | Command
 -----------------------------------|--------------------------------------------
+`mocha-explorer.enable`            | Enable Mocha Test Explorer for a workspace folder
+`mocha-explorer.disable`           | Disable Mocha Test Explorer for a workspace folder
 `test-explorer.reload`             | Reload tests
 `test-explorer.run-all`            | Run all tests
 `test-explorer.run-file`           | Run tests in current file

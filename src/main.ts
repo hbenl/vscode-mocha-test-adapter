@@ -25,11 +25,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(registrar);
 
 		context.subscriptions.push(
-			vscode.commands.registerCommand('mochaExplorer.enable', () => enableAdapter(registrar))
+			vscode.commands.registerCommand('mocha-explorer.enable', () => enableAdapter(registrar))
 		);
 
 		context.subscriptions.push(
-			vscode.commands.registerCommand('mochaExplorer.disable', () => disableAdapter(registrar))
+			vscode.commands.registerCommand('mocha-explorer.disable', () => disableAdapter(registrar))
 		);
 	}
 }
