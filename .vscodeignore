@@ -1,7 +1,13 @@
 src/**
 **/*.map
 out/test/**
+out/worker/main.js*
+out/worker/patchMocha.js*
+out/worker/processTests.js*
+out/worker/reporter.js*
 package-lock.json
 tsconfig.json
+rollup.config.js
 .vscode/**
 .gitignore
+.rpt2_cache

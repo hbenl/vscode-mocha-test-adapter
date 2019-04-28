@@ -74,7 +74,7 @@ export abstract class MochaAdapterCore {
 			await new Promise<void>(resolve => {
 
 				const childProc = fork(
-					require.resolve('../out/worker/main.js'),
+					require.resolve('../out/worker/bundle.js'),
 					[],
 					{
 						cwd: config.cwd,
@@ -221,7 +221,7 @@ export abstract class MochaAdapterCore {
 				let runningTest: string | undefined = undefined;
 
 				this.runningTestProcess = fork(
-					require.resolve('../out/worker/main.js'),
+					require.resolve('../out/worker/bundle.js'),
 					[],
 					{
 						cwd: config.cwd,

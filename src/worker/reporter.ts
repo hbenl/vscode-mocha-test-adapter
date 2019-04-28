@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { parse as parseStackTrace } from 'stack-trace';
+import stackTrace from 'stack-trace';
 import { stringify } from 'mocha/lib/utils';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
@@ -90,7 +90,7 @@ export default (sendMessage: (message: any) => void) => {
 
 				let decorations: TestDecoration[] = [];
 				if (err.stack) {
-					const parsedStack = parseStackTrace(err);
+					const parsedStack = stackTrace.parse(err);
 					for (const stackFrame of parsedStack) {
 						const filename = stackFrame.getFileName();
 						if (typeof filename === 'string') {
