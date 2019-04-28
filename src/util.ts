@@ -3,6 +3,7 @@ import { MochaOpts } from './opts';
 import { TestInfo, TestSuiteInfo } from 'vscode-test-adapter-api';
 
 export interface WorkerArgs {
+	action: 'loadTests' | 'runTests';
 	testFiles: string[];
 	tests?: string[];
 	mochaPath: string;

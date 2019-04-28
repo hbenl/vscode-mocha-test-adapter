@@ -1,69 +1,10 @@
-import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
 import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { patchMocha } from './patchMocha';
-import { ErrorInfo, WorkerArgs } from '../util';
+import { ErrorInfo } from '../util';
 
-if (process.send) {
-	process.once('message', workerArgs => loadTests(workerArgs, msg => process.send!(msg)));
-} else {
-	loadTests(process.argv[2], console.log);
-}
-
-function loadTests(workerArgs: string, sendMessage: (message: any) => void) {
-	let _logEnabled = true;
-	try {
-
-		const {
-			testFiles,
-			mochaPath,
-			mochaOpts,
-			monkeyPatch,
-			logEnabled
-		} = <WorkerArgs>JSON.parse(workerArgs);
-		_logEnabled = logEnabled;
-
-		const Mocha: typeof import('mocha') = require(mochaPath);
-
-		const cwd = process.cwd();
-		module.paths.push(cwd, path.join(cwd, 'node_modules'));
-		for (let req of mochaOpts.requires) {
-
-			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
-				req = path.resolve(req);
-			}
-
-			if (logEnabled) sendMessage(`Trying require('${req}')`);
-			require(req);
-		}
-
-		const lineSymbol = Symbol('line number');
-		if (monkeyPatch) {
-			if (logEnabled) sendMessage('Patching Mocha');
-			patchMocha(Mocha, mochaOpts.ui, lineSymbol, logEnabled ? sendMessage : undefined);
-		}
-
-		const mocha = new Mocha();
-		mocha.ui(mochaOpts.ui);
-
-		if (logEnabled) sendMessage('Loading files');
-		for (const file of testFiles) {
-			mocha.addFile(file);
-		}
-
-		mocha.grep('$^');
-		mocha.run(() => processTests(mocha.suite, lineSymbol, sendMessage, _logEnabled));
-
-	} catch (err) {
-		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
-		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
-		throw err;
-	}
-}
-
-function processTests(
+export function processTests(
 	suite: Mocha.ISuite,
 	lineSymbol: symbol,
 	sendMessage: (message: any) => void,

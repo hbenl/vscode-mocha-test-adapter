@@ -74,7 +74,7 @@ export abstract class MochaAdapterCore {
 			await new Promise<void>(resolve => {
 
 				const childProc = fork(
-					require.resolve('../out/worker/loadTests.js'),
+					require.resolve('../out/worker/main.js'),
 					[],
 					{
 						cwd: config.cwd,
@@ -84,13 +84,15 @@ export abstract class MochaAdapterCore {
 					}
 				);
 
-				childProc.send(JSON.stringify(<WorkerArgs>{
+				const args: WorkerArgs = {
+					action: 'loadTests',
 					testFiles: config.files,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					monkeyPatch: config.monkeyPatch,
 					logEnabled: this.log.enabled
-				}));
+				}
+				childProc.send(JSON.stringify(args));
 
 				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
@@ -199,17 +201,18 @@ export abstract class MochaAdapterCore {
 				}
 			});
 
-			let testFiles: string[] | undefined = undefined;
+			let _testFiles: string[] | undefined = undefined;
 			if (config.pruneFiles) {
 				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
 				if (testFileSet.size > 0) {
-					testFiles = <string[]>[ ...testFileSet ];
-					if (this.log.enabled) this.log.debug(`Using test files ${JSON.stringify(testFiles)}`);
+					_testFiles = <string[]>[ ...testFileSet ];
+					if (this.log.enabled) this.log.debug(`Using test files ${JSON.stringify(_testFiles)}`);
 				}
 			}
-			if (testFiles === undefined) {
-				testFiles = config.files;
+			if (_testFiles === undefined) {
+				_testFiles = config.files;
 			}
+			const testFiles = _testFiles;
 
 			let childProcessFinished = false;
 
@@ -218,7 +221,7 @@ export abstract class MochaAdapterCore {
 				let runningTest: string | undefined = undefined;
 
 				this.runningTestProcess = fork(
-					require.resolve('../out/worker/runTests.js'),
+					require.resolve('../out/worker/main.js'),
 					[],
 					{
 						cwd: config.cwd,
@@ -229,13 +232,15 @@ export abstract class MochaAdapterCore {
 					}
 				);
 
-				this.runningTestProcess.send(JSON.stringify(<WorkerArgs>{
+				const args: WorkerArgs = {
+					action: 'runTests',
 					testFiles,
 					tests,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					logEnabled: this.log.enabled
-				}));
+				};
+				this.runningTestProcess.send(JSON.stringify(args));
 
 				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
 
