@@ -46,9 +46,11 @@
     "escape-string-regexp": "^2.0.0",
     "minimatch": "^3.0.4",
     "mocha": "^6.1.4",
+    "split": "^1.0.1",
     "stack-trace": "0.0.10",
     "tslib": "^1.9.3",
     "vscode-test-adapter-api": "^1.7.0",
+    "vscode-test-adapter-remoting-util": "^0.4.0",
     "vscode-test-adapter-util": "^0.7.0"
   },
   "devDependencies": {
@@ -61,6 +63,7 @@
     "@types/minimatch": "^3.0.3",
     "@types/mocha": "^5.2.6",
     "@types/node": "^10.14.4",
+    "@types/split": "^1.0.0",
     "@types/stack-trace": "0.0.29",
     "esm": "^3.2.22",
     "glob": "^7.1.3",

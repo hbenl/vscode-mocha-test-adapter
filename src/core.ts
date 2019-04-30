@@ -75,7 +75,7 @@ export abstract class MochaAdapterCore {
 
 				const childProc = fork(
 					require.resolve('../out/worker/bundle.js'),
-					[],
+					[ "{}" ],
 					{
 						cwd: config.cwd,
 						env: config.env,
@@ -222,7 +222,7 @@ export abstract class MochaAdapterCore {
 
 				this.runningTestProcess = fork(
 					require.resolve('../out/worker/bundle.js'),
-					[],
+					[ "{}" ],
 					{
 						cwd: config.cwd,
 						env: config.env,

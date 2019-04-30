@@ -12,6 +12,12 @@ export interface WorkerArgs {
 	logEnabled: boolean;
 }
 
+export interface NetworkOptions {
+	role: 'client' | 'server';
+	port: number;
+	host?: string;
+}
+
 export interface ErrorInfo {
 	type: 'error';
 	errorMessage: string;

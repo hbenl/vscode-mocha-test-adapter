@@ -1,17 +1,49 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
+import { createConnection, receiveConnection, writeMessage } from 'vscode-test-adapter-remoting-util/out/ipc';
+import split from 'split';
 import RegExEscape from 'escape-string-regexp';
-import { WorkerArgs, ErrorInfo } from '../util';
+import { WorkerArgs, ErrorInfo, NetworkOptions } from '../util';
 import { patchMocha } from './patchMocha';
 import { processTests } from './processTests';
 import ReporterFactory from './reporter';
 
-if (process.send) {
-	process.once('message', argsJson => execute(argsJson, msg => process.send!(msg)));
-} else {
-	execute(process.argv[2], console.log);
-}
+(async () => {
+	try {
+
+		const netOptsJson = process.argv[2];
+		const netOpts: NetworkOptions = JSON.parse(netOptsJson);
+
+		if (netOpts.role && netOpts.port) {
+
+			const socket = (netOpts.role === 'client') ?
+				await createConnection(netOpts.port, { host: netOpts.host }) :
+				await receiveConnection(netOpts.port, { host: netOpts.host });
+
+			const argsJson = await new Promise<string>(resolve => {
+				socket.pipe(split()).once('data', resolve);
+			});
+	
+			execute(argsJson, msg => writeMessage(socket, msg));
+
+		} else if (process.send) {
+
+			const argsJson = await new Promise<string>(resolve => {
+				process.once('message', resolve);
+			});
+
+			execute(argsJson, msg => process.send!(msg));
+
+		} else {
+
+			execute(process.argv[3], msg => console.log(msg));
+
+		}
+	} catch (err) {
+		throw err;
+	}
+})();
 
 function execute(argsJson: string, sendMessage: (message: any) => void): void {
 
