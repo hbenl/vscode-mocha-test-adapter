@@ -11,6 +11,7 @@ export interface WorkerArgs {
 	monkeyPatch?: boolean;
 	logEnabled: boolean;
 	workerScript?: string;
+	debuggerPort?: number;
 }
 
 export interface NetworkOptions {

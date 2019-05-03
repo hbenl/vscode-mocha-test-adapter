@@ -178,7 +178,7 @@ export abstract class MochaAdapterCore {
 		}
 	}
 
-	async run(testsToRun: string[], execArgv: string[] = []): Promise<void> {
+	async run(testsToRun: string[], debug = false): Promise<void> {
 
 		try {
 
@@ -232,6 +232,8 @@ export abstract class MochaAdapterCore {
 					path.resolve(this.workspaceFolderPath, config.launcherScript) :
 					this.workerScript;
 
+				const execArgv = (debug && !config.launcherScript) ? [ `--inspect-brk=${config.debuggerPort}` ] : [];
+
 				this.runningTestProcess = fork(
 					childProcScript,
 					[ "{}" ],
@@ -251,7 +253,8 @@ export abstract class MochaAdapterCore {
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					logEnabled: this.log.enabled,
-					workerScript: this.workerScript
+					workerScript: this.workerScript,
+					debuggerPort: debug ? config.debuggerPort : undefined
 				};
 				this.runningTestProcess.send(JSON.stringify(args));
 
@@ -332,7 +335,7 @@ export abstract class MochaAdapterCore {
 			return;
 		}
 
-		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${config.debuggerPort}` ]);
+		const testRunPromise = this.run(testsToRun, true);
 
 		this.log.info('Starting the debug session');
 		let debugSession: any;
