@@ -53,7 +53,9 @@ export async function createTestMochaAdapter(
 
 		mochaOptsFile: optsFilePath,
 		envFile: undefined,
-		globs: mochaOptsAndFiles.globs
+		globs: mochaOptsAndFiles.globs,
+
+		launcherScript: undefined
 	};
 
 	return new TestMochaAdapter(workspaceFolderPath, new TestConfigReader(config));

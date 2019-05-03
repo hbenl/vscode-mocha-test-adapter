@@ -28,6 +28,8 @@ export interface AdapterConfig {
 	mochaOptsFile: string | undefined;
 	envFile: string | undefined;
 	globs: string[];
+
+	launcherScript: string | undefined;
 }
 
 export class ConfigReader implements IConfigReader, IDisposable {
@@ -149,7 +151,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			files: await this.lookupFiles(config, optsFromFiles.globs, optsFromFiles.files),
 			mochaOptsFile,
 			envFile,
-			globs: this.getTestFilesGlobs(config, optsFromFiles.globs)
+			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
+			launcherScript: this.getLauncherScript(config)
 		}
 	}
 
@@ -458,6 +461,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getEnvFile(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.envPath.key) || undefined;
+	}
+
+	private getLauncherScript(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>(configKeys.launcherScript.key) || undefined;
 	}
 
 	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {

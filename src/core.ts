@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
@@ -34,7 +35,7 @@ export abstract class MochaAdapterCore {
 	protected abstract readonly workspaceFolderPath: string;
 
 	protected abstract readonly configReader: IConfigReader;
-	
+
 	protected abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
 	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
 	protected abstract readonly retireEmitter: IEventEmitter<RetireEvent>;
@@ -43,6 +44,8 @@ export abstract class MochaAdapterCore {
 	protected abstract onDidTerminateDebugSession(cb: (session: any) => any): IDisposable;
 
 	protected readonly nodesById = new Map<string, TestSuiteInfo | TestInfo>();
+
+	private readonly workerScript = require.resolve('../out/worker/bundle.js');
 
 	private runningTestProcess: ChildProcess | undefined;
 
@@ -73,8 +76,12 @@ export abstract class MochaAdapterCore {
 
 			await new Promise<void>(resolve => {
 
+				const childProcScript = config.launcherScript ?
+					path.resolve(this.workspaceFolderPath, config.launcherScript) :
+					this.workerScript;
+
 				const childProc = fork(
-					require.resolve('../out/worker/bundle.js'),
+					childProcScript,
 					[ "{}" ],
 					{
 						cwd: config.cwd,
@@ -90,7 +97,8 @@ export abstract class MochaAdapterCore {
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					monkeyPatch: config.monkeyPatch,
-					logEnabled: this.log.enabled
+					logEnabled: this.log.enabled,
+					workerScript: this.workerScript
 				}
 				childProc.send(JSON.stringify(args));
 
@@ -116,7 +124,7 @@ export abstract class MochaAdapterCore {
 
 								if (changedFiles) {
 
-									const changedTests = findTests(info, { tests: 
+									const changedTests = findTests(info, { tests:
 										info => ((info.file !== undefined) && (changedFiles.indexOf(info.file) >= 0))
 									});
 									this.retireEmitter.fire({ tests: [ ...changedTests ].map(info => info.id) })
@@ -220,8 +228,12 @@ export abstract class MochaAdapterCore {
 
 				let runningTest: string | undefined = undefined;
 
+				const childProcScript = config.launcherScript ?
+					path.resolve(this.workspaceFolderPath, config.launcherScript) :
+					this.workerScript;
+
 				this.runningTestProcess = fork(
-					require.resolve('../out/worker/bundle.js'),
+					childProcScript,
 					[ "{}" ],
 					{
 						cwd: config.cwd,
@@ -238,7 +250,8 @@ export abstract class MochaAdapterCore {
 					tests,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
-					logEnabled: this.log.enabled
+					logEnabled: this.log.enabled,
+					workerScript: this.workerScript
 				};
 				this.runningTestProcess.send(JSON.stringify(args));
 

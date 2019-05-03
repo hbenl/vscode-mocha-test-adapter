@@ -10,6 +10,7 @@ export interface WorkerArgs {
 	mochaOpts: MochaOpts;
 	monkeyPatch?: boolean;
 	logEnabled: boolean;
+	workerScript?: string;
 }
 
 export interface NetworkOptions {

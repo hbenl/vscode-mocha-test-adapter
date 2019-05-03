@@ -210,6 +210,15 @@
           "default": null,
           "scope": "resource"
         },
+        "mochaExplorer.launcherScript": {
+          "description": "The path of a launcher script (relative to the workspace folder) used for running the tests remotely",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
         "mochaExplorer.logpanel": {
           "description": "Write diagnotic logs to an output panel",
           "type": "boolean",

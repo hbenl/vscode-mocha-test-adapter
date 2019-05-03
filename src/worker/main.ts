@@ -25,7 +25,7 @@ import ReporterFactory from './reporter';
 				socket.pipe(split()).once('data', resolve);
 			});
 	
-			execute(argsJson, msg => writeMessage(socket, msg));
+			execute(argsJson, msg => writeMessage(socket, msg), () => socket.unref());
 
 		} else if (process.send) {
 
@@ -45,7 +45,7 @@ import ReporterFactory from './reporter';
 	}
 })();
 
-function execute(argsJson: string, sendMessage: (message: any) => void): void {
+function execute(argsJson: string, sendMessage: (message: any) => void, onFinished?: () => void): void {
 
 	let logEnabled = true;
 	let sendErrorInfo = true;
@@ -89,7 +89,10 @@ function execute(argsJson: string, sendMessage: (message: any) => void): void {
 		if (args.action === 'loadTests') {
 
 			mocha.grep('$^');
-			mocha.run(() => processTests(mocha.suite, lineSymbol, sendMessage, args.logEnabled));
+			mocha.run(() => {
+				processTests(mocha.suite, lineSymbol, sendMessage, args.logEnabled);
+				if (onFinished) onFinished();
+			});
 
 		} else {
 
@@ -98,7 +101,10 @@ function execute(argsJson: string, sendMessage: (message: any) => void): void {
 			mocha.reporter(<any>ReporterFactory(sendMessage));
 	
 			if (args.logEnabled) sendMessage('Running tests');
-			mocha.run(args.mochaOpts.exit ? () => process.exit() : undefined);
+			mocha.run(() => {
+				if (onFinished) onFinished();
+				if (args.mochaOpts.exit) process.exit();
+			});
 
 		}
 
