@@ -87,9 +87,17 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			const filename = document.uri.fsPath;
 			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
 
-			if (await this.isTestFile(filename)) {
+			const isTestFile = await this.isTestFile(filename);
+			if (isTestFile) {
+
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				load([ filename ]);
+				
+				if (isTestFile === 'config') {
+					load();
+				} else {
+					load([ filename ]);
+				}
+
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
 				this.log.info('Sending autorun event');
 				retire();
@@ -281,7 +289,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return resolvedFilesFromOptsFile.concat(testFiles);
 	}
 
-	private async isTestFile(absolutePath: string): Promise<boolean> {
+	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
 
 		if (!absolutePath.startsWith(this.workspaceFolder.uri.fsPath)) {
 			return false;
@@ -294,7 +302,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'package.json' ]) {
 			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
 			if (absolutePath === resolvedConfigFile) {
-				return true;
+				return 'config';
 			}
 		}
 
@@ -309,7 +317,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		if (optsFile) {
 			const resolvedOptsFile = path.resolve(this.workspaceFolder.uri.fsPath, optsFile);
 			if (absolutePath === resolvedOptsFile) {
-				return true;
+				return 'config';
 			}
 		}
 
@@ -317,7 +325,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		if (envFile) {
 			const resolvedEnvFile = path.resolve(this.workspaceFolder.uri.fsPath, envFile);
 			if (absolutePath === resolvedEnvFile) {
-				return true;
+				return 'config';
 			}
 		}
 
