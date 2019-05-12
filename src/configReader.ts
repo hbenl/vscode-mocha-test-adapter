@@ -313,19 +313,12 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			return absolutePath.startsWith(testFolderPath);
 		}
 
-		const optsFile = config.mochaOptsFile;
-		if (optsFile) {
-			const resolvedOptsFile = path.resolve(this.workspaceFolder.uri.fsPath, optsFile);
-			if (absolutePath === resolvedOptsFile) {
-				return 'config';
-			}
-		}
-
-		const envFile = config.envFile;
-		if (envFile) {
-			const resolvedEnvFile = path.resolve(this.workspaceFolder.uri.fsPath, envFile);
-			if (absolutePath === resolvedEnvFile) {
-				return 'config';
+		for (const configFile of [ config.mochaOptsFile, config.envFile, config.launcherScript ]) {
+			if (configFile) {
+				const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
+				if (absolutePath === resolvedConfigFile) {
+					return 'config';
+				}
 			}
 		}
 
