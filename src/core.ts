@@ -87,7 +87,8 @@ export abstract class MochaAdapterCore {
 						cwd: config.cwd,
 						env: config.env,
 						execPath: config.nodePath,
-						execArgv: [] // ['--inspect-brk=12345']
+						execArgv: [], // ['--inspect-brk=12345']
+						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
 
@@ -155,10 +156,19 @@ export abstract class MochaAdapterCore {
 					}
 				});
 
-				childProc.on('close', () => {
-					this.log.info('Worker finished');
+				if (this.log.enabled) {
+					childProc.stdout.on('data', data => this.log.info(data.toString()));
+					childProc.stderr.on('data', data => this.log.error(data.toString()));
+				}
+
+				childProc.on('exit', (code, signal) => {
+					if (this.log.enabled) this.log.info(`Worker finished with code ${code} and signal ${signal}`);
 					if (!testsLoaded) {
-						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+						if (code || signal) {
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `The worker process finished with code ${code} and signal ${signal}` });
+						} else {
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+						}
 						resolve();
 					}
 				});
