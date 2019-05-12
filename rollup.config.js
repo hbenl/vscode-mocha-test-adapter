@@ -12,7 +12,7 @@ export default {
 		sourcemap: true
 	},
 
-	external: [ 'fs', 'util', 'path', 'net', 'stream', 'buffer', 'string_decoder', 'mocha/lib/utils' ],
+	external: [ 'fs', 'util', 'path', 'net', 'stream', 'buffer', 'string_decoder' ],
 
 	plugins: [
 		nodeResolve(),

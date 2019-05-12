@@ -1,10 +1,9 @@
 import * as path from 'path';
 import stackTrace from 'stack-trace';
-import { stringify } from 'mocha/lib/utils';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
 
-export default (sendMessage: (message: any) => void) => {
+export default (sendMessage: (message: any) => void, stringify: (obj: any) => string) => {
 
 	return class Reporter {
 

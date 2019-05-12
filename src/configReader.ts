@@ -429,7 +429,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		if (mochaPath) {
 			return path.resolve(this.workspaceFolder.uri.fsPath, mochaPath);
 		} else {
-			return require.resolve('mocha');
+			return path.dirname(require.resolve('mocha'));
 		}
 	}
 

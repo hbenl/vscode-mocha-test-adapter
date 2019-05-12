@@ -96,9 +96,10 @@ function execute(argsJson: string, sendMessage: (message: any) => void, onFinish
 
 		} else {
 
+			const stringify: (obj: any) => string = require(`${args.mochaPath}/lib/utils`).stringify;
 			const regExp = new RegExp(args.tests!.map(RegExEscape).join('|'));
 			mocha.grep(regExp);
-			mocha.reporter(<any>ReporterFactory(sendMessage));
+			mocha.reporter(<any>ReporterFactory(sendMessage, stringify));
 	
 			if (args.logEnabled) sendMessage('Running tests');
 			mocha.run(() => {
