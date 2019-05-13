@@ -225,7 +225,7 @@
     ],
     "languages": [
       {
-        "id": "code-runner-output",
+        "id": "test-runner-output",
         "mimetypes": [
           "text/x-code-output"
         ]
@@ -233,7 +233,7 @@
     ],
     "grammars": [
       {
-        "language": "code-runner-output",
+        "language": "test-runner-output",
         "scopeName": "source.output",
         "path": "./syntaxes/test-output.tmLanguage.json"
       }
