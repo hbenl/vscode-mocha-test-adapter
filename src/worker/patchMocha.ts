@@ -6,7 +6,7 @@ export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol
 
 		Mocha.interfaces.bdd = patchInterface(
 			Mocha.interfaces.bdd,
-			[ 'describe', 'it', 'context', 'specify' ],
+			['describe', 'it', 'context', 'specify'],
 			lineSymbol,
 			log
 		);
@@ -15,7 +15,7 @@ export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol
 
 		Mocha.interfaces.tdd = patchInterface(
 			Mocha.interfaces.tdd,
-			[ 'suite', 'test' ],
+			['suite', 'test'],
 			lineSymbol,
 			log
 		);
@@ -24,7 +24,7 @@ export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol
 
 		Mocha.interfaces.qunit = patchInterface(
 			Mocha.interfaces.qunit,
-			[ 'suite', 'test' ],
+			['suite', 'test'],
 			lineSymbol,
 			log
 		);
@@ -75,7 +75,7 @@ function patchFunction(
 	lineSymbol: symbol,
 	log?: (message: any) => void
 ): any {
-	return function(this: any) {
+	return function (this: any) {
 
 		const result = origFunction.apply(this, arguments);
 
@@ -96,9 +96,8 @@ function findCallLocation(
 ): number | undefined {
 
 	const err = new Error();
-	if (log) log(`Looking for ${file} in ${err.stack}`);
+	if (log) log({ type: "error", errorMessage: `Looking for ${file} in ${err.stack}` });
 	const stackTrace = parseStackTrace(err);
-
 	for (var i = 0; i < stackTrace.length - 1; i++) {
 		const stackFrame = stackTrace[i];
 		if (stackFrame.getFileName() === file) {

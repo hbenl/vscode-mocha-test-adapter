@@ -115,7 +115,7 @@ export class TestMochaAdapter extends MochaAdapterCore {
 	}
 
 	protected onDidTerminateDebugSession(cb: (session: any) => void): IDisposable {
-		return { dispose() {} };
+		return { dispose() { } };
 	}
 }
 
@@ -131,7 +131,7 @@ export class TestConfigReader implements IConfigReader {
 		this.config = initialConfig;
 	}
 
-	reloadConfig(): void {}
+	reloadConfig(): void { }
 }
 
 export class TestEventCollector<T> implements IEventEmitter<T> {
@@ -163,6 +163,7 @@ export class TestLog implements ILog {
 	}
 	error(...msg: any[]): void {
 	}
+	outputChannel = undefined
 }
 
 async function findFiles(glob: string): Promise<string[]> {

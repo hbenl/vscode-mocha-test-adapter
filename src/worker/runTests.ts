@@ -58,7 +58,7 @@ function runTests(workerArgs: string, sendMessage: (message: any) => void) {
 		mocha.run(mochaOpts.exit ? () => process.exit() : undefined);
 
 	} catch (err) {
-		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
+		if (_logEnabled) sendMessage({ type: "error", errorMessage: `Caught error ${util.inspect(err)}` });
 		throw err;
 	}
 }

@@ -3,7 +3,7 @@ import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
 import { ErrorInfo, WorkerArgs, findTests } from './util';
 import { AdapterConfig } from './configReader';
-
+import * as vscode from 'vscode'
 export interface IDisposable {
 	dispose(): void;
 }
@@ -27,6 +27,7 @@ export interface ILog {
 	info(...msg: any[]): void;
 	warn(...msg: any[]): void;
 	error(...msg: any[]): void;
+	outputChannel: vscode.OutputChannel | undefined
 }
 
 export abstract class MochaAdapterCore {
@@ -34,7 +35,7 @@ export abstract class MochaAdapterCore {
 	protected abstract readonly workspaceFolderPath: string;
 
 	protected abstract readonly configReader: IConfigReader;
-	
+
 	protected abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
 	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
 	protected abstract readonly retireEmitter: IEventEmitter<RetireEvent>;
@@ -49,129 +50,133 @@ export abstract class MochaAdapterCore {
 	constructor(
 		protected readonly outputChannel: IOutputChannel,
 		protected readonly log: ILog
-	) {}
+	) { }
 
 	async load(changedFiles?: string[]): Promise<void> {
+		if (this.log.outputChannel)
+			try {
 
-		try {
+				if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
-			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
+				this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
-			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
+				this.configReader.reloadConfig();
+				const config = await this.configReader.currentConfig;
 
-			this.configReader.reloadConfig();
-			const config = await this.configReader.currentConfig;
+				if (!config) {
+					this.log.info('Adapter disabled for this folder, loading cancelled');
+					this.nodesById.clear();
+					this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
+					return;
+				}
 
-			if (!config) {
-				this.log.info('Adapter disabled for this folder, loading cancelled');
-				this.nodesById.clear();
-				this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
-				return;
-			}
+				let testsLoaded = false;
 
-			let testsLoaded = false;
+				await new Promise<void>(resolve => {
 
-			await new Promise<void>(resolve => {
+					const childProc = fork(
+						require.resolve('../out/worker/loadTests.js'),
+						[],
+						{
+							cwd: config.cwd,
+							env: config.env,
+							execPath: config.nodePath,
+							execArgv: [] // ['--inspect-brk=12345']
+						}
+					);
 
-				const childProc = fork(
-					require.resolve('../out/worker/loadTests.js'),
-					[],
-					{
-						cwd: config.cwd,
-						env: config.env,
-						execPath: config.nodePath,
-						execArgv: [] // ['--inspect-brk=12345']
-					}
-				);
+					childProc.send(JSON.stringify(<WorkerArgs>{
+						testFiles: config.files,
+						mochaPath: config.mochaPath,
+						mochaOpts: config.mochaOpts,
+						monkeyPatch: config.monkeyPatch,
+						logEnabled: this.log.enabled
+					}));
 
-				childProc.send(JSON.stringify(<WorkerArgs>{
-					testFiles: config.files,
-					mochaPath: config.mochaPath,
-					mochaOpts: config.mochaOpts,
-					monkeyPatch: config.monkeyPatch,
-					logEnabled: this.log.enabled
-				}));
+					childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
-				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
+						if (typeof info === 'string') {
 
-					if (typeof info === 'string') {
-
-						if (this.log.enabled) this.log.info(`Worker: ${info}`);
-
-					} else {
-
-						this.nodesById.clear();
-
-						if (info) {
-
-							if (info.type === 'suite') {
-
-								this.log.info('Received tests from worker');
-								info.id = `${this.workspaceFolderPath}: Mocha`;
-								info.label = 'Mocha';
-								this.collectNodesById(info);
-								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
-
-								if (changedFiles) {
-
-									const changedTests = findTests(info, { tests: 
-										info => ((info.file !== undefined) && (changedFiles.indexOf(info.file) >= 0))
-									});
-									this.retireEmitter.fire({ tests: [ ...changedTests ].map(info => info.id) })
-
-								} else {
-									this.retireEmitter.fire({});
-								}
-
-							} else { // info.type === 'error'
-
-								this.log.info('Received error from worker');
-								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
-
-							}
+							if (this.log.enabled) this.log.info(`Worker: ${info}`);
 
 						} else {
 
-							this.log.info('Worker found no tests');
-							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
+							this.nodesById.clear();
 
+							if (info) {
+
+								if (info.type === 'suite') {
+
+									this.log.info('Received tests from worker');
+									info.id = `${this.workspaceFolderPath}: Mocha`;
+									info.label = 'Mocha';
+									this.collectNodesById(info);
+									this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
+
+									if (changedFiles) {
+
+										const changedTests = findTests(info, {
+											tests:
+												info => ((info.file !== undefined) && (changedFiles.indexOf(info.file) >= 0))
+										});
+										this.retireEmitter.fire({ tests: [...changedTests].map(info => info.id) })
+
+									} else {
+										this.retireEmitter.fire({});
+									}
+
+								} else { // info.type === 'error'
+
+									this.log.error('Received error from worker ' + info.errorMessage);
+									this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
+
+								}
+
+							} else {
+
+								this.log.info('Worker found no tests');
+								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
+
+							}
+
+							testsLoaded = true;
+							if (config.mochaOpts.exit) {
+								childProc.kill();
+							}
+							resolve();
 						}
+					});
 
-						testsLoaded = true;
-						if (config.mochaOpts.exit) {
-							childProc.kill();
+					childProc.on('close', () => {
+						this.log.info('Worker finished');
+						if (!testsLoaded) {
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+							resolve();
 						}
-						resolve();
-					}
+					});
+
+					childProc.on('error', err => {
+						if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
+						if (!testsLoaded) {
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
+							resolve();
+						}
+					});
 				});
 
-				childProc.on('close', () => {
-					this.log.info('Worker finished');
-					if (!testsLoaded) {
-						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
-						resolve();
-					}
-				});
-
-				childProc.on('error', err => {
-					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
-					if (!testsLoaded) {
-						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
-						resolve();
-					}
-				});
-			});
-
-		} catch (err) {
-			if (this.log.enabled) this.log.error(`Error while loading tests: ${util.inspect(err)}`);
-			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
-		}
+			} catch (err) {
+				if (this.log.enabled) this.log.error(`Error while loading tests: ${util.inspect(err)}`);
+				this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
+			}
 	}
 
 	async run(testsToRun: string[], execArgv: string[] = []): Promise<void> {
 
 		try {
-
+			if (this.log.outputChannel) {
+				this.log.outputChannel.clear();
+				this.log.outputChannel.show()
+			}
 			if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolderPath}`);
 
 			const config = await this.configReader.currentConfig;
@@ -203,7 +208,7 @@ export abstract class MochaAdapterCore {
 			if (config.pruneFiles) {
 				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
 				if (testFileSet.size > 0) {
-					testFiles = <string[]>[ ...testFileSet ];
+					testFiles = <string[]>[...testFileSet];
 					if (this.log.enabled) this.log.debug(`Using test files ${JSON.stringify(testFiles)}`);
 				}
 			}
@@ -225,7 +230,7 @@ export abstract class MochaAdapterCore {
 						env: config.env,
 						execPath: config.nodePath,
 						execArgv,
-						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
+						stdio: ['pipe', 'pipe', 'pipe', 'ipc']
 					}
 				);
 
@@ -237,15 +242,17 @@ export abstract class MochaAdapterCore {
 					logEnabled: this.log.enabled
 				}));
 
-				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
+				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent | ErrorInfo) => {
 
 					if (typeof message === 'string') {
 
 						if (this.log.enabled) this.log.info(`Worker: ${message}`);
 
+					} else if (message.type == "error") {
+						if (this.log.enabled) this.log.error(message.errorMessage);
 					} else {
 
-						if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
+						if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message, null, 2)}`);
 
 						this.testStatesEmitter.fire(message);
 
@@ -314,7 +321,7 @@ export abstract class MochaAdapterCore {
 			return;
 		}
 
-		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${config.debuggerPort}` ]);
+		const testRunPromise = this.run(testsToRun, [`--inspect-brk=${config.debuggerPort}`]);
 
 		this.log.info('Starting the debug session');
 		let debugSession: any;
@@ -326,7 +333,7 @@ export abstract class MochaAdapterCore {
 			return;
 		}
 
-		const subscription = this.onDidTerminateDebugSession((session) => {
+		const subscription = this.onDidTerminateDebugSession((session) => {
 			if (debugSession != session) return;
 			this.log.info('Debug session ended');
 			this.cancel(); // terminate the test run

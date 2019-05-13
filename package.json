@@ -222,6 +222,21 @@
         "command": "mocha-explorer.disable",
         "title": "Mocha Test Explorer: Disable for a workspace folder"
       }
+    ],
+    "languages": [
+      {
+        "id": "code-runner-output",
+        "mimetypes": [
+          "text/x-code-output"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "code-runner-output",
+        "scopeName": "source.output",
+        "path": "./syntaxes/test-output.tmLanguage.json"
+      }
     ]
   }
 }
