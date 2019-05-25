@@ -4,27 +4,27 @@ import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { ErrorInfo } from '../util';
 
-export function processTests(
+export async function processTests(
 	suite: Mocha.ISuite,
 	lineSymbol: symbol,
-	sendMessage: (message: any) => void,
+	sendMessage: (message: any) => Promise<void>,
 	logEnabled: boolean
-): void {
+): Promise<void> {
 	try {
 
-		if (logEnabled) sendMessage('Converting tests and suites');
+		if (logEnabled) await sendMessage('Converting tests and suites');
 		const fileCache = new Map<string, string>();
 		const rootSuite = convertSuite(suite, lineSymbol, fileCache);
 
 		if (rootSuite.children.length > 0) {
-			sendMessage(rootSuite);
+			await sendMessage(rootSuite);
 		} else {
-			sendMessage(null);
+			await sendMessage(null);
 		}
 
 	} catch (err) {
-		if (logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
-		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
+		if (logEnabled) await sendMessage(`Caught error ${util.inspect(err)}`);
+		await sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
 		throw err;
 	}
 }

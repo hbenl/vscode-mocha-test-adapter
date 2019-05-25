@@ -149,9 +149,6 @@ export abstract class MochaAdapterCore {
 						}
 
 						testsLoaded = true;
-						if (config.mochaOpts.exit) {
-							childProc.kill();
-						}
 						resolve();
 					}
 				});

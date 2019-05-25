@@ -33,11 +33,11 @@ import ReporterFactory from './reporter';
 				process.once('message', resolve);
 			});
 
-			execute(argsJson, msg => process.send!(msg));
+			execute(argsJson, async msg => process.send!(msg));
 
 		} else {
 
-			execute(process.argv[3], msg => console.log(msg));
+			execute(process.argv[3], async msg => console.log(msg));
 
 		}
 	} catch (err) {
@@ -45,7 +45,7 @@ import ReporterFactory from './reporter';
 	}
 })();
 
-function execute(argsJson: string, sendMessage: (message: any) => void, onFinished?: () => void): void {
+function execute(argsJson: string, sendMessage: (message: any) => Promise<void>, onFinished?: () => void): void {
 
 	let logEnabled = true;
 	let sendErrorInfo = true;
@@ -89,9 +89,10 @@ function execute(argsJson: string, sendMessage: (message: any) => void, onFinish
 		if (args.action === 'loadTests') {
 
 			mocha.grep('$^');
-			mocha.run(() => {
-				processTests(mocha.suite, lineSymbol, sendMessage, args.logEnabled);
+			mocha.run(async () => {
+				await processTests(mocha.suite, lineSymbol, sendMessage, args.logEnabled);
 				if (onFinished) onFinished();
+				if (args.mochaOpts.exit) process.exit();
 			});
 
 		} else {
