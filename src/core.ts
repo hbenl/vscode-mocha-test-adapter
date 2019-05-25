@@ -309,6 +309,7 @@ export abstract class MochaAdapterCore {
 
 				this.runningTestProcess.on('exit', () => {
 					this.log.info('Worker finished');
+					runningTest = undefined;
 					this.runningTestProcess = undefined;
 					if (!childProcessFinished) {
 						childProcessFinished = true;
@@ -319,6 +320,7 @@ export abstract class MochaAdapterCore {
 
 				this.runningTestProcess.on('error', err => {
 					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
+					runningTest = undefined;
 					this.runningTestProcess = undefined;
 					if (!childProcessFinished) {
 						childProcessFinished = true;
