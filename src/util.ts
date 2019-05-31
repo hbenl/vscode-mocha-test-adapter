@@ -67,3 +67,14 @@ export function* findTests(
 
 	}
 }
+
+export function stringsOnly(env: { [envVar: string]: string | null | undefined }): { [envVar: string]: string } {
+	const result: { [envVar: string]: string } = {};
+	for (const envVar in env) {
+		const val = env[envVar];
+		if (typeof val === 'string') {
+			result[envVar] = val;
+		}
+	}
+	return result;
+}

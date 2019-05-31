@@ -111,7 +111,10 @@
           "description": "Environment variables to be set when running the tests",
           "type": "object",
           "additionalProperties": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "default": {},
           "scope": "resource"

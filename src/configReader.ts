@@ -9,12 +9,14 @@ import { MochaOpts } from './opts';
 import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
 import { configKeys, OnChange, configSection } from './configKeys';
 
+export type EnvVars = { [envVar: string]: string | null };
+
 export interface AdapterConfig {
 
 	nodePath: string | undefined;
 	mochaPath: string;
 	cwd: string;
-	env: NodeJS.ProcessEnv;
+	env: EnvVars;
 
 	monkeyPatch: boolean;
 	pruneFiles: boolean;
@@ -341,34 +343,21 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return false;
 	}
 
-	private async getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): Promise<NodeJS.ProcessEnv> {
+	private async getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): Promise<EnvVars> {
 
-		const processEnv = process.env;
-		const configEnv: { [prop: string]: string } = config.get(configKeys.env.key) || {};
-		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(configEnv)}`);
+		let resultEnv: EnvVars = config.get(configKeys.env.key) || {};
+		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(resultEnv)}`);
 
 		const envPath: string | undefined = config.get<string>(configKeys.envPath.key);
-		if (envPath && this.log.enabled) this.log.debug(`Reading environment variables from ${envPath}`);
-
-		let resultEnv = { ...processEnv };
-
-		// workaround for esm not working when mocha is loaded programmatically (see #12)
-		if (mochaOpts.requires.indexOf('esm') >= 0) {
-			resultEnv['NYC_ROOT_ID'] = '';
-		}
-
-		for (const prop in configEnv) {
-			const val = configEnv[prop];
-			if ((val === undefined) || (val === null)) {
-				delete resultEnv.prop;
-			} else {
-				resultEnv[prop] = String(val);
-			}
-		}
-
 		if (envPath) {
+			if (this.log.enabled) this.log.debug(`Reading environment variables from ${envPath}`);
 			const dotenvFile = await readFile(path.resolve(this.workspaceFolder.uri.fsPath, envPath));
 			resultEnv = { ...dotenvParse(dotenvFile), ...resultEnv };
+		}
+
+		// workaround for esm not working when mocha is loaded programmatically (see #12)
+		if ((mochaOpts.requires.indexOf('esm') >= 0) && !resultEnv.hasOwnProperty('NYC_ROOT_ID')) {
+			resultEnv['NYC_ROOT_ID'] = '';
 		}
 
 		return resultEnv;

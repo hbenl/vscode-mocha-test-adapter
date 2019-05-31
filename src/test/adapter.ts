@@ -4,13 +4,13 @@ import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestR
 import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputChannel, ILog } from '../core';
 import { MochaOpts } from '../opts';
 import { MochaOptsReader } from '../optsReader';
-import { AdapterConfig } from '../configReader';
+import { AdapterConfig, EnvVars } from '../configReader';
 
 export async function createTestMochaAdapter(
 	workspaceName: string,
 	opts?: {
 		monkeyPatch?: boolean,
-		env?: NodeJS.ProcessEnv,
+		env?: EnvVars,
 		pruneFiles?: boolean
 	}
 ): Promise<TestMochaAdapter> {
