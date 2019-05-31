@@ -4,7 +4,7 @@ import * as util from 'util';
 import { createConnection, receiveConnection, writeMessage } from 'vscode-test-adapter-remoting-util/out/ipc';
 import split from 'split';
 import RegExEscape from 'escape-string-regexp';
-import { WorkerArgs, ErrorInfo, NetworkOptions } from '../util';
+import { WorkerArgs, ErrorInfo, NetworkOptions } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { patchMocha } from './patchMocha';
 import { processTests } from './processTests';
 import ReporterFactory from './reporter';

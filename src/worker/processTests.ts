@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as util from 'util';
 import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { ErrorInfo } from '../util';
+import { ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
 
 export async function processTests(
 	suite: Mocha.ISuite,

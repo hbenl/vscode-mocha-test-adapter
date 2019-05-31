@@ -2,7 +2,8 @@ import * as path from 'path';
 import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
-import { ErrorInfo, WorkerArgs, findTests } from './util';
+import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
+import { findTests } from './util';
 import { AdapterConfig } from './configReader';
 
 export interface IDisposable {
