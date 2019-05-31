@@ -11,7 +11,7 @@ import ReporterFactory from './reporter';
 
 (async () => {
 
-	const netOptsJson = process.argv[2];
+	const netOptsJson = (process.argv.length > 2) ? process.argv[2] : '{}';
 	const netOpts: NetworkOptions = JSON.parse(netOptsJson);
 
 	if (netOpts.role && netOpts.port) {

@@ -82,7 +82,7 @@ export abstract class MochaAdapterCore {
 
 				const childProc = fork(
 					childProcScript,
-					[ "{}" ],
+					[],
 					{
 						cwd: config.cwd,
 						env: config.env,
@@ -243,7 +243,7 @@ export abstract class MochaAdapterCore {
 
 				this.runningTestProcess = fork(
 					childProcScript,
-					[ "{}" ],
+					[],
 					{
 						cwd: config.cwd,
 						env: config.env,
