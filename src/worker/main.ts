@@ -10,38 +10,34 @@ import { processTests } from './processTests';
 import ReporterFactory from './reporter';
 
 (async () => {
-	try {
 
-		const netOptsJson = process.argv[2];
-		const netOpts: NetworkOptions = JSON.parse(netOptsJson);
+	const netOptsJson = process.argv[2];
+	const netOpts: NetworkOptions = JSON.parse(netOptsJson);
 
-		if (netOpts.role && netOpts.port) {
+	if (netOpts.role && netOpts.port) {
 
-			const socket = (netOpts.role === 'client') ?
-				await createConnection(netOpts.port, { host: netOpts.host }) :
-				await receiveConnection(netOpts.port, { host: netOpts.host });
+		const socket = (netOpts.role === 'client') ?
+			await createConnection(netOpts.port, { host: netOpts.host }) :
+			await receiveConnection(netOpts.port, { host: netOpts.host });
 
-			const argsJson = await new Promise<string>(resolve => {
-				socket.pipe(split()).once('data', resolve);
-			});
-	
-			execute(argsJson, msg => writeMessage(socket, msg), () => socket.unref());
+		const argsJson = await new Promise<string>(resolve => {
+			socket.pipe(split()).once('data', resolve);
+		});
 
-		} else if (process.send) {
+		execute(argsJson, msg => writeMessage(socket, msg), () => socket.unref());
 
-			const argsJson = await new Promise<string>(resolve => {
-				process.once('message', resolve);
-			});
+	} else if (process.send) {
 
-			execute(argsJson, async msg => process.send!(msg));
+		const argsJson = await new Promise<string>(resolve => {
+			process.once('message', resolve);
+		});
 
-		} else {
+		execute(argsJson, async msg => process.send!(msg));
 
-			execute(process.argv[3], async msg => console.log(msg));
+	} else {
 
-		}
-	} catch (err) {
-		throw err;
+		execute(process.argv[3], async msg => console.log(msg));
+
 	}
 })();
 
