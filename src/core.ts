@@ -2,7 +2,7 @@ import * as path from 'path';
 import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
-import { ErrorInfo, WorkerArgs, findTests, stringsOnly } from './util';
+import { ErrorInfo, WorkerArgs, findTests } from './util';
 import { AdapterConfig } from './configReader';
 
 export interface IDisposable {
@@ -85,7 +85,6 @@ export abstract class MochaAdapterCore {
 					[],
 					{
 						cwd: config.cwd,
-						env: stringsOnly({ ...process.env, ...config.env }),
 						execPath: config.nodePath,
 						execArgv: [], // ['--inspect-brk=12345']
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
@@ -95,6 +94,7 @@ export abstract class MochaAdapterCore {
 				const args: WorkerArgs = {
 					action: 'loadTests',
 					testFiles: config.files,
+					env: config.env,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					monkeyPatch: config.monkeyPatch,
@@ -246,7 +246,6 @@ export abstract class MochaAdapterCore {
 					[],
 					{
 						cwd: config.cwd,
-						env: stringsOnly({ ...process.env, ...config.env }),
 						execPath: config.nodePath,
 						execArgv,
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
@@ -257,6 +256,7 @@ export abstract class MochaAdapterCore {
 					action: 'runTests',
 					testFiles,
 					tests,
+					env: config.env,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					logEnabled: this.log.enabled,

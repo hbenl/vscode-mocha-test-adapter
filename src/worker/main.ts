@@ -51,6 +51,15 @@ function execute(argsJson: string, sendMessage: (message: any) => Promise<void>,
 		logEnabled = args.logEnabled;
 		sendErrorInfo = (args.action === 'loadTests');
 
+		for (const envVar in args.env) {
+			const val = args.env[envVar];
+			if (val === null) {
+				delete process.env[envVar];
+			} else {
+				process.env[envVar] = val;
+			}
+		}
+
 		const Mocha: typeof import('mocha') = require(args.mochaPath);
 
 		const lineSymbol = Symbol('line number');

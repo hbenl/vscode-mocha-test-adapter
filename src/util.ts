@@ -1,11 +1,13 @@
 import * as fs from 'fs';
 import { MochaOpts } from './opts';
 import { TestInfo, TestSuiteInfo } from 'vscode-test-adapter-api';
+import { EnvVars } from './configReader';
 
 export interface WorkerArgs {
 	action: 'loadTests' | 'runTests';
 	testFiles: string[];
 	tests?: string[];
+	env: EnvVars;
 	mochaPath: string;
 	mochaOpts: MochaOpts;
 	monkeyPatch?: boolean;
@@ -66,15 +68,4 @@ export function* findTests(
 		}
 
 	}
-}
-
-export function stringsOnly(env: { [envVar: string]: string | null | undefined }): { [envVar: string]: string } {
-	const result: { [envVar: string]: string } = {};
-	for (const envVar in env) {
-		const val = env[envVar];
-		if (typeof val === 'string') {
-			result[envVar] = val;
-		}
-	}
-	return result;
 }
