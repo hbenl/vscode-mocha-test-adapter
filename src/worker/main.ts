@@ -24,32 +24,29 @@ import ReporterFactory from './reporter';
 			socket.pipe(split()).once('data', resolve);
 		});
 
-		execute(argsJson, msg => writeMessage(socket, msg), () => socket.unref());
+		execute(JSON.parse(argsJson), msg => writeMessage(socket, msg), () => socket.unref());
 
 	} else if (process.send) {
 
-		const argsJson = await new Promise<string>(resolve => {
+		const args = await new Promise<WorkerArgs>(resolve => {
 			process.once('message', resolve);
 		});
 
-		execute(argsJson, async msg => process.send!(msg));
+		execute(args, async msg => process.send!(msg));
 
 	} else {
 
-		execute(process.argv[3], async msg => console.log(msg));
+		execute(JSON.parse(process.argv[3]), async msg => console.log(msg));
 
 	}
 })();
 
-function execute(argsJson: string, sendMessage: (message: any) => Promise<void>, onFinished?: () => void): void {
+function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>, onFinished?: () => void): void {
 
-	let logEnabled = true;
-	let sendErrorInfo = true;
+	let logEnabled = args.logEnabled;
+	let sendErrorInfo = (args.action === 'loadTests');
+
 	try {
-
-		const args: WorkerArgs = JSON.parse(argsJson);
-		logEnabled = args.logEnabled;
-		sendErrorInfo = (args.action === 'loadTests');
 
 		for (const envVar in args.env) {
 			const val = args.env[envVar];

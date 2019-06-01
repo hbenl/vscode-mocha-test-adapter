@@ -102,7 +102,7 @@ export abstract class MochaAdapterCore {
 					logEnabled: this.log.enabled,
 					workerScript: this.workerScript
 				}
-				childProc.send(JSON.stringify(args));
+				childProc.send(args);
 
 				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
@@ -264,7 +264,7 @@ export abstract class MochaAdapterCore {
 					workerScript: this.workerScript,
 					debuggerPort: debug ? config.debuggerPort : undefined
 				};
-				this.runningTestProcess.send(JSON.stringify(args));
+				this.runningTestProcess.send(args);
 
 				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
 
