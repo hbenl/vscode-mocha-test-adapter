@@ -85,7 +85,6 @@ export abstract class MochaAdapterCore {
 					childProcScript,
 					[],
 					{
-						cwd: config.cwd,
 						execPath: config.nodePath,
 						execArgv: [], // ['--inspect-brk=12345']
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
@@ -94,6 +93,7 @@ export abstract class MochaAdapterCore {
 
 				const args: WorkerArgs = {
 					action: 'loadTests',
+					cwd: config.cwd,
 					testFiles: config.files,
 					env: config.env,
 					mochaPath: config.mochaPath,
@@ -101,7 +101,7 @@ export abstract class MochaAdapterCore {
 					monkeyPatch: config.monkeyPatch,
 					logEnabled: this.log.enabled,
 					workerScript: this.workerScript
-				}
+				};
 				childProc.send(args);
 
 				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
@@ -246,7 +246,6 @@ export abstract class MochaAdapterCore {
 					childProcScript,
 					[],
 					{
-						cwd: config.cwd,
 						execPath: config.nodePath,
 						execArgv,
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
@@ -255,6 +254,7 @@ export abstract class MochaAdapterCore {
 
 				const args: WorkerArgs = {
 					action: 'runTests',
+					cwd: config.cwd,
 					testFiles,
 					tests,
 					env: config.env,

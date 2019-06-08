@@ -48,6 +48,8 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 
 	try {
 
+		process.chdir(args.cwd);
+
 		for (const envVar in args.env) {
 			const val = args.env[envVar];
 			if (val === null) {
