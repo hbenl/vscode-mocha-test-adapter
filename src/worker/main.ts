@@ -57,7 +57,9 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			}
 		}
 
-		const Mocha: typeof import('mocha') = require(args.mochaPath);
+		const mochaPath = args.mochaPath ? args.mochaPath : path.dirname(require.resolve('mocha'));
+		if (args.logEnabled) sendMessage(`Using the mocha package at ${mochaPath}`);
+		const Mocha: typeof import('mocha') = require(mochaPath);
 
 		const lineSymbol = Symbol('line number');
 		if ((args.action === 'loadTests') && args.monkeyPatch) {
@@ -99,7 +101,7 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 
 		} else {
 
-			const stringify: (obj: any) => string = require(`${args.mochaPath}/lib/utils`).stringify;
+			const stringify: (obj: any) => string = require(`${mochaPath}/lib/utils`).stringify;
 			const regExp = new RegExp(args.tests!.map(RegExEscape).join('|'));
 			mocha.grep(regExp);
 			mocha.reporter(<any>ReporterFactory(sendMessage, stringify));

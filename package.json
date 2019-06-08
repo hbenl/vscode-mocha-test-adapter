@@ -50,7 +50,7 @@
     "stack-trace": "0.0.10",
     "tslib": "^1.9.3",
     "vscode-test-adapter-api": "^1.7.0",
-    "vscode-test-adapter-remoting-util": "^0.6.0",
+    "vscode-test-adapter-remoting-util": "^0.7.0",
     "vscode-test-adapter-util": "^0.7.0"
   },
   "devDependencies": {
@@ -69,7 +69,7 @@
     "glob": "^7.1.4",
     "mocha-prepare": "^0.1.0",
     "rimraf": "^2.6.3",
-    "rollup": "^1.13.0",
+    "rollup": "^1.14.4",
     "rollup-plugin-commonjs": "^10.0.0",
     "rollup-plugin-node-resolve": "^5.0.1",
     "rollup-plugin-typescript2": "^0.21.1",
