@@ -2,15 +2,15 @@ import * as path from 'path';
 import { Glob } from 'glob';
 import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, RetireEvent } from 'vscode-test-adapter-api';
 import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputChannel, ILog } from '../core';
-import { MochaOpts } from '../opts';
+import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { MochaOptsReader } from '../optsReader';
-import { AdapterConfig } from '../configReader';
+import { AdapterConfig, EnvVars } from '../configReader';
 
 export async function createTestMochaAdapter(
 	workspaceName: string,
 	opts?: {
 		monkeyPatch?: boolean,
-		env?: NodeJS.ProcessEnv,
+		env?: EnvVars,
 		pruneFiles?: boolean
 	}
 ): Promise<TestMochaAdapter> {
@@ -38,7 +38,7 @@ export async function createTestMochaAdapter(
 	const config = {
 
 		nodePath: undefined,
-		mochaPath: require.resolve('mocha'),
+		mochaPath: path.dirname(require.resolve('mocha')),
 		cwd: workspaceFolderPath,
 		env,
 
@@ -53,7 +53,9 @@ export async function createTestMochaAdapter(
 
 		mochaOptsFile: optsFilePath,
 		envFile: undefined,
-		globs: mochaOptsAndFiles.globs
+		globs: mochaOptsAndFiles.globs,
+
+		launcherScript: undefined
 	};
 
 	return new TestMochaAdapter(workspaceFolderPath, new TestConfigReader(config));

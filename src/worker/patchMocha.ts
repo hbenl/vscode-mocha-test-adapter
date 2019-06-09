@@ -1,4 +1,4 @@
-import { parse as parseStackTrace } from 'stack-trace';
+import stackTrace from 'stack-trace';
 
 export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol: symbol, log?: (message: any) => void) {
 
@@ -97,10 +97,10 @@ function findCallLocation(
 
 	const err = new Error();
 	if (log) log(`Looking for ${file} in ${err.stack}`);
-	const stackTrace = parseStackTrace(err);
+	const stackFrames = stackTrace.parse(err);
 
-	for (var i = 0; i < stackTrace.length - 1; i++) {
-		const stackFrame = stackTrace[i];
+	for (var i = 0; i < stackFrames.length - 1; i++) {
+		const stackFrame = stackFrames[i];
 		if (stackFrame.getFileName() === file) {
 			return stackFrame.getLineNumber() - 1;
 		}

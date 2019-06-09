@@ -5,16 +5,18 @@ import { Minimatch } from 'minimatch';
 import { parse as dotenvParse } from 'dotenv';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { IDisposable, IConfigReader } from './core';
-import { MochaOpts } from './opts';
+import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
 import { configKeys, OnChange, configSection } from './configKeys';
+
+export type EnvVars = { [envVar: string]: string | null };
 
 export interface AdapterConfig {
 
 	nodePath: string | undefined;
 	mochaPath: string;
 	cwd: string;
-	env: NodeJS.ProcessEnv;
+	env: EnvVars;
 
 	monkeyPatch: boolean;
 	pruneFiles: boolean;
@@ -28,6 +30,8 @@ export interface AdapterConfig {
 	mochaOptsFile: string | undefined;
 	envFile: string | undefined;
 	globs: string[];
+
+	launcherScript: string | undefined;
 }
 
 export class ConfigReader implements IConfigReader, IDisposable {
@@ -85,9 +89,17 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			const filename = document.uri.fsPath;
 			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
 
-			if (await this.isTestFile(filename)) {
+			const isTestFile = await this.isTestFile(filename);
+			if (isTestFile) {
+
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				load([ filename ]);
+				
+				if (isTestFile === 'config') {
+					load();
+				} else {
+					load([ filename ]);
+				}
+
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
 				this.log.info('Sending autorun event');
 				retire();
@@ -149,7 +161,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			files: await this.lookupFiles(config, optsFromFiles.globs, optsFromFiles.files),
 			mochaOptsFile,
 			envFile,
-			globs: this.getTestFilesGlobs(config, optsFromFiles.globs)
+			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
+			launcherScript: this.getLauncherScript(config)
 		}
 	}
 
@@ -278,7 +291,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return resolvedFilesFromOptsFile.concat(testFiles);
 	}
 
-	private async isTestFile(absolutePath: string): Promise<boolean> {
+	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
 
 		if (!absolutePath.startsWith(this.workspaceFolder.uri.fsPath)) {
 			return false;
@@ -291,7 +304,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml', 'package.json' ]) {
 			const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
 			if (absolutePath === resolvedConfigFile) {
-				return true;
+				return 'config';
 			}
 		}
 
@@ -302,19 +315,12 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			return absolutePath.startsWith(testFolderPath);
 		}
 
-		const optsFile = config.mochaOptsFile;
-		if (optsFile) {
-			const resolvedOptsFile = path.resolve(this.workspaceFolder.uri.fsPath, optsFile);
-			if (absolutePath === resolvedOptsFile) {
-				return true;
-			}
-		}
-
-		const envFile = config.envFile;
-		if (envFile) {
-			const resolvedEnvFile = path.resolve(this.workspaceFolder.uri.fsPath, envFile);
-			if (absolutePath === resolvedEnvFile) {
-				return true;
+		for (const configFile of [ config.mochaOptsFile, config.envFile, config.launcherScript ]) {
+			if (configFile) {
+				const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
+				if (absolutePath === resolvedConfigFile) {
+					return 'config';
+				}
 			}
 		}
 
@@ -337,34 +343,21 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return false;
 	}
 
-	private async getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): Promise<NodeJS.ProcessEnv> {
+	private async getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): Promise<EnvVars> {
 
-		const processEnv = process.env;
-		const configEnv: { [prop: string]: string } = config.get(configKeys.env.key) || {};
-		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(configEnv)}`);
+		let resultEnv: EnvVars = config.get(configKeys.env.key) || {};
+		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(resultEnv)}`);
 
 		const envPath: string | undefined = config.get<string>(configKeys.envPath.key);
-		if (envPath && this.log.enabled) this.log.debug(`Reading environment variables from ${envPath}`);
-
-		let resultEnv = { ...processEnv };
-
-		// workaround for esm not working when mocha is loaded programmatically (see #12)
-		if (mochaOpts.requires.indexOf('esm') >= 0) {
-			resultEnv['NYC_ROOT_ID'] = '';
-		}
-
-		for (const prop in configEnv) {
-			const val = configEnv[prop];
-			if ((val === undefined) || (val === null)) {
-				delete resultEnv.prop;
-			} else {
-				resultEnv[prop] = String(val);
-			}
-		}
-
 		if (envPath) {
+			if (this.log.enabled) this.log.debug(`Reading environment variables from ${envPath}`);
 			const dotenvFile = await readFile(path.resolve(this.workspaceFolder.uri.fsPath, envPath));
 			resultEnv = { ...dotenvParse(dotenvFile), ...resultEnv };
+		}
+
+		// workaround for esm not working when mocha is loaded programmatically (see #12)
+		if ((mochaOpts.requires.indexOf('esm') >= 0) && !resultEnv.hasOwnProperty('NYC_ROOT_ID')) {
+			resultEnv['NYC_ROOT_ID'] = '';
 		}
 
 		return resultEnv;
@@ -426,7 +419,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		if (mochaPath) {
 			return path.resolve(this.workspaceFolder.uri.fsPath, mochaPath);
 		} else {
-			return require.resolve('mocha');
+			return path.dirname(require.resolve('mocha'));
 		}
 	}
 
@@ -458,6 +451,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getEnvFile(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.envPath.key) || undefined;
+	}
+
+	private getLauncherScript(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>(configKeys.launcherScript.key) || undefined;
 	}
 
 	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {

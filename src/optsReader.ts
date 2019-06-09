@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as util from 'util';
 import { fork } from 'child_process';
-import { MochaOpts } from './opts';
+import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { ILog } from './core';
 
 export interface MochaOptsAndFiles {

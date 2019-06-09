@@ -12,6 +12,14 @@
       "runOptions": {
         "runOn": "folderOpen"
       }
+    },
+    {
+      "label": "Bundle Mocha worker",
+      "type": "npm",
+      "script": "watch-worker",
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
     }
   ]
 }

@@ -1,7 +1,9 @@
+import * as path from 'path';
 import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
-import { ErrorInfo, WorkerArgs, findTests } from './util';
+import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
+import { findTests } from './util';
 import { AdapterConfig } from './configReader';
 
 export interface IDisposable {
@@ -34,7 +36,7 @@ export abstract class MochaAdapterCore {
 	protected abstract readonly workspaceFolderPath: string;
 
 	protected abstract readonly configReader: IConfigReader;
-	
+
 	protected abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
 	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
 	protected abstract readonly retireEmitter: IEventEmitter<RetireEvent>;
@@ -43,6 +45,8 @@ export abstract class MochaAdapterCore {
 	protected abstract onDidTerminateDebugSession(cb: (session: any) => any): IDisposable;
 
 	protected readonly nodesById = new Map<string, TestSuiteInfo | TestInfo>();
+
+	private readonly workerScript = require.resolve('../out/worker/bundle.js');
 
 	private runningTestProcess: ChildProcess | undefined;
 
@@ -73,24 +77,32 @@ export abstract class MochaAdapterCore {
 
 			await new Promise<void>(resolve => {
 
+				const childProcScript = config.launcherScript ?
+					path.resolve(this.workspaceFolderPath, config.launcherScript) :
+					this.workerScript;
+
 				const childProc = fork(
-					require.resolve('../out/worker/loadTests.js'),
+					childProcScript,
 					[],
 					{
-						cwd: config.cwd,
-						env: config.env,
 						execPath: config.nodePath,
-						execArgv: [] // ['--inspect-brk=12345']
+						execArgv: [], // ['--inspect-brk=12345']
+						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
 
-				childProc.send(JSON.stringify(<WorkerArgs>{
+				const args: WorkerArgs = {
+					action: 'loadTests',
+					cwd: config.cwd,
 					testFiles: config.files,
+					env: config.env,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					monkeyPatch: config.monkeyPatch,
-					logEnabled: this.log.enabled
-				}));
+					logEnabled: this.log.enabled,
+					workerScript: this.workerScript
+				};
+				childProc.send(args);
 
 				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
@@ -114,7 +126,7 @@ export abstract class MochaAdapterCore {
 
 								if (changedFiles) {
 
-									const changedTests = findTests(info, { tests: 
+									const changedTests = findTests(info, { tests:
 										info => ((info.file !== undefined) && (changedFiles.indexOf(info.file) >= 0))
 									});
 									this.retireEmitter.fire({ tests: [ ...changedTests ].map(info => info.id) })
@@ -138,17 +150,23 @@ export abstract class MochaAdapterCore {
 						}
 
 						testsLoaded = true;
-						if (config.mochaOpts.exit) {
-							childProc.kill();
-						}
 						resolve();
 					}
 				});
 
-				childProc.on('close', () => {
-					this.log.info('Worker finished');
+				if (this.log.enabled) {
+					childProc.stdout.on('data', data => this.log.info(data.toString()));
+					childProc.stderr.on('data', data => this.log.error(data.toString()));
+				}
+
+				childProc.on('exit', (code, signal) => {
+					if (this.log.enabled) this.log.info(`Worker finished with code ${code} and signal ${signal}`);
 					if (!testsLoaded) {
-						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+						if (code || signal) {
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `The worker process finished with code ${code} and signal ${signal}` });
+						} else {
+							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+						}
 						resolve();
 					}
 				});
@@ -168,7 +186,7 @@ export abstract class MochaAdapterCore {
 		}
 	}
 
-	async run(testsToRun: string[], execArgv: string[] = []): Promise<void> {
+	async run(testsToRun: string[], debug = false): Promise<void> {
 
 		try {
 
@@ -199,17 +217,18 @@ export abstract class MochaAdapterCore {
 				}
 			});
 
-			let testFiles: string[] | undefined = undefined;
+			let _testFiles: string[] | undefined = undefined;
 			if (config.pruneFiles) {
 				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
 				if (testFileSet.size > 0) {
-					testFiles = <string[]>[ ...testFileSet ];
-					if (this.log.enabled) this.log.debug(`Using test files ${JSON.stringify(testFiles)}`);
+					_testFiles = <string[]>[ ...testFileSet ];
+					if (this.log.enabled) this.log.debug(`Using test files ${JSON.stringify(_testFiles)}`);
 				}
 			}
-			if (testFiles === undefined) {
-				testFiles = config.files;
+			if (_testFiles === undefined) {
+				_testFiles = config.files;
 			}
+			const testFiles = _testFiles;
 
 			let childProcessFinished = false;
 
@@ -217,25 +236,35 @@ export abstract class MochaAdapterCore {
 
 				let runningTest: string | undefined = undefined;
 
+				const childProcScript = config.launcherScript ?
+					path.resolve(this.workspaceFolderPath, config.launcherScript) :
+					this.workerScript;
+
+				const execArgv = (debug && !config.launcherScript) ? [ `--inspect-brk=${config.debuggerPort}` ] : [];
+
 				this.runningTestProcess = fork(
-					require.resolve('../out/worker/runTests.js'),
+					childProcScript,
 					[],
 					{
-						cwd: config.cwd,
-						env: config.env,
 						execPath: config.nodePath,
 						execArgv,
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
 
-				this.runningTestProcess.send(JSON.stringify(<WorkerArgs>{
+				const args: WorkerArgs = {
+					action: 'runTests',
+					cwd: config.cwd,
 					testFiles,
 					tests,
+					env: config.env,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
-					logEnabled: this.log.enabled
-				}));
+					logEnabled: this.log.enabled,
+					workerScript: this.workerScript,
+					debuggerPort: debug ? config.debuggerPort : undefined
+				};
+				this.runningTestProcess.send(args);
 
 				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
 
@@ -278,6 +307,7 @@ export abstract class MochaAdapterCore {
 
 				this.runningTestProcess.on('exit', () => {
 					this.log.info('Worker finished');
+					runningTest = undefined;
 					this.runningTestProcess = undefined;
 					if (!childProcessFinished) {
 						childProcessFinished = true;
@@ -288,6 +318,7 @@ export abstract class MochaAdapterCore {
 
 				this.runningTestProcess.on('error', err => {
 					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
+					runningTest = undefined;
 					this.runningTestProcess = undefined;
 					if (!childProcessFinished) {
 						childProcessFinished = true;
@@ -314,7 +345,7 @@ export abstract class MochaAdapterCore {
 			return;
 		}
 
-		const testRunPromise = this.run(testsToRun, [ `--inspect-brk=${config.debuggerPort}` ]);
+		const testRunPromise = this.run(testsToRun, true);
 
 		this.log.info('Starting the debug session');
 		let debugSession: any;

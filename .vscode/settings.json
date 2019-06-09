@@ -2,7 +2,8 @@
   "files.exclude": {
     ".git": true,
     "node_modules": true,
-    "out": true
+    "out": true,
+    ".rpt2_cache": true
   },
   "editor.insertSpaces": false,
   "editor.tabSize": 4,

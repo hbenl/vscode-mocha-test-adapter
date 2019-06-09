@@ -1,89 +1,30 @@
-import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
 import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { patchMocha } from './patchMocha';
-import { ErrorInfo, WorkerArgs } from '../util';
+import { ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
 
-if (process.send) {
-	process.once('message', workerArgs => loadTests(workerArgs, msg => process.send!(msg)));
-} else {
-	loadTests(process.argv[2], console.log);
-}
-
-function loadTests(workerArgs: string, sendMessage: (message: any) => void) {
-	let _logEnabled = true;
-	try {
-
-		const {
-			testFiles,
-			mochaPath,
-			mochaOpts,
-			monkeyPatch,
-			logEnabled
-		} = <WorkerArgs>JSON.parse(workerArgs);
-		_logEnabled = logEnabled;
-
-		const Mocha: typeof import('mocha') = require(mochaPath);
-
-		const cwd = process.cwd();
-		module.paths.push(cwd, path.join(cwd, 'node_modules'));
-		for (let req of mochaOpts.requires) {
-
-			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
-				req = path.resolve(req);
-			}
-
-			if (logEnabled) sendMessage(`Trying require('${req}')`);
-			require(req);
-		}
-
-		const lineSymbol = Symbol('line number');
-		if (monkeyPatch) {
-			if (logEnabled) sendMessage('Patching Mocha');
-			patchMocha(Mocha, mochaOpts.ui, lineSymbol, logEnabled ? sendMessage : undefined);
-		}
-
-		const mocha = new Mocha();
-		mocha.ui(mochaOpts.ui);
-
-		if (logEnabled) sendMessage('Loading files');
-		for (const file of testFiles) {
-			mocha.addFile(file);
-		}
-
-		mocha.grep('$^');
-		mocha.run(() => processTests(mocha.suite, lineSymbol, sendMessage, _logEnabled));
-
-	} catch (err) {
-		if (_logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
-		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
-		throw err;
-	}
-}
-
-function processTests(
+export async function processTests(
 	suite: Mocha.ISuite,
 	lineSymbol: symbol,
-	sendMessage: (message: any) => void,
+	sendMessage: (message: any) => Promise<void>,
 	logEnabled: boolean
-): void {
+): Promise<void> {
 	try {
 
-		if (logEnabled) sendMessage('Converting tests and suites');
+		if (logEnabled) await sendMessage('Converting tests and suites');
 		const fileCache = new Map<string, string>();
 		const rootSuite = convertSuite(suite, lineSymbol, fileCache);
 
 		if (rootSuite.children.length > 0) {
-			sendMessage(rootSuite);
+			await sendMessage(rootSuite);
 		} else {
-			sendMessage(null);
+			await sendMessage(null);
 		}
 
 	} catch (err) {
-		if (logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
-		sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
+		if (logEnabled) await sendMessage(`Caught error ${util.inspect(err)}`);
+		await sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
 		throw err;
 	}
 }

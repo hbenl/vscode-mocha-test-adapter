@@ -1,20 +1,5 @@
 import * as fs from 'fs';
-import { MochaOpts } from './opts';
 import { TestInfo, TestSuiteInfo } from 'vscode-test-adapter-api';
-
-export interface WorkerArgs {
-	testFiles: string[];
-	tests?: string[];
-	mochaPath: string;
-	mochaOpts: MochaOpts;
-	monkeyPatch?: boolean;
-	logEnabled: boolean;
-}
-
-export interface ErrorInfo {
-	type: 'error';
-	errorMessage: string;
-}
 
 export function fileExists(path: string): Promise<boolean> {
 	return new Promise<boolean>(resolve => {
