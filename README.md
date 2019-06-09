@@ -21,6 +21,23 @@ Run your Mocha tests using the
 * Open the Test view
 * Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
+## Running tests remotely
+
+If you want/need to run your tests in a remote environment (e.g. in a docker container or on another machine via ssh),
+you can do so by writing a "launcher script": this script will be called by Mocha Test Explorer (instead of its standard worker script)
+to load and run the tests in the remote environment.
+Documentation for writing launcher scripts can be found in the
+[vscode-test-adapter-remoting-util](https://github.com/hbenl/vscode-test-adapter-remoting-util)
+package, which also contains utility functions for writing your launcher script.
+There are also example projects containing well-documented launcher scripts for running your tests
+[in a docker container](https://github.com/hbenl/vscode-mocha-docker-example) or
+[on another machine via ssh](https://github.com/hbenl/vscode-mocha-ssh-example).
+
+Alternatively, you can use [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview)
+to move your workspace to the remote environment. If you do so, your tests will also be run in this environment automatically.
+This is easier to set up (because you don't need to write a launcher script), but requires that your entire workspace and large
+parts of VS Code run in the remote environment, which (depending on the environment) may be impractical or even impossible.
+
 ## Configuration
 
 ### Mocha command line options
@@ -71,6 +88,7 @@ Property                        | Description
 `mochaExplorer.monkeyPatch`     | Apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
 `mochaExplorer.debuggerPort`    | The port to use for debugging sessions (default: `9229`)
 `mochaExplorer.pruneFiles`      | Only load the test files needed for the current test run (default: `false` - load all configured files)
+`mochaExplorer.launcherScript`  | The path to a launcher script (relative to the workspace folder) for [running your tests remotely](https://github.com/hbenl/vscode-test-adapter-remoting-util)
 `testExplorer.codeLens`         | Show a CodeLens above each test or suite for running or debugging the tests
 `testExplorer.gutterDecoration` | Show the state of each test in the editor using Gutter Decorations
 `testExplorer.onStart`          | Retire or reset all test states whenever a test run is started
