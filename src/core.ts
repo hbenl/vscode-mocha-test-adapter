@@ -3,7 +3,7 @@ import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
 import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
-import { findTests } from './util';
+import { findTests, stringsOnly } from './util';
 import { AdapterConfig } from './configReader';
 
 export interface IDisposable {
@@ -87,6 +87,7 @@ export abstract class MochaAdapterCore {
 					{
 						execPath: config.nodePath,
 						execArgv: [], // ['--inspect-brk=12345']
+						env: stringsOnly({ ...process.env, ...config.env }),
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
@@ -248,6 +249,7 @@ export abstract class MochaAdapterCore {
 					{
 						execPath: config.nodePath,
 						execArgv,
+						env: stringsOnly({ ...process.env, ...config.env }),
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
