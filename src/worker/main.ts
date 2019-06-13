@@ -98,7 +98,6 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			mocha.run(async () => {
 				await processTests(mocha.suite, lineSymbol, sendMessage, args.logEnabled);
 				if (onFinished) onFinished();
-				if (args.mochaOpts.exit) process.exit();
 			});
 
 		} else {
@@ -110,8 +109,8 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 	
 			if (args.logEnabled) sendMessage('Running tests');
 			mocha.run(() => {
+				sendMessage({ type: 'finished' });
 				if (onFinished) onFinished();
-				if (args.mochaOpts.exit) process.exit();
 			});
 
 		}

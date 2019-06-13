@@ -151,6 +151,9 @@ export abstract class MochaAdapterCore {
 						}
 
 						testsLoaded = true;
+						if (config.mochaOpts.exit && !config.launcherScript) {
+							childProc.kill();
+						}
 						resolve();
 					}
 				});
@@ -168,6 +171,7 @@ export abstract class MochaAdapterCore {
 						} else {
 							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
 						}
+						testsLoaded = true;
 						resolve();
 					}
 				});
@@ -176,6 +180,7 @@ export abstract class MochaAdapterCore {
 					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
 					if (!testsLoaded) {
 						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
+						testsLoaded = true;
 						resolve();
 					}
 				});
@@ -268,7 +273,7 @@ export abstract class MochaAdapterCore {
 				};
 				this.runningTestProcess.send(args);
 
-				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent) => {
+				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent | TestRunFinishedEvent) => {
 
 					if (typeof message === 'string') {
 
@@ -278,14 +283,20 @@ export abstract class MochaAdapterCore {
 
 						if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
 
-						this.testStatesEmitter.fire(message);
+						if (message.type !== 'finished') {
 
-						if (message.type === 'test') {
-							if (message.state === 'running') {
-								runningTest = (typeof message.test === 'string') ? message.test : message.test.id;
-							} else {
-								runningTest = undefined;
+							this.testStatesEmitter.fire(message);
+
+							if (message.type === 'test') {
+								if (message.state === 'running') {
+									runningTest = (typeof message.test === 'string') ? message.test : message.test.id;
+								} else {
+									runningTest = undefined;
+								}
 							}
+
+						} else if (config.mochaOpts.exit && !config.launcherScript && this.runningTestProcess) {
+							this.runningTestProcess.kill();
 						}
 					}
 				});
