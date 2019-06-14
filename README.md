@@ -21,6 +21,23 @@ Run your Mocha tests using the
 * Open the Test view
 * Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
+## Using transpilers (Typescript, Babel, etc.)
+
+If you use a transpiler for your test sources, there are 2 ways to make the tests work in Mocha Test Explorer:
+* running the original (non-transpiled) sources directly by transpiling them on-the-fly using `ts-node` for Typescript, `babel-register` for Babel, etc.
+  Example for Typescript:
+  ```json
+  "mochaExplorer.files": "test/**/*.ts",
+  "mochaExplorer.require": "ts-node/register"
+  ```
+
+* enabling source-maps in your transpiler's configuration and running the transpiled test sources using the
+  [`source-map-support`](https://www.npmjs.com/package/source-map-support) package. Example for Typescript:
+  ```json
+  "mochaExplorer.files": "test/**/*.js",
+  "mochaExplorer.require": "source-map-support/register"
+  ```
+
 ## Running tests remotely
 
 If you want/need to run your tests in a remote environment (e.g. in a docker container or on another machine via ssh),
