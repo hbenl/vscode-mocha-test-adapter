@@ -63,10 +63,10 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 		if (args.logEnabled) sendMessage(`Using the mocha package at ${mochaPath}`);
 		const Mocha: typeof import('mocha') = require(mochaPath);
 
-		const lineSymbol = Symbol('line number');
+		const locationSymbol = Symbol('location');
 		if ((args.action === 'loadTests') && args.monkeyPatch) {
 			if (args.logEnabled) sendMessage('Patching Mocha');
-			patchMocha(Mocha, args.mochaOpts.ui, lineSymbol, args.logEnabled ? sendMessage : undefined);
+			patchMocha(Mocha, args.mochaOpts.ui, locationSymbol, args.cwd, args.logEnabled ? sendMessage : undefined);
 		}
 
 		const cwd = process.cwd();
@@ -96,7 +96,7 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 
 			mocha.grep('$^');
 			mocha.run(async () => {
-				await processTests(mocha.suite, lineSymbol, sendMessage, args.logEnabled);
+				await processTests(mocha.suite, locationSymbol, sendMessage, args.logEnabled);
 				if (onFinished) onFinished();
 			});
 

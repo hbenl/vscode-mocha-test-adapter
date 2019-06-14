@@ -1,13 +1,25 @@
 import stackTrace from 'stack-trace';
 
-export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol: symbol, log?: (message: any) => void) {
+export interface Location {
+	file: string;
+	line: number
+}
+
+export function patchMocha(
+	Mocha: typeof import('mocha'),
+	ui: string,
+	locationSymbol: symbol,
+	baseDir: string | undefined,
+	log?: (message: any) => void
+): void {
 
 	if (ui === 'bdd') {
 
 		Mocha.interfaces.bdd = patchInterface(
 			Mocha.interfaces.bdd,
 			[ 'describe', 'it', 'context', 'specify' ],
-			lineSymbol,
+			locationSymbol,
+			baseDir,
 			log
 		);
 
@@ -16,7 +28,8 @@ export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol
 		Mocha.interfaces.tdd = patchInterface(
 			Mocha.interfaces.tdd,
 			[ 'suite', 'test' ],
-			lineSymbol,
+			locationSymbol,
+			baseDir,
 			log
 		);
 
@@ -25,7 +38,8 @@ export function patchMocha(Mocha: typeof import('mocha'), ui: string, lineSymbol
 		Mocha.interfaces.qunit = patchInterface(
 			Mocha.interfaces.qunit,
 			[ 'suite', 'test' ],
-			lineSymbol,
+			locationSymbol,
+			baseDir,
 			log
 		);
 	}
@@ -36,25 +50,26 @@ type MochaInterface = (suite: Mocha.Suite) => void;
 function patchInterface(
 	origInterface: MochaInterface,
 	functionNames: string[],
-	lineSymbol: symbol,
+	locationSymbol: symbol,
+	baseDir: string | undefined,
 	log?: (message: any) => void
 ): MochaInterface {
 	return (suite: Mocha.Suite) => {
 
 		origInterface(suite);
 
-		suite.on('pre-require', (context: any, file, mocha) => {
+		suite.on('pre-require', (context: any, file) => {
 			for (const functionName of functionNames) {
 
 				if (log) log(`Patching ${functionName}`);
 				const origFunction = context[functionName];
-				const patchedFunction = patchFunction(origFunction, file, lineSymbol, log);
+				const patchedFunction = patchFunction(origFunction, file, locationSymbol, baseDir, log);
 
 				for (const property in origFunction) {
 					if ((property === 'skip') || (property === 'only')) {
 
 						if (log) log(`Patching ${functionName}.${property}`);
-						patchedFunction[property] = patchFunction(origFunction[property], file, lineSymbol, log);
+						patchedFunction[property] = patchFunction(origFunction[property], file, locationSymbol, baseDir, log);
 
 					} else {
 
@@ -72,7 +87,8 @@ function patchInterface(
 function patchFunction(
 	origFunction: Function,
 	file: string,
-	lineSymbol: symbol,
+	locationSymbol: symbol,
+	baseDir: string | undefined,
 	log?: (message: any) => void
 ): any {
 	return function(this: any) {
@@ -80,9 +96,9 @@ function patchFunction(
 		const result = origFunction.apply(this, arguments);
 
 		if (result) {
-			const line = findCallLocation(file, log);
-			if (line !== undefined) {
-				result[lineSymbol] = line;
+			const location = findCallLocation(file, baseDir, log);
+			if (location !== undefined) {
+				result[locationSymbol] = location;
 			}
 		}
 
@@ -91,18 +107,32 @@ function patchFunction(
 }
 
 function findCallLocation(
-	file: string,
+	runningFile: string,
+	baseDir: string | undefined,
 	log?: (message: any) => void
-): number | undefined {
+): Location | undefined {
 
 	const err = new Error();
-	if (log) log(`Looking for ${file} in ${err.stack}`);
 	const stackFrames = stackTrace.parse(err);
+
+	if (log) log(`Looking for ${runningFile} in ${err.stack}`);
 
 	for (var i = 0; i < stackFrames.length - 1; i++) {
 		const stackFrame = stackFrames[i];
-		if (stackFrame.getFileName() === file) {
-			return stackFrame.getLineNumber() - 1;
+		if (stackFrame.getFileName() === runningFile) {
+			return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
+		}
+	}
+
+	if (log) log(`Looking for ${baseDir} in ${err.stack}`);
+
+	if (baseDir) {
+		for (var i = 0; i < stackFrames.length - 1; i++) {
+			const stackFrame = stackFrames[i];
+			const file = stackFrame.getFileName();
+			if (file.startsWith(baseDir)) {
+				return { file, line: stackFrame.getLineNumber() - 1 };
+			}
 		}
 	}
 
