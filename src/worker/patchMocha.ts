@@ -115,23 +115,28 @@ function findCallLocation(
 	const err = new Error();
 	const stackFrames = stackTrace.parse(err);
 
-	if (log) log(`Looking for ${runningFile} in ${err.stack}`);
+	if (!baseDir) {
 
-	for (var i = 0; i < stackFrames.length - 1; i++) {
-		const stackFrame = stackFrames[i];
-		if (stackFrame.getFileName() === runningFile) {
-			return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
-		}
-	}
+		if (log) log(`Looking for ${runningFile} in ${err.stack}`);
 
-	if (log) log(`Looking for ${baseDir} in ${err.stack}`);
-
-	if (baseDir) {
 		for (var i = 0; i < stackFrames.length - 1; i++) {
 			const stackFrame = stackFrames[i];
-			const file = stackFrame.getFileName();
-			if (file.startsWith(baseDir)) {
-				return { file, line: stackFrame.getLineNumber() - 1 };
+			if (stackFrame.getFileName() === runningFile) {
+				return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
+			}
+		}
+
+	} else {
+
+		if (log) log(`Looking for ${baseDir} in ${err.stack}`);
+
+		if (baseDir) {
+			for (var i = 0; i < stackFrames.length - 1; i++) {
+				const stackFrame = stackFrames[i];
+				const file = stackFrame.getFileName();
+				if (file.startsWith(baseDir)) {
+					return { file, line: stackFrame.getLineNumber() - 1 };
+				}
 			}
 		}
 	}

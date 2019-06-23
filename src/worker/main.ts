@@ -67,7 +67,13 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 		const locationSymbol = Symbol('location');
 		if ((args.action === 'loadTests') && args.monkeyPatch) {
 			if (args.logEnabled) sendMessage('Patching Mocha');
-			patchMocha(Mocha, args.mochaOpts.ui, locationSymbol, args.cwd, args.logEnabled ? sendMessage : undefined);
+			patchMocha(
+				Mocha,
+				args.mochaOpts.ui,
+				locationSymbol,
+				sourceMapSupportEnabled ? args.cwd : undefined,
+				args.logEnabled ? sendMessage : undefined
+			);
 		}
 
 		const cwd = process.cwd();
