@@ -45,6 +45,7 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 
 	let logEnabled = args.logEnabled;
 	let sendErrorInfo = (args.action === 'loadTests');
+	const sourceMapSupportEnabled = args.mochaOpts.requires.includes('source-map-support/register');
 
 	try {
 
@@ -105,7 +106,7 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			const stringify: (obj: any) => string = require(`${mochaPath}/lib/utils`).stringify;
 			const regExp = new RegExp(args.tests!.map(RegExEscape).join('|'));
 			mocha.grep(regExp);
-			mocha.reporter(<any>ReporterFactory(sendMessage, stringify));
+			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled));
 	
 			if (args.logEnabled) sendMessage('Running tests');
 			mocha.run(() => {

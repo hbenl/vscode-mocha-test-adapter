@@ -3,7 +3,7 @@ import stackTrace from 'stack-trace';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
 
-export default (sendMessage: (message: any) => void, stringify: (obj: any) => string) => {
+export default (sendMessage: (message: any) => void, stringify: (obj: any) => string, sloppyMatch: boolean) => {
 
 	return class Reporter {
 
@@ -91,9 +91,22 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				if (err.stack) {
 					const parsedStack = stackTrace.parse(err);
 					for (const stackFrame of parsedStack) {
-						const filename = stackFrame.getFileName();
+						let filename = stackFrame.getFileName();
 						if (typeof filename === 'string') {
-							if (path.resolve(filename) === test.file) {
+							filename = path.resolve(filename);
+							let matchFound = false;
+							if (sloppyMatch && test.file) {
+								const f1 = filename.substring(0, filename.length - path.extname(filename).length);
+								const f2 = test.file.substring(0, test.file.length - path.extname(test.file).length);
+								if (f1 === f2) {
+									matchFound = true;
+								}
+							} else {
+								if (filename === test.file) {
+									matchFound = true;
+								}
+							}
+							if (matchFound) {
 								decorations.push({
 									line: stackFrame.getLineNumber() - 1,
 									message: err.message
