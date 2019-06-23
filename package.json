@@ -32,6 +32,7 @@
     "watch-extension": "tsc -w",
     "build-worker": "rollup -c",
     "watch-worker": "rollup --watch -c",
+    "build-tests": "cd src/test/workspaces/sourcemap ; tsc",
     "build": "npm run build-extension && npm run build-worker",
     "rebuild": "npm run clean && npm run build",
     "package": "vsce package",

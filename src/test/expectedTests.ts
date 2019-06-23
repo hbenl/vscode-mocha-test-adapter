@@ -3,10 +3,13 @@ import { TestSuiteInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEven
 
 export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 
-	const extension = (workspaceName === 'typescript') ? 'ts' : 'js'
+	const extension = (['typescript', 'sourcemap'].includes(workspaceName)) ? 'ts' : 'js'
+	const extensionInID = (['typescript'].includes(workspaceName)) ? 'ts' : 'js'
 	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
 	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extension);
 	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extension);
+	const staticTestFilePathInID = path.join(workspaceFolderPath, 'test/static.' + extensionInID);
+	const dynamicTestFilePathInID = path.join(workspaceFolderPath, 'test/dynamic.' + extensionInID);
 
 	return {
 		"type": "suite",
@@ -15,14 +18,14 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 		"children": [
 			{
 				"type": "suite",
-				"id": dynamicTestFilePath + ": Suite #3",
+				"id": dynamicTestFilePathInID + ": Suite #3",
 				"label": "Suite #3",
 				"file": dynamicTestFilePath,
 				"line": 0,
 				"children": [
 					{
 						"type": "test",
-						"id": dynamicTestFilePath + ": Suite #3 Test #3.1",
+						"id": dynamicTestFilePathInID + ": Suite #3 Test #3.1",
 						"label": "Test #3.1",
 						"file": dynamicTestFilePath,
 						"line": 1,
@@ -30,7 +33,7 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 					},
 					{
 						"type": "test",
-						"id": dynamicTestFilePath + ": Suite #3 Test #3.2",
+						"id": dynamicTestFilePathInID + ": Suite #3 Test #3.2",
 						"label": "Test #3.2",
 						"file": dynamicTestFilePath,
 						"line": 3,
@@ -38,7 +41,7 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 					},
 					{
 						"type": "test",
-						"id": dynamicTestFilePath + ": Suite #3 Test #3.3",
+						"id": dynamicTestFilePathInID + ": Suite #3 Test #3.3",
 						"label": "Test #3.3",
 						"file": dynamicTestFilePath,
 						"line": 3,
@@ -48,14 +51,14 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 			},
 			{
 				"type": "suite",
-				"id": staticTestFilePath + ": Suite #1",
+				"id": staticTestFilePathInID + ": Suite #1",
 				"label": "Suite #1",
 				"file": staticTestFilePath,
 				"line": 2,
 				"children": [
 					{
 						"type": "test",
-						"id": staticTestFilePath + ": Suite #1 Test #1.1",
+						"id": staticTestFilePathInID + ": Suite #1 Test #1.1",
 						"label": "Test #1.1",
 						"file": staticTestFilePath,
 						"line": 4,
@@ -63,7 +66,7 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 					},
 					{
 						"type": "test",
-						"id": staticTestFilePath + ": Suite #1 Test #1.2",
+						"id": staticTestFilePathInID + ": Suite #1 Test #1.2",
 						"label": "Test #1.2",
 						"file": staticTestFilePath,
 						"line": 8,
@@ -71,7 +74,7 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 					},
 					{
 						"type": "test",
-						"id": staticTestFilePath + ": Suite #1 Test #1.3",
+						"id": staticTestFilePathInID + ": Suite #1 Test #1.3",
 						"label": "Test #1.3",
 						"file": staticTestFilePath,
 						"line": 12,
@@ -81,14 +84,14 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 			},
 			{
 				"type": "suite",
-				"id": staticTestFilePath + ": Suite #2",
+				"id": staticTestFilePathInID + ": Suite #2",
 				"label": "Suite #2",
 				"file": staticTestFilePath,
 				"line": 16,
 				"children": [
 					{
 						"type": "test",
-						"id": staticTestFilePath + ": Suite #2 Test #2.1",
+						"id": staticTestFilePathInID + ": Suite #2 Test #2.1",
 						"label": "Test #2.1",
 						"file": staticTestFilePath,
 						"line": 17,
@@ -102,10 +105,11 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 
 export function getExpectedTestRunEvents(workspaceName: string): (TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent)[] {
 
-	const extension = (workspaceName === 'typescript') ? 'ts' : 'js'
+	const extension = (['typescript', 'sourcemap'].includes(workspaceName)) ? 'ts' : 'js'
+	const extensionInID = (['typescript'].includes(workspaceName)) ? 'ts' : 'js'
 	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
-	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extension);
-	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extension);
+	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extensionInID);
+	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extensionInID);
 
 	return [
 		{
