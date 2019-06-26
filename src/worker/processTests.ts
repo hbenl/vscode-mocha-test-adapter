@@ -18,6 +18,7 @@ export async function processTests(
 		const rootSuite = convertSuite(suite, locationSymbol, fileCache);
 
 		if (rootSuite.children.length > 0) {
+      rootSuite.children = joinDuplicateSuiteNames(rootSuite.children);
 			await sendMessage(rootSuite);
 		} else {
 			await sendMessage(null);
@@ -29,7 +30,6 @@ export async function processTests(
 		throw err;
 	}
 }
-
 
 function convertSuite(
 	suite: Mocha.ISuite,
@@ -103,4 +103,40 @@ function findLineContaining(needle: string, haystack: string | undefined): numbe
 	if (index < 0) return undefined;
 
 	return haystack.substr(0, index).split('\n').length - 1;
+}
+
+
+function joinDuplicateSuiteNames(children: (TestSuiteInfo | TestInfo)[]) {
+
+  const uniqueChildren = children.filter(c =>
+    children.every(ic => c.label !== ic.label || c.type !== 'suite')
+  );
+
+  const duplicateChildren = children.filter(c =>
+    children.some(ic => c.label === ic.label && c.type === 'suite')
+  );
+
+  const groupedDuplicateChildren = duplicateChildren.reduce(
+    (prev, next) => {
+      if (!prev.some(p => p.label === next.label)) {
+        prev.push(next as TestSuiteInfo);
+
+      } else {
+        const sub = prev.find(p => p && p.label === next.label);
+        sub && sub.children.push(...(next as TestSuiteInfo).children);
+      }
+      return prev;
+    },
+    [] as TestSuiteInfo[]
+  );
+  
+  const result = uniqueChildren.concat(groupedDuplicateChildren);
+
+  result.forEach(c => {
+    if (c.type !== 'suite') return;
+    
+    c.children = joinDuplicateSuiteNames(c.children);
+  });
+
+  return result;
 }
