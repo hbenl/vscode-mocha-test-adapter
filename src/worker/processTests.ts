@@ -9,13 +9,19 @@ export async function processTests(
 	suite: Mocha.ISuite,
 	locationSymbol: symbol,
 	sendMessage: (message: any) => Promise<void>,
-	logEnabled: boolean
+	logEnabled: boolean,
+	hotReload?: 'initial' | 'update',
 ): Promise<void> {
 	try {
 
 		if (logEnabled) await sendMessage('Converting tests and suites');
 		const fileCache = new Map<string, string>();
-		const rootSuite = convertSuite(suite, locationSymbol, fileCache);
+		const rootSuite = convertSuite(suite, locationSymbol, fileCache, hotReload);
+
+		// set hot-reload flag on root suite
+		if (hotReload) {
+			rootSuite.hotReload = hotReload;
+		}
 
 		if (rootSuite.children.length > 0) {
 			await sendMessage(rootSuite);
@@ -34,12 +40,52 @@ export async function processTests(
 function convertSuite(
 	suite: Mocha.ISuite,
 	locationSymbol: symbol,
-	fileCache: Map<string, string>
+	fileCache: Map<string, string>,
+	hotReload?: 'initial' | 'update',
 ): TestSuiteInfo {
 
-	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(suite, locationSymbol, fileCache));
-	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(test, locationSymbol, fileCache));
-	const children = (<(TestSuiteInfo | TestInfo)[]>childSuites).concat(childTests);
+	const children: (TestSuiteInfo | TestInfo)[] = [];
+	const unique = new Map<string, TestSuiteInfo | TestInfo>();
+	for (let i = suite.suites.length - 1; i >= 0; i--) {
+		const s = suite.suites[i];
+		const converted = convertSuite(s, locationSymbol, fileCache);
+		if (!hotReload) {
+			children.unshift(converted);
+			continue;
+		}
+		const newer = unique.get(converted.file!);
+		if (newer) {
+			if (hotReload === 'initial') {
+				throw new Error('HMR does support multiple suites/tests per file');
+			}
+			// there is a newer version => set flag & remove older
+			newer.hotReload = 'update';
+			suite.suites.splice(i, 1);
+		} else {
+			unique.set(converted.file!, converted);
+			children.unshift(converted);
+		}
+	}
+	for (let i = suite.tests.length - 1; i >= 0; i--) {
+		const s = suite.tests[i];
+		const converted = convertTest(s, locationSymbol, fileCache);
+		if (!hotReload) {
+			children.unshift(converted);
+			continue;
+		}
+		const newer = unique.get(converted.file!);
+		if (newer) {
+			if (hotReload === 'initial') {
+				throw new Error('HMR does support multiple suites/tests per file');
+			}
+			// there is a newer version => set flag & remove older
+			newer.hotReload = 'update';
+			suite.tests.splice(i, 1);
+		} else {
+			unique.set(converted.file!, s as any);
+			children.unshift(converted);
+		}
+	}
 
 	let location: Location | undefined = (<any>suite)[locationSymbol];
 	if ((location === undefined) && suite.file) {

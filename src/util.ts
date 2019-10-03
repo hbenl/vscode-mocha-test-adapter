@@ -44,6 +44,29 @@ export function* findTests(
 	}
 }
 
+export function collectFiles(root: TestInfo | TestSuiteInfo, test?: (item: TestInfo | TestSuiteInfo) => boolean): Set<string> {
+	const files = new Set<string>();
+	function collect(info: TestInfo | TestSuiteInfo) {
+		if (test && !test(info)) {
+			return;
+		}
+		if (info.file) {
+			files.add(info.file);
+			return;
+		}
+		if (info.type !== 'suite') {
+			return;
+		}
+
+		for (const child of info.children) {
+			collect(child);
+		}
+	}
+
+	collect(root);
+	return files;
+}
+
 export function stringsOnly(env: { [envVar: string]: string | null | undefined }): { [envVar: string]: string } {
 	const result: { [envVar: string]: string } = {};
 	for (const envVar in env) {

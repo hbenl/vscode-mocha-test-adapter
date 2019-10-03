@@ -3,7 +3,7 @@ import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
 import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
-import { findTests, stringsOnly } from './util';
+import { findTests, stringsOnly, collectFiles } from './util';
 import { AdapterConfig } from './configReader';
 
 export interface IDisposable {
@@ -30,7 +30,7 @@ export interface ILog {
 	warn(...msg: any[]): void;
 	error(...msg: any[]): void;
 }
-
+let debugPort = 12345;
 export abstract class MochaAdapterCore {
 
 	protected abstract readonly workspaceFolderPath: string;
@@ -49,6 +49,7 @@ export abstract class MochaAdapterCore {
 	private readonly workerScript = require.resolve('../out/worker/bundle.js');
 
 	private runningTestProcess: ChildProcess | undefined;
+	private runningHotReloadProcess: ChildProcess | undefined;
 
 	constructor(
 		protected readonly outputChannel: IOutputChannel,
@@ -58,6 +59,11 @@ export abstract class MochaAdapterCore {
 	async load(changedFiles?: string[]): Promise<void> {
 
 		try {
+
+			// when HMR running, then ignore file changes
+			if (changedFiles && this.runningHotReloadProcess) {
+				return;
+			}
 
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
@@ -73,6 +79,9 @@ export abstract class MochaAdapterCore {
 				return;
 			}
 
+			// force kill previous HMR watcher process
+			this.killHotReload(config);
+
 			let testsLoaded = false;
 
 			await new Promise<void>(resolve => {
@@ -86,7 +95,8 @@ export abstract class MochaAdapterCore {
 					[],
 					{
 						execPath: config.nodePath,
-						execArgv: [], // ['--inspect-brk=12345']
+						// execArgv:  ['--inspect-brk=' + (debugPort++)],
+						execArgv:  [],
 						env: stringsOnly({ ...process.env, ...config.env }),
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
@@ -123,14 +133,29 @@ export abstract class MochaAdapterCore {
 								info.id = `${this.workspaceFolderPath}: Mocha`;
 								info.label = 'Mocha';
 								this.collectNodesById(info);
+
+								if (info.hotReload === 'initial') {
+									if (this.runningHotReloadProcess !== childProc) {
+										this.killHotReload(config);
+									}
+									this.runningHotReloadProcess = childProc;
+								} else if (!info.hotReload) {
+									childProc.send({ exit: true });
+								}
+
 								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
 
+								if (info.hotReload) {
+									changedFiles = [...collectFiles(info, x => !!x.hotReload)];
+								}
+								console.log(changedFiles);
 								if (changedFiles) {
-
 									const changedTests = findTests(info, { tests:
-										info => ((info.file !== undefined) && (changedFiles.indexOf(info.file) >= 0))
+										info => ((info.file !== undefined) && (changedFiles!.indexOf(info.file) >= 0))
 									});
-									this.retireEmitter.fire({ tests: [ ...changedTests ].map(info => info.id) })
+									const tests = [ ...changedTests ].map(info => info.id);
+									console.log(tests);
+									this.retireEmitter.fire({ tests })
 
 								} else {
 									this.retireEmitter.fire({});
@@ -151,8 +176,11 @@ export abstract class MochaAdapterCore {
 						}
 
 						testsLoaded = true;
-						if (config.mochaOpts.exit && !config.launcherScript) {
+						if (!this.runningHotReloadProcess && config.mochaOpts.exit && !config.launcherScript) {
 							childProc.kill();
+							if (this.runningHotReloadProcess === childProc) {
+								this.runningHotReloadProcess = undefined;
+							}
 						}
 						resolve();
 					}
@@ -189,6 +217,17 @@ export abstract class MochaAdapterCore {
 		} catch (err) {
 			if (this.log.enabled) this.log.error(`Error while loading tests: ${util.inspect(err)}`);
 			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
+		}
+	}
+
+	private killHotReload(config: AdapterConfig) {
+		if (this.runningHotReloadProcess) {
+			if (config.mochaOpts.exit) {
+				this.runningHotReloadProcess.kill()
+			} else {
+				this.runningHotReloadProcess.send({ exit: true });
+			}
+			this.runningHotReloadProcess = undefined;
 		}
 	}
 
@@ -297,6 +336,8 @@ export abstract class MochaAdapterCore {
 
 						} else if (config.mochaOpts.exit && !config.launcherScript && this.runningTestProcess) {
 							this.runningTestProcess.kill();
+						} else if (this.runningTestProcess) {
+							this.runningTestProcess.send({ exit: true });
 						}
 					}
 				});

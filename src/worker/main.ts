@@ -29,7 +29,19 @@ import ReporterFactory from './reporter';
 	} else if (process.send) {
 
 		const args = await new Promise<WorkerArgs>(resolve => {
-			process.once('message', resolve);
+			let receiver: any;
+			receiver = (message: WorkerArgs | { exit: boolean }) => {
+				if (typeof message === 'object' && message && 'exit' in message) {
+					hotReloadStatus = 'exit';
+					process.removeListener('message', receiver);
+					if (nextHotReload) {
+						nextHotReload();
+					}
+					return;
+				}
+				resolve(message);
+			}
+			process.on('message', receiver);
 		});
 
 		execute(args, async msg => process.send!(msg));
@@ -41,6 +53,8 @@ import ReporterFactory from './reporter';
 	}
 })();
 
+let hotReloadStatus: 'supported' | 'unsupported' | 'exit' = 'unsupported';
+let nextHotReload: () => void;
 function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>, onFinished?: () => void): void {
 
 	let logEnabled = args.logEnabled;
@@ -101,9 +115,32 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 
 		if (args.action === 'loadTests') {
 
+			(global as any)['mocha-hot-reload'] = function() {
+				if (nextHotReload) {
+					nextHotReload();
+				} else if(hotReloadStatus === 'unsupported') {
+					hotReloadStatus = 'supported';
+				}
+			}
+
 			mocha.grep('$^');
 			mocha.run(async () => {
-				await processTests(mocha.suite, locationSymbol, sendMessage, args.logEnabled);
+				// send all tests
+				const hotReload = hotReloadStatus === 'supported' ? 'initial' : undefined;
+				await processTests(mocha.suite, locationSymbol, sendMessage, args.logEnabled, hotReload);
+
+				while (hotReloadStatus === 'supported') {
+					// wait for change
+					await new Promise(done => nextHotReload = done);
+					if (hotReloadStatus !== 'supported') {
+						break;
+					}
+
+					// sends test updates
+					await processTests(mocha.suite, locationSymbol, sendMessage, args.logEnabled, 'update');
+				}
+
+				// we're done here.
 				if (onFinished) onFinished();
 			});
 
