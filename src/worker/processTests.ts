@@ -4,17 +4,17 @@ import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { Location } from './patchMocha';
+import { ICommandQueue } from './commandQueue';
 
 export async function processTests(
 	suite: Mocha.ISuite,
 	locationSymbol: symbol,
-	sendMessage: (message: any) => Promise<void>,
-	logEnabled: boolean,
+	queue: ICommandQueue,
 	hotReload?: 'initial' | 'update',
 ): Promise<void> {
 	try {
 
-		if (logEnabled) await sendMessage('Converting tests and suites');
+		await queue.sendInfo('Converting tests and suites');
 		const fileCache = new Map<string, string>();
 		const rootSuite = convertSuite(suite, locationSymbol, fileCache, hotReload);
 
@@ -24,14 +24,14 @@ export async function processTests(
 		}
 
 		if (rootSuite.children.length > 0) {
-			await sendMessage(rootSuite);
+			await queue.sendMessage(rootSuite);
 		} else {
-			await sendMessage(null);
+			await queue.sendMessage(null);
 		}
 
 	} catch (err) {
-		if (logEnabled) await sendMessage(`Caught error ${util.inspect(err)}`);
-		await sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
+		await queue.sendInfo(`Caught error ${util.inspect(err)}`);
+		await queue.sendError(err);
 		throw err;
 	}
 }

@@ -77,3 +77,42 @@ export function stringsOnly(env: { [envVar: string]: string | null | undefined }
 	}
 	return result;
 }
+
+/**
+ * A simple deep compararison
+ * (only handles primitives except no dates - i.e. JSON objects)
+ */
+export function deepEqual<T>(a: T, b: T, depth = 10) {
+    if (depth < 0) {
+        console.error('Comparing too deep entities');
+        return false;
+	}
+
+    if (a == b) {  // simple equality is intended
+        return true;
+	}
+
+    if (Array.isArray(a)) {
+        if (!Array.isArray(b) || a.length !== b.length)
+            return false;
+        for (let i = 0; i < a.length; i++) {
+            if (!deepEqual(a[i], b[i], depth - 1))
+                return false;
+        }
+        return true;
+    }
+
+    // handle plain objects
+    const t = typeof a;
+    if (t !== 'object' || t !== typeof b)
+        return false;
+    const ak = Object.keys(a);
+    const bk = Object.keys(b);
+    if (ak.length !== bk.length)
+        return false;
+    for (const k of Object.keys(a)) {
+        if (!(k in b) || !deepEqual((a as any)[k], (b as any)[k], depth - 1))
+            return false;
+    }
+    return true;
+}

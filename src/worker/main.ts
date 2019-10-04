@@ -8,60 +8,67 @@ import { WorkerArgs, ErrorInfo, NetworkOptions } from 'vscode-test-adapter-remot
 import { patchMocha } from './patchMocha';
 import { processTests } from './processTests';
 import ReporterFactory from './reporter';
+import { CommandQueue, Pipe, ICommandProcessor } from './commandQueue';
 
 (async () => {
 
 	const netOptsJson = (process.argv.length > 2) ? process.argv[2] : '{}';
 	const netOpts: NetworkOptions = JSON.parse(netOptsJson);
 
+	let pipe: Pipe;
 	if (netOpts.role && netOpts.port) {
 
 		const socket = (netOpts.role === 'client') ?
 			await createConnection(netOpts.port, { host: netOpts.host }) :
 			await receiveConnection(netOpts.port, { host: netOpts.host });
 
-		const argsJson = await new Promise<string>(resolve => {
-			socket.pipe(split()).once('data', resolve);
-		});
-
-		execute(JSON.parse(argsJson), msg => writeMessage(socket, msg), () => socket.unref());
-
+		const splitted = socket.pipe(split());
+		pipe = {
+			write: msg => writeMessage(socket, msg),
+			subscribe: receiver => splitted.once('data', x => receiver(JSON.parse(x))),
+			unsubscribe: () => splitted.removeAllListeners(),
+			dispose: () => socket.unref(),
+		}
 	} else if (process.send) {
 
-		const args = await new Promise<WorkerArgs>(resolve => {
-			let receiver: any;
-			receiver = (message: WorkerArgs | { exit: boolean }) => {
-				if (typeof message === 'object' && message && 'exit' in message) {
-					hotReloadStatus = 'exit';
-					process.removeListener('message', receiver);
-					if (nextHotReload) {
-						nextHotReload();
-					}
-					return;
-				}
-				resolve(message);
-			}
-			process.on('message', receiver);
-		});
+		pipe = {
+			write: msg => process.send!(msg),
+			subscribe: receiver => process.on('message', receiver),
+			unsubscribe: receiver => process.removeListener('message', receiver),
+			dispose: () => { },
+		}
 
-		execute(args, async msg => process.send!(msg));
 
 	} else {
 
-		execute(JSON.parse(process.argv[3]), async msg => console.log(msg));
-
+		pipe = {
+			write: msg => console.log(msg),
+			subscribe: receiver => receiver(JSON.parse(process.argv[3])),
+			unsubscribe: () => { },
+			dispose: () => { },
+		}
 	}
+
+	const queue = new CommandQueue(pipe);
+	queue.start(new CommandProcessor(queue));
 })();
 
-let hotReloadStatus: 'supported' | 'unsupported' | 'exit' = 'unsupported';
-let nextHotReload: () => void;
-function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>, onFinished?: () => void): void {
+class CommandProcessor implements ICommandProcessor {
+	private mocha!: Mocha;
+	private locationSymbol = Symbol('location');
+	private mochaPath!: string;
+	private sourceMapSupportEnabled!: boolean;
+	private hotReloadStatus: 'supported' | 'unsupported' | 'exit' = 'unsupported';
+	private nextHotReload?: () => void;
 
-	let logEnabled = args.logEnabled;
-	let sendErrorInfo = (args.action === 'loadTests');
-	const sourceMapSupportEnabled = args.mochaOpts.requires.includes('source-map-support/register');
+	constructor(private queue: CommandQueue) {
+	}
 
-	try {
+	/**
+	 * Initializes mocha
+	 */
+	async initialize(args: WorkerArgs): Promise<void> {
+		this.sourceMapSupportEnabled = args.mochaOpts.requires.includes('source-map-support/register');
 
 		process.chdir(args.cwd);
 
@@ -74,19 +81,20 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			}
 		}
 
-		const mochaPath = args.mochaPath ? args.mochaPath : path.dirname(require.resolve('mocha'));
-		if (args.logEnabled) sendMessage(`Using the mocha package at ${mochaPath}`);
-		const Mocha: typeof import('mocha') = require(mochaPath);
+		this.mochaPath = args.mochaPath ? args.mochaPath : path.dirname(require.resolve('mocha'));
+		this.queue.sendInfo(`Using the mocha package at ${this.mochaPath}`);
+		const Mocha: typeof import('mocha') = require(this.mochaPath);
 
-		const locationSymbol = Symbol('location');
 		if ((args.action === 'loadTests') && args.monkeyPatch) {
-			if (args.logEnabled) sendMessage('Patching Mocha');
+			this.queue.sendInfo('Patching Mocha');
 			patchMocha(
 				Mocha,
 				args.mochaOpts.ui,
-				locationSymbol,
-				sourceMapSupportEnabled ? args.cwd : undefined,
-				args.logEnabled ? sendMessage : undefined
+				this.locationSymbol,
+				this.sourceMapSupportEnabled ? args.cwd : undefined,
+				args.logEnabled
+					? msg => this.queue.sendInfo(msg)
+					: undefined
 			);
 		}
 
@@ -98,70 +106,82 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 				req = path.resolve(req);
 			}
 
-			if (args.logEnabled) sendMessage(`Trying require('${req}')`);
+			this.queue.sendInfo(`Trying require('${req}')`);
 			require(req);
 		}
 
-		const mocha = new Mocha();
+		this.mocha = new Mocha();
 
 		mocha.ui(args.mochaOpts.ui);
 		mocha.timeout(args.mochaOpts.timeout);
 		mocha.suite.retries(args.mochaOpts.retries);
+	}
 
-		if (logEnabled) sendMessage('Loading files');
-		for (const file of args.testFiles) {
+	dispose() {
+		this.hotReloadStatus = 'exit';
+		if (this.nextHotReload) {
+			this.nextHotReload();
+		}
+	}
+
+	/**
+	 * Loads test list
+	 */
+	loadTests(testFiles: string[]): void {
+		this.queue.sendInfo('Loading files');
+		for (const file of testFiles) {
 			mocha.addFile(file);
 		}
 
-		if (args.action === 'loadTests') {
 
-			(global as any)['mocha-hot-reload'] = function() {
-				if (nextHotReload) {
-					nextHotReload();
-				} else if(hotReloadStatus === 'unsupported') {
-					hotReloadStatus = 'supported';
-				}
+		(global as any)['mocha-hot-reload'] = function () {
+			if (this.nextHotReload) {
+				this.nextHotReload();
+			} else if (this.hotReloadStatus === 'unsupported') {
+				this.hotReloadStatus = 'supported';
 			}
-
-			mocha.grep('$^');
-			mocha.run(async () => {
-				// send all tests
-				const hotReload = hotReloadStatus === 'supported' ? 'initial' : undefined;
-				await processTests(mocha.suite, locationSymbol, sendMessage, args.logEnabled, hotReload);
-
-				while (hotReloadStatus === 'supported') {
-					// wait for change
-					await new Promise(done => nextHotReload = done);
-					if (hotReloadStatus !== 'supported') {
-						break;
-					}
-
-					// sends test updates
-					await processTests(mocha.suite, locationSymbol, sendMessage, args.logEnabled, 'update');
-				}
-
-				// we're done here.
-				if (onFinished) onFinished();
-			});
-
-		} else {
-
-			const stringify: (obj: any) => string = require(`${mochaPath}/lib/utils`).stringify;
-			const regExp = new RegExp(args.tests!.map(RegExEscape).join('|'));
-			mocha.grep(regExp);
-			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled));
-	
-			if (args.logEnabled) sendMessage('Running tests');
-			mocha.run(() => {
-				sendMessage({ type: 'finished' });
-				if (onFinished) onFinished();
-			});
-
 		}
 
-	} catch (err) {
-		if (logEnabled) sendMessage(`Caught error ${util.inspect(err)}`);
-		if (sendErrorInfo) sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
-		throw err;
+		mocha.grep('$^');
+		mocha.run(async () => {
+			// send all tests
+			const hotReload = this.hotReloadStatus === 'supported' ? 'initial' : undefined;
+			await processTests(mocha.suite, this.locationSymbol, this.queue, hotReload);
+
+			while (this.hotReloadStatus === 'supported') {
+				// wait for change
+				await new Promise(done => this.nextHotReload = done);
+				if (this.hotReloadStatus !== 'supported') {
+					break;
+				}
+
+				// sends test updates
+				await processTests(mocha.suite, this.locationSymbol, this.queue, 'update');
+			}
+
+			// we're done here.
+			this.queue.stop();
+		});
+	}
+
+	/**
+	 * Runs a collection of tests
+	 */
+	runTests(testFiles: string[], tests: string[]): void {
+		this.queue.sendInfo('Loading files');
+		for (const file of testFiles) {
+			mocha.addFile(file);
+		}
+
+		const stringify: (obj: any) => string = require(`${this.mochaPath}/lib/utils`).stringify;
+		const regExp = new RegExp(tests!.map(RegExEscape).join('|'));
+		mocha.grep(regExp);
+		mocha.reporter(<any>ReporterFactory(m => this.queue.sendMessage(m), stringify, this.sourceMapSupportEnabled));
+
+		this.queue.sendInfo('Running tests');
+		mocha.run(async () => {
+			await this.queue.sendMessage({ type: 'finished' });
+			this.queue.stop();
+		});
 	}
 }
