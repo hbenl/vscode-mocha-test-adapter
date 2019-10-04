@@ -24,6 +24,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	mochaPath: { onChange: 'reloadTests' },
 	monkeyPatch: { onChange: 'reloadTests' },
 	debuggerPort: { onChange: 'reloadConfig' },
+	enableHmr: { onChange: 'reloadTests' },
 	debuggerConfig: { onChange: 'reloadConfig' },
 	launcherScript: { onChange: 'reloadTests'},
 	logpanel: {},

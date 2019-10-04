@@ -214,6 +214,12 @@
           "default": null,
           "scope": "resource"
         },
+        "mochaExplorer.enableHmr": {
+          "description": "Enables HMR (Hot Module Reload) with Webpack - this option is NOT compatible with 'launcherScript' or with 'exit' set to true",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
+        },
         "mochaExplorer.launcherScript": {
           "description": "The path of a launcher script (relative to the workspace folder) used for running the tests remotely",
           "type": [

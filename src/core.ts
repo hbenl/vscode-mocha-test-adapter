@@ -90,19 +90,30 @@ export abstract class MochaAdapterCore {
 					path.resolve(this.workspaceFolderPath, config.launcherScript) :
 					this.workerScript;
 
+				let execArgv: string[] = [];
+				// execArgv:  ['--inspect-brk=' + (debugPort++)],
+				if (config.enableHmr) {
+					if (this.workerScript) {
+						throw new Error('"mochaExplorer.enableHmr" is not compatible with "mochaExplorer.workerScript');
+					}
+					if (config.mochaOpts.exit) {
+						throw new Error('"mochaExplorer.enableHmr" is not compatible with "mochaOpts.exit"');
+					}
+					execArgv = [`--inspect=${config.debuggerPort}`];
+				}
+
 				const childProc = fork(
 					childProcScript,
 					[],
 					{
 						execPath: config.nodePath,
-						// execArgv:  ['--inspect-brk=' + (debugPort++)],
-						execArgv:  [],
+						execArgv,
 						env: stringsOnly({ ...process.env, ...config.env }),
 						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 					}
 				);
 
-				const args: WorkerArgs = {
+				const args: WorkerArgs & { enableHmr: boolean } = {
 					action: 'loadTests',
 					cwd: config.cwd,
 					testFiles: config.files,
@@ -111,7 +122,8 @@ export abstract class MochaAdapterCore {
 					mochaOpts: config.mochaOpts,
 					monkeyPatch: config.monkeyPatch,
 					logEnabled: this.log.enabled,
-					workerScript: this.workerScript
+					workerScript: this.workerScript,
+					enableHmr: config.enableHmr,
 				};
 				childProc.send(args);
 

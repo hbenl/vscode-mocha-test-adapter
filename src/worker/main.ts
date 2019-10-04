@@ -60,6 +60,7 @@ class CommandProcessor implements ICommandProcessor {
 	private sourceMapSupportEnabled!: boolean;
 	private hotReloadStatus: 'supported' | 'unsupported' | 'exit' = 'unsupported';
 	private nextHotReload?: () => void;
+	private enableHmr: boolean | undefined;
 
 	constructor(private queue: CommandQueue) {
 	}
@@ -67,7 +68,7 @@ class CommandProcessor implements ICommandProcessor {
 	/**
 	 * Initializes mocha
 	 */
-	async initialize(args: WorkerArgs): Promise<void> {
+	async initialize(args: WorkerArgs & { enableHmr: boolean }): Promise<void> {
 		this.sourceMapSupportEnabled = args.mochaOpts.requires.includes('source-map-support/register');
 
 		process.chdir(args.cwd);
@@ -81,6 +82,7 @@ class CommandProcessor implements ICommandProcessor {
 			}
 		}
 
+		this.enableHmr = args.enableHmr;
 		this.mochaPath = args.mochaPath ? args.mochaPath : path.dirname(require.resolve('mocha'));
 		this.queue.sendInfo(`Using the mocha package at ${this.mochaPath}`);
 		const Mocha: typeof import('mocha') = require(this.mochaPath);
@@ -112,9 +114,9 @@ class CommandProcessor implements ICommandProcessor {
 
 		this.mocha = new Mocha();
 
-		mocha.ui(args.mochaOpts.ui);
-		mocha.timeout(args.mochaOpts.timeout);
-		mocha.suite.retries(args.mochaOpts.retries);
+		this.mocha.ui(args.mochaOpts.ui);
+		this.mocha.timeout(args.mochaOpts.timeout);
+		this.mocha.suite.retries(args.mochaOpts.retries);
 	}
 
 	dispose() {
@@ -130,33 +132,40 @@ class CommandProcessor implements ICommandProcessor {
 	loadTests(testFiles: string[]): void {
 		this.queue.sendInfo('Loading files');
 		for (const file of testFiles) {
-			mocha.addFile(file);
+			this.mocha.addFile(file);
 		}
 
-
-		(global as any)['mocha-hot-reload'] = function () {
-			if (this.nextHotReload) {
-				this.nextHotReload();
-			} else if (this.hotReloadStatus === 'unsupported') {
-				this.hotReloadStatus = 'supported';
+		// add a hook that must be called
+		if (this.enableHmr) {
+			(global as any)['mocha-hot-reload'] = function () {
+				if (this.nextHotReload) {
+					this.nextHotReload();
+				} else if (this.hotReloadStatus === 'unsupported') {
+					this.hotReloadStatus = 'supported';
+				}
 			}
 		}
 
-		mocha.grep('$^');
-		mocha.run(async () => {
+		this.mocha.grep('$^');
+		this.mocha.run(async () => {
 			// send all tests
 			const hotReload = this.hotReloadStatus === 'supported' ? 'initial' : undefined;
-			await processTests(mocha.suite, this.locationSymbol, this.queue, hotReload);
+			await processTests(this.mocha.suite, this.locationSymbol, this.queue, hotReload);
 
-			while (this.hotReloadStatus === 'supported') {
-				// wait for change
-				await new Promise(done => this.nextHotReload = done);
+			if (this.enableHmr) {
 				if (this.hotReloadStatus !== 'supported') {
-					break;
+					this.queue.sendError(`"mochaExplorer.enableHmr" has been set to true, HMR has not been hooked.`);
 				}
+				while (this.hotReloadStatus === 'supported') {
+					// wait for change
+					await new Promise(done => this.nextHotReload = done);
+					if (this.hotReloadStatus !== 'supported') {
+						break;
+					}
 
-				// sends test updates
-				await processTests(mocha.suite, this.locationSymbol, this.queue, 'update');
+					// sends test updates
+					await processTests(this.mocha.suite, this.locationSymbol, this.queue, 'update');
+				}
 			}
 
 			// we're done here.
@@ -170,16 +179,16 @@ class CommandProcessor implements ICommandProcessor {
 	runTests(testFiles: string[], tests: string[]): void {
 		this.queue.sendInfo('Loading files');
 		for (const file of testFiles) {
-			mocha.addFile(file);
+			this.mocha.addFile(file);
 		}
 
 		const stringify: (obj: any) => string = require(`${this.mochaPath}/lib/utils`).stringify;
 		const regExp = new RegExp(tests!.map(RegExEscape).join('|'));
-		mocha.grep(regExp);
-		mocha.reporter(<any>ReporterFactory(m => this.queue.sendMessage(m), stringify, this.sourceMapSupportEnabled));
+		this.mocha.grep(regExp);
+		this.mocha.reporter(<any>ReporterFactory(m => this.queue.sendMessage(m), stringify, this.sourceMapSupportEnabled));
 
 		this.queue.sendInfo('Running tests');
-		mocha.run(async () => {
+		this.mocha.run(async () => {
 			await this.queue.sendMessage({ type: 'finished' });
 			this.queue.stop();
 		});

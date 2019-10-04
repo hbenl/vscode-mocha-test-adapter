@@ -20,6 +20,7 @@ export interface AdapterConfig {
 
 	monkeyPatch: boolean;
 	pruneFiles: boolean;
+	enableHmr: boolean;
 
 	debuggerPort: number;
 	debuggerConfig: string | undefined;
@@ -93,7 +94,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			if (isTestFile) {
 
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				
+
 				if (isTestFile === 'config') {
 					load();
 				} else {
@@ -154,6 +155,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			cwd,
 			env: await this.getEnv(config, mochaOpts),
 			monkeyPatch: this.getMonkeyPatch(config),
+			enableHmr: this.getEnableHmr(config),
 			pruneFiles: this.getPruneFiles(config),
 			debuggerPort: this.getDebuggerPort(config),
 			debuggerConfig: this.getDebuggerConfig(config),
@@ -443,6 +445,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getDebuggerConfig(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.debuggerConfig.key) || undefined;
+	}
+
+	private getEnableHmr(config: vscode.WorkspaceConfiguration): boolean {
+		let enableHmr = config.get<boolean>(configKeys.enableHmr.key);
+		return (enableHmr !== undefined) ? enableHmr : true;
 	}
 
 	private getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {
