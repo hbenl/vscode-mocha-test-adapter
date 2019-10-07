@@ -229,6 +229,27 @@
           "default": null,
           "scope": "resource"
         },
+        "mochaExplorer.skipFrames": {
+          "description": "When finding location of a test, those file frames will be skipped",
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "default": null,
+          "scope": "resource"
+        },
+        "mochaExplorer.nodeArgs": {
+          "description": "Additional arguments passed to nodes (ex: --harmony-async-iteration)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
         "mochaExplorer.logpanel": {
           "description": "Write diagnotic logs to an output panel",
           "type": "boolean",

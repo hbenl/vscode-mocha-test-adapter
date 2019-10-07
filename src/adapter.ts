@@ -10,9 +10,9 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 
 	private disposables: IDisposable[] = [];
 
-	protected readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
-	protected readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
-	protected readonly retireEmitter = new vscode.EventEmitter<RetireEvent>();
+	readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
+	readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
+	readonly retireEmitter = new vscode.EventEmitter<RetireEvent>();
 
 	get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> {
 		return this.testsEmitter.event;
@@ -26,7 +26,7 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 		return this.retireEmitter.event;
 	}
 
-	protected get workspaceFolderPath(): string {
+	get workspaceFolderPath(): string {
 		return this.workspaceFolder.uri.fsPath;
 	}
 
@@ -81,9 +81,19 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 			let subscription: vscode.Disposable | undefined;
 			subscription = vscode.debug.onDidStartDebugSession(debugSession => {
 				if ((debugSession.name === debuggerConfigName) && subscription) {
-					resolve(debugSession);
+					;
 					subscription.dispose();
 					subscription = undefined;
+					// for some reason, breakpoints are not being hit
+					// unless we give some time to the debugger to attach properly
+					// => this looses some time, but avoids using the annonying --inspect-brk
+					// 		(moreover, inspect-brk is not an option for HMR attach)
+					// this might have to do with the 'configurationDone' event.
+					// see https://github.com/microsoft/vscode/issues/4902
+					// (but i dont see any way to subscribe to this event, which seem internal)
+					setTimeout(() => {
+						resolve(debugSession);
+					}, 800);
 				}
 			});
 

@@ -2,21 +2,19 @@ import * as fs from 'fs';
 import * as util from 'util';
 import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
-import { Location } from './patchMocha';
-import { ICommandQueue } from './commandQueue';
+import { Location, locationSymbol, reRegisterSymbol } from './patchMocha';
+import { IQueueWriter } from './commandQueue';
 
 export async function processTests(
 	suite: Mocha.ISuite,
-	locationSymbol: symbol,
-	queue: ICommandQueue,
+	queue: IQueueWriter,
 	hotReload?: 'initial' | 'update',
 ): Promise<void> {
 	try {
 
 		await queue.sendInfo('Converting tests and suites');
 		const fileCache = new Map<string, string>();
-		const rootSuite = convertSuite(suite, locationSymbol, fileCache, hotReload);
+		const rootSuite = convertSuite(suite, fileCache, hotReload);
 
 		// set hot-reload flag on root suite
 		if (hotReload) {
@@ -36,10 +34,21 @@ export async function processTests(
 	}
 }
 
+export function resetSuite(suite: Mocha.ISuite) {
+	const toReReg = [...suite.suites, ...suite.tests]
+		.map(x => (x as any)[reRegisterSymbol])
+		.filter(x => !!x);
+	suite.suites.splice(0, suite.suites.length);
+	suite.tests.splice(0, suite.tests.length);
+
+	for (const r of toReReg) {
+		r();
+	}
+}
+
 
 function convertSuite(
 	suite: Mocha.ISuite,
-	locationSymbol: symbol,
 	fileCache: Map<string, string>,
 	hotReload?: 'initial' | 'update',
 ): TestSuiteInfo {
@@ -48,7 +57,7 @@ function convertSuite(
 	const unique = new Map<string, TestSuiteInfo | TestInfo>();
 	for (let i = suite.suites.length - 1; i >= 0; i--) {
 		const s = suite.suites[i];
-		const converted = convertSuite(s, locationSymbol, fileCache);
+		const converted = convertSuite(s, fileCache);
 		if (!hotReload) {
 			children.unshift(converted);
 			continue;
@@ -56,7 +65,7 @@ function convertSuite(
 		const newer = unique.get(converted.file!);
 		if (newer) {
 			if (hotReload === 'initial') {
-				throw new Error('HMR does support multiple suites/tests per file');
+				throw new Error('HMR does support multiple suites/tests per file: ' + converted.file!);
 			}
 			// there is a newer version => set flag & remove older
 			newer.hotReload = 'update';
@@ -68,7 +77,7 @@ function convertSuite(
 	}
 	for (let i = suite.tests.length - 1; i >= 0; i--) {
 		const s = suite.tests[i];
-		const converted = convertTest(s, locationSymbol, fileCache);
+		const converted = convertTest(s, fileCache);
 		if (!hotReload) {
 			children.unshift(converted);
 			continue;
@@ -76,7 +85,7 @@ function convertSuite(
 		const newer = unique.get(converted.file!);
 		if (newer) {
 			if (hotReload === 'initial') {
-				throw new Error('HMR does support multiple suites/tests per file');
+				throw new Error('HMR does support multiple suites/tests per file: ' + converted.file!);
 			}
 			// there is a newer version => set flag & remove older
 			newer.hotReload = 'update';
@@ -107,7 +116,6 @@ function convertSuite(
 
 function convertTest(
 	test: Mocha.ITest,
-	locationSymbol: symbol,
 	fileCache: Map<string, string>
 ): TestInfo {
 

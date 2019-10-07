@@ -20,7 +20,7 @@ export interface AdapterConfig {
 
 	monkeyPatch: boolean;
 	pruneFiles: boolean;
-	enableHmr: boolean;
+	enableHmr?: boolean;
 
 	debuggerPort: number;
 	debuggerConfig: string | undefined;
@@ -33,6 +33,8 @@ export interface AdapterConfig {
 	globs: string[];
 
 	launcherScript: string | undefined;
+	nodeArgs: string | undefined;
+	skipFrames: string[] | undefined;
 }
 
 export class ConfigReader implements IConfigReader, IDisposable {
@@ -164,7 +166,9 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			mochaOptsFile,
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
-			launcherScript: this.getLauncherScript(config)
+			launcherScript: this.getLauncherScript(config),
+			skipFrames: this.getSkipFrames(config),
+			nodeArgs: this.getNodeArgs(config),
 		}
 	}
 
@@ -449,7 +453,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getEnableHmr(config: vscode.WorkspaceConfiguration): boolean {
 		let enableHmr = config.get<boolean>(configKeys.enableHmr.key);
-		return (enableHmr !== undefined) ? enableHmr : true;
+		return (enableHmr !== undefined) ? enableHmr : false;
 	}
 
 	private getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {
@@ -462,6 +466,18 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getLauncherScript(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.launcherScript.key) || undefined;
+	}
+
+
+	private getSkipFrames(config: vscode.WorkspaceConfiguration): string[] | undefined {
+		const value = config.get<string | string[]>(configKeys.skipFrames.key);
+		if (typeof value === 'string') {
+			return [value];
+		}
+		return value;
+	}
+	private getNodeArgs(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string>(configKeys.nodeArgs.key) || undefined;
 	}
 
 	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {

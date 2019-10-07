@@ -1,4 +1,8 @@
 import stackTrace from 'stack-trace';
+import path from 'path';
+
+export const locationSymbol = Symbol('location');
+export const reRegisterSymbol = Symbol('re-register');
 
 export interface Location {
 	file: string;
@@ -8,17 +12,27 @@ export interface Location {
 export function patchMocha(
 	Mocha: typeof import('mocha'),
 	ui: string,
-	locationSymbol: symbol,
 	baseDir: string | undefined,
+	skipFrames: string[] | undefined,
 	log?: (message: any) => void
 ): void {
+	if (baseDir) {
+		baseDir = baseDir.replace(/\\/g, '/').toLowerCase();
+	}
+	if (skipFrames && baseDir) {
+		skipFrames = skipFrames
+			.map(x => path.resolve(baseDir!, x))
+			.map(x => x.replace(/\\/g, '/').toLowerCase());
+	} else {
+		skipFrames = undefined;
+	}
 
 	if (ui === 'bdd') {
 
 		Mocha.interfaces.bdd = patchInterface(
 			Mocha.interfaces.bdd,
 			[ 'describe', 'it', 'context', 'specify' ],
-			locationSymbol,
+			skipFrames,
 			baseDir,
 			log
 		);
@@ -28,7 +42,7 @@ export function patchMocha(
 		Mocha.interfaces.tdd = patchInterface(
 			Mocha.interfaces.tdd,
 			[ 'suite', 'test' ],
-			locationSymbol,
+			skipFrames,
 			baseDir,
 			log
 		);
@@ -38,7 +52,7 @@ export function patchMocha(
 		Mocha.interfaces.qunit = patchInterface(
 			Mocha.interfaces.qunit,
 			[ 'suite', 'test' ],
-			locationSymbol,
+			skipFrames,
 			baseDir,
 			log
 		);
@@ -50,7 +64,7 @@ type MochaInterface = (suite: Mocha.Suite) => void;
 function patchInterface(
 	origInterface: MochaInterface,
 	functionNames: string[],
-	locationSymbol: symbol,
+	skipFrames: string[] | undefined,
 	baseDir: string | undefined,
 	log?: (message: any) => void
 ): MochaInterface {
@@ -63,13 +77,13 @@ function patchInterface(
 
 				if (log) log(`Patching ${functionName}`);
 				const origFunction = context[functionName];
-				const patchedFunction = patchFunction(origFunction, file, locationSymbol, baseDir, log);
+				const patchedFunction = patchFunction(origFunction, file, skipFrames, baseDir, log);
 
 				for (const property in origFunction) {
 					if ((property === 'skip') || (property === 'only')) {
 
 						if (log) log(`Patching ${functionName}.${property}`);
-						patchedFunction[property] = patchFunction(origFunction[property], file, locationSymbol, baseDir, log);
+						patchedFunction[property] = patchFunction(origFunction[property], file, skipFrames, baseDir, log);
 
 					} else {
 
@@ -87,28 +101,34 @@ function patchInterface(
 function patchFunction(
 	origFunction: Function,
 	file: string,
-	locationSymbol: symbol,
+	skipFrames: string[] | undefined,
 	baseDir: string | undefined,
 	log?: (message: any) => void
 ): any {
-	return function(this: any) {
+	return function(this: any, ...args: any[]) {
 
-		const result = origFunction.apply(this, arguments);
-
-		if (result) {
-			const location = findCallLocation(file, baseDir, log);
+		let location: any;
+		const register = () => {
+			const result = origFunction.apply(this, args);
+			if (!result) {
+				return result;
+			}
+			location = location || findCallLocation(file, baseDir, skipFrames, log);
 			if (location !== undefined) {
 				result[locationSymbol] = location;
 			}
+			result[reRegisterSymbol] = register;
+			return result;
 		}
 
-		return result;
+		return register();
 	}
 }
 
 function findCallLocation(
 	runningFile: string,
 	baseDir: string | undefined,
+	skipFrames: string[] | undefined,
 	log?: (message: any) => void
 ): Location | undefined {
 
@@ -133,8 +153,15 @@ function findCallLocation(
 		if (baseDir) {
 			for (var i = 0; i < stackFrames.length - 1; i++) {
 				const stackFrame = stackFrames[i];
-				const file = stackFrame.getFileName();
-				if (file.startsWith(baseDir)) {
+				let file = stackFrame.getFileName();
+				if (!file) {
+					continue;
+				}
+				file = file.replace(/\\/g, '/').toLowerCase();
+				if (file && file.startsWith(baseDir)) {
+					if((skipFrames || []).find(x => file.startsWith(x))) {
+						continue;
+					}
 					return { file, line: stackFrame.getLineNumber() - 1 };
 				}
 			}

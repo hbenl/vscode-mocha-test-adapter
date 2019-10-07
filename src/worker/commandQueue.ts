@@ -1,6 +1,7 @@
 import { WorkerArgs, ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
-import { deepEqual } from '../util';
+import { deepEqual, areCompatibleRunners } from '../util';
 import * as util from 'util';
+import { WorkerArgsAugmented } from '../interfaces';
 
 export interface Pipe {
 	subscribe(messageProcessor: (messgage: any) => void): void;
@@ -9,23 +10,28 @@ export interface Pipe {
 	dispose(): void;
 }
 export interface ICommandProcessor {
-	loadTests(testFiles: string[]): void;
-	runTests(testFiles: string[], tests: string[]): void;
-	initialize(args: WorkerArgs): Promise<void>;
+	loadTests(writer: IQueueWriter, testFiles: string[]): void;
+	runTests(writer: IQueueWriter, testFiles: string[], tests: string[]): void;
+	initialize(writer: IQueueWriter, args: WorkerArgs): Promise<void>;
 	dispose(): void;
 }
-export interface ICommandQueue {
+export interface IQueueWriter {
+	preventStopping(): void;
+	stop(): void;
 	sendInfo(info: string): Promise<void>;
 	sendError(err: any): Promise<void>;
 	sendMessage(message: any): Promise<void>;
 }
 
-export class CommandQueue implements ICommandQueue {
+export class CommandQueue {
 	private commandProcessor!: ICommandProcessor;
-	private initArgs!: WorkerArgs;
 	private initialization!: Promise<void>;
+	private defaultWriter: IQueueWriter;
+	initArgs!: WorkerArgs;
+	preventStopping = new Set<number>();
 
-	constructor(private pipe: Pipe) {
+	constructor(readonly pipe: Pipe) {
+		this.defaultWriter = this.createWriter(0);
 	}
 
 	start(commandProcessor: ICommandProcessor) {
@@ -39,59 +45,106 @@ export class CommandQueue implements ICommandQueue {
 		this.commandProcessor.dispose();
 	}
 
+	createWriter(sessionId: number): IQueueWriter {
+		return new QueueWriter(this, sessionId);
+	}
+
+
+	private processMessage = async (message: WorkerArgsAugmented | { exit: true }) => {
+		try {
+
+			if (typeof message !== 'object') {
+				return;
+			}
+			if ('exit' in message) {
+				this.stop();
+				return;
+			}
+
+			// create a writer that is linked to the current session
+			// (sent messages will be triaged by session ID)
+			const writer = this.createWriter(message.sessionId!);
+
+			// check worker initialization parameters
+			const {testFiles, tests, action} = message;
+			const sendErrorInfo = (action === 'loadTests');
+			if (!this.initArgs) {
+				this.initArgs = message;
+				this.initialization = this.commandProcessor.initialize(writer, message);
+			} else if (!areCompatibleRunners(this.initArgs, message)) {
+				this.defaultWriter.sendError('Mocha initialization options have changed. Worker must be reloaded.');
+				this.stop();
+			}
+
+			// wait for initialization
+			try {
+				await this.initialization;
+			} catch (err) {
+				this.defaultWriter.sendInfo(`Caught error ${util.inspect(err)}`);
+				if (sendErrorInfo) this.defaultWriter.sendError(err);
+			}
+
+			// process action
+			if (message.action === 'loadTests') {
+				this.commandProcessor.loadTests(writer, testFiles);
+			} else if (message.action === 'runTests') {
+				this.commandProcessor.runTests(writer, testFiles, tests!);
+			} else {
+				if (sendErrorInfo) this.defaultWriter.sendError('Worker received an unexpected action: ' + message.action);
+				return;
+			}
+		} catch (e) {
+			await this.defaultWriter.sendError(e);
+			this.stop();
+		}
+	}
+}
+
+
+class QueueWriter implements IQueueWriter {
+
+	constructor(private owner: CommandQueue
+		, private sessionId: number) {
+	}
+
 	async sendInfo(info: string) {
-		if (!this.initArgs || this.initArgs.logEnabled) {
-			await this.pipe.write(info);
+		if (!this.owner.initArgs || this.owner.initArgs.logEnabled) {
+			await this.owner.pipe.write(info);
 		}
 	}
 
 	async sendError(err: any) {
-		await this.pipe.write(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
+		await this.sendMessage(<ErrorInfo>{
+			type: 'error',
+			errorMessage: util.inspect(err)
+		});
 	}
 
 	async sendMessage(message: any) {
-		await this.pipe.write(message);
+		// enrich mesage with current session ID
+		// => messages will be triaged on this ID
+		const sid = this.sessionId;
+		if (sid) {
+			if (message === null) {
+				message = {} as any;
+			}
+			if (typeof message === 'object') {
+				message.sessionId = sid;
+			}
+		}
+
+		// send message
+		await this.owner.pipe.write(message);
 	}
 
-	private processMessage = async (message: WorkerArgs | { exit: true }) => {
-		if (typeof message !== 'object') {
-			return;
-		}
-		if ('exit' in message) {
-			this.stop();
-			return;
-		}
+	preventStopping() {
+		this.owner.preventStopping.add(this.sessionId || 0);
+	}
 
-		// check worker initialization parameters
-		const {testFiles, tests, action} = message;
-		const sendErrorInfo = (action === 'loadTests');
-		if (!this.initArgs) {
-			delete message.testFiles;
-			delete message.tests;
-			delete message.action;
-			this.initArgs = message;
-			this.initialization = this.commandProcessor.initialize(message);
-		} else if (!deepEqual(this.initArgs, message)) {
-			this.sendError('Mocha initialization options have changed. Worker must be reloaded.');
-			this.stop();
-		}
-
-		// wait for initialization
-		try {
-			await this.initialization;
-		} catch (err) {
-			this.sendInfo(`Caught error ${util.inspect(err)}`);
-			if (sendErrorInfo) this.sendError(err);
-		}
-
-		// process action
-		if (message.action === 'loadTests') {
-			this.commandProcessor.loadTests(testFiles);
-		} else if (message.action === 'runTests') {
-			this.commandProcessor.runTests(testFiles, tests!);
-		} else {
-			if (sendErrorInfo) this.sendError('Worker received an unexpected action: ' + message.action);
-			return;
+	stop() {
+		this.owner.preventStopping.delete(this.sessionId || 0);
+		if (!this.owner.preventStopping.size) {
+			this.owner.stop();
 		}
 	}
 }

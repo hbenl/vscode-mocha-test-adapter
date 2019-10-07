@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as util from 'util';
 import { fork } from 'child_process';
 import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
-import { ILog } from './core';
+import { ILog } from './interfaces';
 
 export interface MochaOptsAndFiles {
 	mochaOpts: Partial<MochaOpts>;
@@ -120,7 +120,7 @@ export class MochaOptsReader {
 				[],
 				{ cwd, execArgv: [] }
 			);
-	
+
 			let finished = false;
 
 			childProc.once('message', (options: {}) => {

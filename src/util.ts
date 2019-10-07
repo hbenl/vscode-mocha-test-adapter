@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 import { TestInfo, TestSuiteInfo } from 'vscode-test-adapter-api';
+import { WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
+import { WorkerArgsAugmented } from './interfaces';
 
 export function fileExists(path: string): Promise<boolean> {
 	return new Promise<boolean>(resolve => {
@@ -100,14 +102,20 @@ export function deepEqual<T>(a: T, b: T, depth = 10) {
                 return false;
         }
         return true;
-    }
+	}
+	if (a instanceof Proxy) {
+		return b instanceof Proxy;
+	}
+	if (b instanceof Proxy) {
+		return false;
+	}
 
     // handle plain objects
     const t = typeof a;
     if (t !== 'object' || t !== typeof b)
         return false;
-    const ak = Object.keys(a);
-    const bk = Object.keys(b);
+    let ak = Object.keys(a);
+	let bk = Object.keys(b);
     if (ak.length !== bk.length)
         return false;
     for (const k of Object.keys(a)) {
@@ -115,4 +123,20 @@ export function deepEqual<T>(a: T, b: T, depth = 10) {
             return false;
     }
     return true;
+}
+
+export function areCompatibleRunners(a: WorkerArgs, b: WorkerArgs): boolean {
+	return deepEqual(extractInit(a), extractInit(b), 10);
+}
+
+export function extractInit(x: WorkerArgsAugmented) {
+	return {
+		mochaOpts: x.mochaOpts,
+		cwd: x.cwd,
+		env: x.env,
+		enableHmr: x.enableHmr,
+		mochaPath: x.mochaPath,
+		testFiles: x.testFiles,
+		skipFrames: x.skipFrames,
+	}
 }
