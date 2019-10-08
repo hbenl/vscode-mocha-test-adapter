@@ -1,6 +1,6 @@
 # Mocha Test Explorer for Visual Studio Code
 
-Run your Mocha tests using the 
+Run your Mocha tests using the
 [Test Explorer UI](https://marketplace.visualstudio.com/items?itemName=hbenl.vscode-test-explorer).
 
 ![Screenshot](img/screenshot.png)
@@ -54,6 +54,16 @@ Alternatively, you can use [VS Code Remote Development](https://code.visualstudi
 to move your workspace to the remote environment. If you do so, your tests will also be run in this environment automatically.
 This is easier to set up (because you don't need to write a launcher script), but requires that your entire workspace and large
 parts of VS Code run in the remote environment, which (depending on the environment) may be impractical or even impossible.
+
+## Webpack HMR (Hot Module Reload) support
+
+For big projects, or projects with a big compilation ovehead (i'm looking at you, Typescript users), testing can be a bit painful.
+
+To remove overheads due to compilation & loading all your scripts, you can enable [Webpack HMR](https://webpack.js.org/concepts/hot-module-replacement/) with the `testExplorer.hmrBundle` option.
+
+Using this option, tests can be updated/launched/debugged almost instantly, no matter your project size.
+
+See [this repository](https://github.com/oguimbal/vscode-mocha-hmr-sample) for a sample implementation.
 
 ## Configuration
 
@@ -110,6 +120,9 @@ Property                        | Description
 `testExplorer.gutterDecoration` | Show the state of each test in the editor using Gutter Decorations
 `testExplorer.onStart`          | Retire or reset all test states whenever a test run is started
 `testExplorer.onReload`         | Retire or reset all test states whenever the test tree is reloaded
+`testExplorer.nodeArgs`         | Additional arguments passed to node (ex: --harmony-async-iteration)
+`testExplorer.skipFrames`       | When finding location of a test, those file frames will be skipped (useful if you are using "describe()" or "it()" wrappers)
+`testExplorer.hmrBundle`        | HMR (Hot Module Reload) Webpack bundle to watch
 
 ## Commands
 
