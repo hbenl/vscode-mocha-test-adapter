@@ -207,6 +207,7 @@ export class WorkerInstance implements IWorkerInstance {
 		if (!session) {
 			return;
 		}
+		session.finished();
 		this.sessions.delete(sessionId);
 
 		// if a session is still running, then ignore
@@ -223,10 +224,15 @@ export class WorkerInstance implements IWorkerInstance {
 		}
 
 		// kill process, or send a graceful exit message
-		if (this.config.mochaOpts.exit) {
+		if (this.config.mochaOpts.exit || !this.childProc.connected) {
 			this.childProc.kill()
 		} else {
-			this.childProc.send({ exit: true });
+			try {
+				this.childProc.send({ exit: true });
+			} catch (e) {
+				this.logWarn('Failed to gracefully stop worker process => killing it')
+				this.childProc.kill()
+			}
 		}
 		this.childProc = undefined;
 	}

@@ -231,7 +231,7 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 			}
 
 			// pre-launch
-			worker.spawn();
+			worker.spawn(!!attachDebugger);
 
 			// try to attach debugger
 			if (attachDebugger) {

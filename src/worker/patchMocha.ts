@@ -16,13 +16,11 @@ export function patchMocha(
 	skipFrames: string[] | undefined,
 	log?: (message: any) => void
 ): void {
-	if (baseDir) {
-		baseDir = baseDir.replace(/\\/g, '/').toLowerCase();
-	}
+	baseDir = normalizeFileName(baseDir);
 	if (skipFrames && baseDir) {
 		skipFrames = skipFrames
 			.map(x => path.resolve(baseDir!, x))
-			.map(x => x.replace(/\\/g, '/').toLowerCase());
+			.map(x => normalizeFileName(x));
 	} else {
 		skipFrames = undefined;
 	}
@@ -77,6 +75,7 @@ function patchInterface(
 
 				if (log) log(`Patching ${functionName}`);
 				const origFunction = context[functionName];
+				file = normalizeFileName(file);
 				const patchedFunction = patchFunction(origFunction, file, skipFrames, baseDir, log);
 
 				for (const property in origFunction) {
@@ -141,7 +140,8 @@ function findCallLocation(
 
 		for (var i = 0; i < stackFrames.length - 1; i++) {
 			const stackFrame = stackFrames[i];
-			if (stackFrame.getFileName() === runningFile) {
+			let file = normalizeFileName(stackFrame.getFileName());
+			if (file === runningFile) {
 				return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
 			}
 		}
@@ -153,11 +153,10 @@ function findCallLocation(
 		if (baseDir) {
 			for (var i = 0; i < stackFrames.length - 1; i++) {
 				const stackFrame = stackFrames[i];
-				let file = stackFrame.getFileName();
+				let file = normalizeFileName(stackFrame.getFileName());
 				if (!file) {
 					continue;
 				}
-				file = file.replace(/\\/g, '/').toLowerCase();
 				if (file && file.startsWith(baseDir)) {
 					if((skipFrames || []).find(x => file.startsWith(x))) {
 						continue;
@@ -169,4 +168,11 @@ function findCallLocation(
 	}
 
 	return undefined;
+}
+
+function normalizeFileName(file: string | undefined): string {
+	if (!file) {
+		return file as string;
+	}
+	return file.replace(/\\/g, '/').toLowerCase();
 }
