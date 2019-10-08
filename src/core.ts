@@ -69,7 +69,6 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 	async load(changedFiles?: string[]): Promise<void> {
 
 		try {
-			await new Promise(done => setTimeout(done, 1000));
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
 			// load config
@@ -83,7 +82,10 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 			}
 
 			// check config
-			if (config.enableHmr) {
+			if (config.hmrBundle) {
+				if (config.files && config.files.length) {
+					throw new Error('"mochaExplorer.hmrBundle" is not compatible with "mochaExplorer.files" or with a mocha config file');
+				}
 				if (config.launcherScript) {
 					throw new Error('"mochaExplorer.enableHmr" is not compatible with "mochaExplorer.workerScript');
 				}
@@ -94,7 +96,7 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 
 
 			// an HMR worker is running
-			if (config.enableHmr) {
+			if (config.hmrBundle) {
 				// when HMR running, then ignore file changes
 				if (changedFiles) {
 					return;
@@ -113,7 +115,7 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 
 			 // if HMR is enabled, then try to detect HMR
 			 // when detected, then next runs will re-use this worker
-			 if (config.enableHmr) {
+			 if (config.hmrBundle) {
 				worker.onDetectHmr(() => {
 					// stop previous worker (should not happen)
 					if (this.hmrWorker) {
@@ -129,14 +131,14 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 			 const args: WorkerArgsAugmented = {
 				action: 'loadTests',
 				cwd: config.cwd,
-				testFiles: config.files,
+				testFiles: config.hmrBundle ? [config.hmrBundle] : config.files,
 				env: config.env,
 				mochaPath: config.mochaPath,
 				mochaOpts: config.mochaOpts,
 				monkeyPatch: config.monkeyPatch,
 				logEnabled: this.log.enabled,
 				workerScript: this.workerScript,
-				enableHmr: config.enableHmr,
+				enableHmr: !!config.hmrBundle,
 				skipFrames: config.skipFrames,
 			};
 			this.nodesById.clear();
@@ -184,8 +186,8 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 				}
 			});
 
-			let _testFiles: string[] | undefined = undefined;
-			if (config.pruneFiles) {
+			let _testFiles: string[] | undefined = config.hmrBundle ? [config.hmrBundle] : undefined;
+			if (!_testFiles && config.pruneFiles) {
 				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
 				if (testFileSet.size > 0) {
 					_testFiles = <string[]>[ ...testFileSet ];
@@ -208,10 +210,10 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 				mochaOpts: config.mochaOpts,
 				logEnabled: this.log.enabled,
 				workerScript: this.workerScript,
-				enableHmr: config.enableHmr,
+				enableHmr: !!config.hmrBundle,
 				skipFrames: config.skipFrames,
 			};
-			if (attachDebugger && !config.enableHmr) {
+			if (attachDebugger && !config.hmrBundle) {
 				args.debuggerPort = config.debuggerPort;
 			}
 
@@ -278,7 +280,7 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 				if (debugSession != session) return;
 				this.log.info('Debug session ended');
 				 // terminate the test run
-				if (!config.enableHmr) {
+				if (!config.hmrBundle) {
 					worker.kill();
 				}
 				subscription.dispose();

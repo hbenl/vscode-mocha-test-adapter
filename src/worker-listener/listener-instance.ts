@@ -64,13 +64,12 @@ export class WorkerInstance implements IWorkerInstance {
 	}
 
 
-	spawn() {
+	spawn(forceDebug?: boolean) {
 		if (this.childProc) {
 			return;
 		}
 		let execArgv: string[] = [];
-		// const execArgv = (debug && !config.launcherScript) ? [ `--inspect-brk=${config.debuggerPort}` ] : [];
-		if (this.config.enableHmr) {
+		if (this.config.hmrBundle || forceDebug && !this.config.launcherScript) {
 			execArgv = [`--inspect=${this.config.debuggerPort}`];
 		}
 		// execArgv =  ['--inspect-brk=' + (debugPort++)];
@@ -99,7 +98,7 @@ export class WorkerInstance implements IWorkerInstance {
 
 			// handle legacy 'null' message for 'no test found'
 			if (!info) {
-				if (!this.config.enableHmr) {
+				if (!this.config.hmrBundle) {
 					this.logWarn(`Received 'null' message when HMR enabled (expected runner session ID)`);
 				}
 				info = { type: 'noTest' };
@@ -169,7 +168,7 @@ export class WorkerInstance implements IWorkerInstance {
 
 
 	execute(args: WorkerArgsAugmented, changedFiles?: string[]): IWorkerSession {
-		if (this.config.enableHmr) {
+		if (this.config.hmrBundle) {
 			args.sessionId = this.sessCnt++;
 		}
 		// spawn process
@@ -205,7 +204,7 @@ export class WorkerInstance implements IWorkerInstance {
 	private stopSession(sessionId: number) {
 		// terminate session
 		const session = this.sessions.get(sessionId || 0);
-		if (session) {
+		if (!session) {
 			return;
 		}
 		this.sessions.delete(sessionId);

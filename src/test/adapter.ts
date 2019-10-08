@@ -56,7 +56,9 @@ export async function createTestMochaAdapter(
 		envFile: undefined,
 		globs: mochaOptsAndFiles.globs,
 
-		launcherScript: undefined
+		launcherScript: undefined,
+		nodeArgs: undefined,
+		skipFrames: undefined,
 	};
 
 	return new TestMochaAdapter(workspaceFolderPath, new TestConfigReader(config));

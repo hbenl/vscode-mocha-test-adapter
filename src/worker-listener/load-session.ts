@@ -12,6 +12,7 @@ export class LoadSession implements IWorkerSession {
 
 	private triggerEndInitialRun!: () => void;
 	private endInitialRun = new Promise<void>(done => this.triggerEndInitialRun = done);
+	private isFinished = false;
 
 
 	constructor(private adapter: IAdapterCore
@@ -53,7 +54,7 @@ export class LoadSession implements IWorkerSession {
 
 		if (err) {
 			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `The worker process finished: ${util.inspect(err)}` });
-		} else {
+		} else if (!this.isFinished){
 			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
 		}
 
@@ -95,6 +96,8 @@ export class LoadSession implements IWorkerSession {
 		if (info.hotReload) {
 			this.owner.detectedHmr();
 			this.changedFiles = [...collectFiles(info, x => !!x.hotReload)];
+		} else {
+			this.isFinished = true;
 		}
 
 		if (this.changedFiles) {

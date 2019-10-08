@@ -25,7 +25,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	monkeyPatch: { onChange: 'reloadTests' },
 	debuggerPort: { onChange: 'reloadConfig' },
 	skipFrames: { onChange: 'reloadTests' },
-	enableHmr: { onChange: 'reloadTests' },
+	hmrBundle: { onChange: 'reloadTests' },
 	debuggerConfig: { onChange: 'reloadConfig' },
 	launcherScript: { onChange: 'reloadTests'},
 	nodeArgs: { onChange: 'reloadTests'},

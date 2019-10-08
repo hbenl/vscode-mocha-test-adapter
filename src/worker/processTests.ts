@@ -46,6 +46,10 @@ export function resetSuite(suite: Mocha.ISuite) {
 	}
 }
 
+const multiHmrError = (f: string) => `HMR does support multiple suites/tests per file in ${f}
+- If this file contains multiple tests, then consider splitting it.
+- If this file is a wrapper of mocha methods ('describe', 'it', ...) then consider adding it to option 'mochaExplorer.skipFrames' in your settings.json`
+
 
 function convertSuite(
 	suite: Mocha.ISuite,
@@ -65,7 +69,7 @@ function convertSuite(
 		const newer = unique.get(converted.file!);
 		if (newer) {
 			if (hotReload === 'initial') {
-				throw new Error('HMR does support multiple suites/tests per file: ' + converted.file!);
+				throw new Error(multiHmrError(converted.file!));
 			}
 			// there is a newer version => set flag & remove older
 			newer.hotReload = 'update';
@@ -85,7 +89,7 @@ function convertSuite(
 		const newer = unique.get(converted.file!);
 		if (newer) {
 			if (hotReload === 'initial') {
-				throw new Error('HMR does support multiple suites/tests per file: ' + converted.file!);
+				throw new Error(multiHmrError(converted.file!));
 			}
 			// there is a newer version => set flag & remove older
 			newer.hotReload = 'update';

@@ -20,7 +20,7 @@ export interface AdapterConfig {
 
 	monkeyPatch: boolean;
 	pruneFiles: boolean;
-	enableHmr?: boolean;
+	hmrBundle?: string;
 
 	debuggerPort: number;
 	debuggerConfig: string | undefined;
@@ -157,7 +157,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			cwd,
 			env: await this.getEnv(config, mochaOpts),
 			monkeyPatch: this.getMonkeyPatch(config),
-			enableHmr: this.getEnableHmr(config),
+			hmrBundle: this.lookupHmrBundle(config),
 			pruneFiles: this.getPruneFiles(config),
 			debuggerPort: this.getDebuggerPort(config),
 			debuggerConfig: this.getDebuggerConfig(config),
@@ -295,6 +295,14 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		return resolvedFilesFromOptsFile.concat(testFiles);
+	}
+
+	private lookupHmrBundle(config: vscode.WorkspaceConfiguration) {
+		const bundle = config.get<string>(configKeys.hmrBundle.key);
+		if (!bundle) {
+			return undefined;
+		}
+		return path.resolve(this.workspaceFolder.uri.fsPath, bundle);
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
@@ -449,11 +457,6 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getDebuggerConfig(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.debuggerConfig.key) || undefined;
-	}
-
-	private getEnableHmr(config: vscode.WorkspaceConfiguration): boolean {
-		let enableHmr = config.get<boolean>(configKeys.enableHmr.key);
-		return (enableHmr !== undefined) ? enableHmr : false;
 	}
 
 	private getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {

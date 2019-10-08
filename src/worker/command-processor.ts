@@ -106,25 +106,25 @@ export class CommandProcessor implements ICommandProcessor {
 
 		this.mocha.grep('$^');
 		this.mocha.run(async () => {
-			// send all tests
-			const hotReload = this.hotReloadStatus === 'supported' ? 'initial' : undefined;
-			await processTests(this.mocha.suite, writer, hotReload);
+			if (this.enableHmr && this.hotReloadStatus !== 'supported') {
+				writer.sendError(`"mochaExplorer.enableHmr" has been set to true, but HMR has not been hooked.`);
+			} else {
+				// send all tests
+				const hotReload = this.hotReloadStatus === 'supported' ? 'initial' : undefined;
+				await processTests(this.mocha.suite, writer, hotReload);
 
-			if (this.enableHmr) {
-				if (this.hotReloadStatus !== 'supported') {
-					writer.sendError(`"mochaExplorer.enableHmr" has been set to true, HMR has not been hooked.`);
-				} else {
+				if (this.enableHmr) {
 					writer.preventStopping();
-				}
-				while (this.hotReloadStatus === 'supported') {
-					// wait for change
-					await new Promise(done => this.nextHotReload = done);
-					if (this.hotReloadStatus !== 'supported') {
-						break;
-					}
+					while (this.hotReloadStatus === 'supported') {
+						// wait for change
+						await new Promise(done => this.nextHotReload = done);
+						if (this.hotReloadStatus !== 'supported') {
+							break;
+						}
 
-					// sends test updates
-					await processTests(this.mocha.suite, writer, 'update');
+						// sends test updates
+						await processTests(this.mocha.suite, writer, 'update');
+					}
 				}
 			}
 

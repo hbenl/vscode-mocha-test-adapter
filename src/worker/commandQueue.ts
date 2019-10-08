@@ -95,7 +95,7 @@ export class CommandQueue {
 			}
 		} catch (e) {
 			await this.defaultWriter.sendError(e);
-			this.stop();
+			// this.stop();
 		}
 	}
 }

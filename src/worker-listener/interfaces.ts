@@ -7,7 +7,7 @@ export interface IWorkerInstance {
 	/** Force kill worker */
 	kill(): void;
 	/** Pre-launches the worker process if necessary (so it can be attached before sending its execution arguments) */
-	spawn(): void;
+	spawn(forceDebug?: boolean): void;
 	/** Sends a command to worker */
 	execute(args: WorkerArgsAugmented, changedFiles?: string[]): IWorkerSession;
 	/** Registers a handler which will be called when the process dies */

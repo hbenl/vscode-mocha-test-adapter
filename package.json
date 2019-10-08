@@ -214,10 +214,13 @@
           "default": null,
           "scope": "resource"
         },
-        "mochaExplorer.enableHmr": {
-          "description": "Enables HMR (Hot Module Reload) with Webpack - this option is NOT compatible with 'launcherScript' or with 'exit' set to true",
-          "type": "boolean",
-          "default": false,
+        "mochaExplorer.hmrBundle": {
+          "description": "HMR (Hot Module Reload) Webpack bundle to watch - this option is NOT compatible with 'files', 'launcherScript' or with 'exit' set to true",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
           "scope": "resource"
         },
         "mochaExplorer.launcherScript": {
