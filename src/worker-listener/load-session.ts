@@ -52,10 +52,12 @@ export class LoadSession implements IWorkerSession {
 			return; // ignore, we've already finished loading
 		}
 
-		if (err) {
-			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `The worker process finished: ${util.inspect(err)}` });
-		} else if (!this.isFinished){
-			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+		if (!this.isFinished) {
+			if (err) {
+				this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `The worker process finished: ${util.inspect(err)}` });
+			} else {
+				this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
+			}
 		}
 
 		this.triggerEndInitialRun();
@@ -68,6 +70,7 @@ export class LoadSession implements IWorkerSession {
 	processMessage(info: WorkerLoadEvent): 'stop' | 'continue' {
 
 		if (info.type === 'error') {
+			this.isFinished = true;
 			this.logInfo('Received error from worker');
 			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
 			return 'stop';
