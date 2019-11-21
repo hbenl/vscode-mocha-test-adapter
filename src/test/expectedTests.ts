@@ -105,8 +105,8 @@ export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 
 export function getExpectedTestRunEvents(workspaceName: string): (TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent)[] {
 
-	const extension = (['typescript', 'sourcemap'].includes(workspaceName)) ? 'ts' : 'js'
-	const extensionInID = (['typescript'].includes(workspaceName)) ? 'ts' : 'js'
+	const extension = (['typescript', 'sourcemap'].includes(workspaceName)) ? 'ts' : 'js';
+	const extensionInID = (['typescript'].includes(workspaceName)) ? 'ts' : 'js';
 	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
 	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extensionInID);
 	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extensionInID);
@@ -193,7 +193,7 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 					"message": "1 == 2"
 				}
 			],
-			"message": "AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static." + extension + ":10:10)\n\n+ expected - actual\n\n-1\n+2\n"
+			"message": `AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static.${extension}:10:10)\n    at processImmediate (internal/timers.js:439:21)\n\n+ expected - actual\n\n-1\n+2\n`
 		},
 		{
 			"type": "test",

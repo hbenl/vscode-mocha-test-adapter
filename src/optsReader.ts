@@ -155,8 +155,8 @@ export class MochaOptsReader {
 			mochaOpts: {
 				ui: options.ui,
 				requires: options.require,
-				timeout: options.timeout,
-				retries: options.retries,
+				timeout: +options.timeout,
+				retries: (options.retries !== undefined) ? +options.retries : undefined,
 				exit: options.exit
 			}
 		}

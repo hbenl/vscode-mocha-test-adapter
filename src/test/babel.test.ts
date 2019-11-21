@@ -27,11 +27,6 @@ describe("Babel tests", function() {
 		await adapter.run([ rootSuite!.id ]);
 
 		const expectedTestRunEvents = getExpectedTestRunEvents(workspaceFolderName);
-		for (const event of expectedTestRunEvents) {
-			if ((event.type === 'test') && (event.state === 'failed') && event.message) {
-				event.message = event.message.replace('Context.<anonymous>', 'Context.equal');
-			}
-		}
 		assert.deepStrictEqual(adapter.getTestRunEvents(), expectedTestRunEvents);
 	});
 });
