@@ -93,7 +93,7 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 					subscription.dispose();
 					subscription = undefined;
 				}
-			}, 5000);
+			}, 10000);
 		});
 
 		const started = await vscode.debug.startDebugging(this.workspaceFolder, debuggerConfig);
