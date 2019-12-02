@@ -103,12 +103,6 @@ export function deepEqual<T>(a: T, b: T, depth = 10) {
         }
         return true;
 	}
-	if (a instanceof Proxy) {
-		return b instanceof Proxy;
-	}
-	if (b instanceof Proxy) {
-		return false;
-	}
 
     // handle plain objects
     const t = typeof a;

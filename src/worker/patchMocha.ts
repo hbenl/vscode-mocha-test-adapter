@@ -1,4 +1,4 @@
-import stackTrace from 'stack-trace';
+	import stackTrace, { StackFrame } from 'stack-trace';
 import path from 'path';
 
 export const locationSymbol = Symbol('location');
@@ -124,6 +124,24 @@ function patchFunction(
 	}
 }
 
+const originalSource = Symbol('original_source');
+export function hookStack() {
+	const originalPrepare: any = Error.prepareStackTrace;
+	if (!originalPrepare) {
+		return function(){};
+	}
+	Error.prepareStackTrace = function(this: any, error: any, stack: any[]) {
+		// retreive orignal file names (non source mapped)
+		// and set them on error object
+		const sources = stack.map(f => f.isNative()
+				? '<native>'
+				:  (f.getFileName() || f.getScriptNameOrSourceURL()));
+		error[originalSource] = sources;
+		return originalPrepare.apply(this, arguments);
+	};
+	return () => Error.prepareStackTrace = originalPrepare;
+}
+
 function findCallLocation(
 	runningFile: string,
 	baseDir: string | undefined,
@@ -131,8 +149,11 @@ function findCallLocation(
 	log?: (message: any) => void
 ): Location | undefined {
 
+	const dispose = hookStack();
 	const err = new Error();
 	const stackFrames = stackTrace.parse(err);
+	const originalFiles = (err as any)[originalSource];
+	dispose();
 
 	if (!baseDir) {
 
@@ -153,6 +174,8 @@ function findCallLocation(
 		if (baseDir) {
 			for (var i = 0; i < stackFrames.length - 1; i++) {
 				const stackFrame = stackFrames[i];
+				// const originalFile = originalFiles[i];
+				// console.log(originalFile);
 				let file = normalizeFileName(stackFrame.getFileName());
 				if (!file) {
 					continue;

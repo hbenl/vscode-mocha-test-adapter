@@ -147,7 +147,14 @@ export class WorkerInstance implements IWorkerInstance {
 		});
 
 		// on error
-		this.childProc.on('error', err => {
+		this.childProc.on('error', (err: any) => {
+			if (err && typeof err === 'object' && err.code === 12) {
+				if (this.config.hmrBundle) {
+					err = `Child process error ${util.inspect(err)}, this is often caused by another HMR mocha instance running on the same port (${this.config.debuggerPort || this.config.debuggerConfig}) - see mochaExplorer.debuggerPort or mochaExplorer.debuggerConfig options.`;
+				} else {
+					err = `Child process error ${util.inspect(err)}, this is often caused by another node instance being debugged on the same debug port (${this.config.debuggerPort || this.config.debuggerConfig}) - see mochaExplorer.debuggerPort or mochaExplorer.debuggerConfig options.`;
+				}
+			}
 			this.logError(`Error from child process: ${util.inspect(err)}`);
 			this.doFinish(err);
 		});
