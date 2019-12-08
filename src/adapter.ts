@@ -72,7 +72,7 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 			request: 'attach',
 			port: config.debuggerPort,
 			protocol: 'inspector',
-			timeout: 30000,
+			timeout: 5000,
 			stopOnEntry: false
 		};
 
@@ -93,7 +93,7 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 					subscription.dispose();
 					subscription = undefined;
 				}
-			}, 10000);
+			}, 5000);
 		});
 
 		const started = await vscode.debug.startDebugging(this.workspaceFolder, debuggerConfig);

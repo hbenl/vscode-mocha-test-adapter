@@ -87,7 +87,7 @@ Here's the default debugging configuration used by this adapter:
   "request": "attach",
   "port": 9229,
   "protocol": "inspector",
-  "timeout": 30000,
+  "timeout": 5000,
   "stopOnEntry": false
 }
 ```
