@@ -17,7 +17,9 @@ Run your Mocha tests using the
 ## Getting started
 
 * Install the extension and restart VS Code
-* Put your Mocha command line options (if you have any) in a `mocha.opts` file or VS Code's settings (see below)
+* Put your Mocha command line options (if you have any) in a [mocha configuration file](https://mochajs.org/#configuring-mocha-nodejs)
+  (either a `.mocharc.*` file or a `mocha` property in your `package.json` or a [`mocha.opts`](https://mochajs.org/#mochaopts) file)
+  or VS Code's settings (see below)
 * Open the Test view
 * Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
@@ -59,9 +61,9 @@ parts of VS Code run in the remote environment, which (depending on the environm
 
 ### Mocha command line options
 
-You can put any command line options into [a `mocha.opts` file](https://mochajs.org/#mochaopts).
-By default, this adapter will use `test/mocha.opts` but you can override that with the
-`mochaExplorer.optsFile` setting.
+You can put any command line options into a [mocha configuration file](https://mochajs.org/#configuring-mocha-nodejs)
+or the legacy [`mocha.opts` file](https://mochajs.org/#mochaopts).
+For `mocha.opts`, this adapter will use the path `test/mocha.opts` by default but you can override that with the `mochaExplorer.optsFile` setting.
 
 Alternatively, you can put supported options into VS Code's settings:
 
@@ -73,6 +75,8 @@ Property                | Corresponding command line option
 `mochaExplorer.require` | `-r`, `--require` (default: `[]`)
 `mochaExplorer.exit`    | `--exit` (default: `false`)
 `mochaExplorer.optsFile`| `--opts` (default: `"test/mocha.opts"`)
+
+Options from VS Code's settings will override those found in a mocha configuration file.
 
 ### Custom debugger configuration
 
@@ -96,9 +100,9 @@ Here's the default debugging configuration used by this adapter:
 
 Property                        | Description
 --------------------------------|---------------------------------------------------------------
-`mochaExplorer.files`           | The glob(s) describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`)
-`mochaExplorer.env`             | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`)
-`mochaExplorer.envPath`         | Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests
+`mochaExplorer.files`           | The glob(s) describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`). These globs will be _added to_ the globs found in a mocha configuration file
+`mochaExplorer.env`             | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`). These environment variables will be _added to_ the environment of the process running mocha. To _remove_ an environment variable, set its value to `null`
+`mochaExplorer.envPath`         | Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests. If you set both `mochaExplorer.env` and `mochaExplorer.envPath`, the environment variables will be merged (with those from `mochaExplorer.env` overriding those from `mochaExplorer.envPath`)
 `mochaExplorer.cwd`             | The working directory where mocha is run (relative to the workspace folder)
 `mochaExplorer.nodePath`        | The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
 `mochaExplorer.mochaPath`       | The path to the mocha package to use (absolute or relative to the workspace folder). By default it looks for a directory `node_modules/mocha` in your workspace and uses that if it exists, otherwise or if this option is set to `null`, it uses a bundled version of mocha
@@ -130,6 +134,9 @@ If the Test view doesn't show your tests or anything else doesn't work as expect
 (note: in multi-root workspaces, these options are always taken from the first workspace folder):
 * `mochaExplorer.logpanel`: Write diagnostic logs to an output panel
 * `mochaExplorer.logfile`: Write diagnostic logs to the given file
+
+Note that the logs usually contain a lot of stacktraces, but if a stacktrace starts with "[INFO] Worker: Looking for \<some path\> in Error",
+then that stacktrace doesn't mean that something went wrong: such stacktraces are used to find the location of a test in a file.
 
 There is a [bug in Node 10.6.0 - 10.9.0](https://github.com/nodejs/node/issues/21671) that breaks this adapter.
 If you're using a version of Node affected by this bug, add `"mochaExplorer.nodePath": null` to your configuration as a workaround.
