@@ -33,7 +33,7 @@ export interface AdapterConfig {
 	globs: string[];
 
 	launcherScript: string | undefined;
-	nodeArgs: string | undefined;
+	nodeArgs: string | string[] | undefined;
 	skipFrames: string[] | undefined;
 }
 
@@ -479,8 +479,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 		return value;
 	}
-	private getNodeArgs(config: vscode.WorkspaceConfiguration): string | undefined {
-		return config.get<string>(configKeys.nodeArgs.key) || undefined;
+	private getNodeArgs(config: vscode.WorkspaceConfiguration): string | string[] | undefined {
+		return config.get<string | string[]>(configKeys.nodeArgs.key) || undefined;
 	}
 
 	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {

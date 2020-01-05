@@ -133,13 +133,33 @@ export function hookStack() {
 	Error.prepareStackTrace = function(this: any, error: any, stack: any[]) {
 		// retreive orignal file names (non source mapped)
 		// and set them on error object
+		// but do not modify the stack
 		const sources = stack.map(f => f.isNative()
 				? '<native>'
 				:  (f.getFileName() || f.getScriptNameOrSourceURL()));
 		error[originalSource] = sources;
-		return originalPrepare.apply(this, arguments);
+		const ret = originalPrepare.apply(this, arguments);
+		return ret;
 	};
 	return () => Error.prepareStackTrace = originalPrepare;
+}
+
+/**
+ * Webpack eval source maps are producing (who knows why) stacks like:
+ * webpack-internal://./path/to/my/file.ts
+ * This function patches it by replacing those with actual paths.
+ */
+export function patchWebpackInternals(cwd: string) {
+	const basePath = path.resolve(cwd).replace(/\\/g, '/');
+	const originalPrepare: any = Error.prepareStackTrace;
+	Error.prepareStackTrace = function(this: any, error: any, stack: any[]) {
+		error.stack = error.stack.replace(/webpack\-internal:\/\/\/\./g, basePath);
+		if (originalPrepare) {
+			const ret = originalPrepare.apply(this, arguments);
+			return ret;
+		}
+	};
+
 }
 
 function findCallLocation(

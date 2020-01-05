@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import RegExEscape from 'escape-string-regexp';
-import { patchMocha } from './patchMocha';
+import { patchMocha, patchWebpackInternals } from './patchMocha';
 import { processTests, resetSuite } from './processTests';
 import ReporterFactory from './reporter';
 import { ICommandProcessor, IQueueWriter } from './commandQueue';
@@ -66,6 +66,10 @@ export class CommandProcessor implements ICommandProcessor {
 
 			writer.sendInfo(`Trying require('${req}')`);
 			require(req);
+		}
+
+		if (this.sourceMapSupportEnabled) {
+			patchWebpackInternals(args.cwd);
 		}
 
 		this.mocha = new Mocha();

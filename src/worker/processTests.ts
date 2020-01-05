@@ -4,6 +4,7 @@ import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { Location, locationSymbol, reRegisterSymbol } from './patchMocha';
 import { IQueueWriter } from './commandQueue';
+import { buildTestId } from './worker-utils';
 
 export async function processTests(
 	suite: Mocha.ISuite,
@@ -110,7 +111,7 @@ function convertSuite(
 
 	return {
 		type: 'suite',
-		id: `${suite.file}: ${suite.fullTitle()}`,
+		id: buildTestId(suite),
 		label: suite.title,
 		file: location ? location.file : suite.file,
 		line: location ? location.line : undefined,
@@ -133,7 +134,7 @@ function convertTest(
 
 	return {
 		type: 'test',
-		id: `${test.file}: ${test.fullTitle()}`,
+		id: buildTestId(test),
 		label: test.title,
 		file: location ? location.file : test.file,
 		line: location ? location.line : undefined,

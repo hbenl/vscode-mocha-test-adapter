@@ -2,3 +2,4 @@
 node_modules
 out
 .rpt2_cache
+*.vsix

@@ -74,7 +74,11 @@ export class WorkerInstance implements IWorkerInstance {
 		}
 		// execArgv =  ['--inspect-brk=' + (debugPort++)];
 		if (this.config.nodeArgs) {
-			execArgv.push(this.config.nodeArgs);
+			if (this.config.nodeArgs instanceof Array) {
+				execArgv.push(...this.config.nodeArgs);
+			} else {
+				execArgv.push(this.config.nodeArgs);
+			}
 		}
 		this.childProc = fork(
 			this.childProcScript,
