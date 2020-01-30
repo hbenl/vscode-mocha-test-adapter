@@ -94,7 +94,11 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 		mocha.timeout(args.mochaOpts.timeout);
 		mocha.suite.retries(args.mochaOpts.retries);
 
-		if (logEnabled) sendMessage('Loading files');
+		if (logEnabled) sendMessage(`Loading extra files ${args.mochaOpts.files}`);
+		for (const file of args.mochaOpts.files) {
+			mocha.addFile(file);
+		}
+		if (logEnabled) sendMessage(`Loading test files ${args.testFiles}`);
 		for (const file of args.testFiles) {
 			mocha.addFile(file);
 		}

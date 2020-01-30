@@ -159,7 +159,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			debuggerPort: this.getDebuggerPort(config),
 			debuggerConfig: this.getDebuggerConfig(config),
 			mochaOpts,
-			files: await this.lookupFiles(config, optsFromFiles.globs, optsFromFiles.files),
+			files: await this.lookupFiles(config, optsFromFiles.globs),
 			mochaOptsFile,
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
@@ -265,8 +265,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private async lookupFiles(
 		config: vscode.WorkspaceConfiguration,
-		globsFromOptsFile: string[],
-		filesFromOptsFile: string[]
+		globsFromOptsFile: string[]
 	): Promise<string[]> {
 
 		const globs = this.getTestFilesGlobs(config, globsFromOptsFile);
@@ -279,17 +278,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			testFiles.push(...fileUris.map(uri => uri.fsPath));
 		}
 
-		const resolvedFilesFromOptsFile = filesFromOptsFile
-			.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
-
 		if (this.log.enabled) {
 			this.log.debug(`Found test files ${JSON.stringify(testFiles)}`);
-			if (filesFromOptsFile.length > 0) {
-				this.log.debug(`Adding files ${JSON.stringify(resolvedFilesFromOptsFile)}`);
-			}
 		}
 
-		return resolvedFilesFromOptsFile.concat(testFiles);
+		return testFiles;
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
@@ -385,12 +378,25 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			requires = [];
 		}
 
+		let files = this.mergeOpts<string | string[]>(configKeys.file.key, mochaOptsFromFile.files, config);
+		if (typeof files === 'string') {
+			if (files.length > 0) {
+				files = [ files ];
+			} else {
+				files = [];
+			}
+		} else if (typeof files === 'undefined') {
+			files = [];
+		}
+		files = files.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
+
 		const mochaOpts = {
 			ui: this.mergeOpts<string>(configKeys.ui.key, mochaOptsFromFile.ui, config),
 			timeout: this.mergeOpts<number>(configKeys.timeout.key, mochaOptsFromFile.timeout, config),
 			retries: this.mergeOpts<number>(configKeys.retries.key, mochaOptsFromFile.retries, config),
 			requires,
-			exit: this.mergeOpts<boolean>(configKeys.exit.key, mochaOptsFromFile.exit, config)
+			exit: this.mergeOpts<boolean>(configKeys.exit.key, mochaOptsFromFile.exit, config),
+			files,
 		}
 
 		if (this.log.enabled) this.log.debug(`Using Mocha options: ${JSON.stringify(mochaOpts)}`);
