@@ -1,10 +1,11 @@
 import * as path from 'path';
 import { Glob } from 'glob';
 import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, RetireEvent } from 'vscode-test-adapter-api';
-import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputChannel, ILog } from '../core';
+import { MochaAdapterCore, IConfigReader, IDisposable } from '../core';
 import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { MochaOptsReader } from '../optsReader';
 import { AdapterConfig, EnvVars } from '../configReader';
+import { IEventEmitter, IOutputChannel, ILog } from '../interfaces';
 
 export async function createTestMochaAdapter(
 	workspaceName: string,
@@ -55,7 +56,9 @@ export async function createTestMochaAdapter(
 		envFile: undefined,
 		globs: mochaOptsAndFiles.globs,
 
-		launcherScript: undefined
+		launcherScript: undefined,
+		nodeArgs: undefined,
+		skipFrames: undefined,
 	};
 
 	return new TestMochaAdapter(workspaceFolderPath, new TestConfigReader(config));
@@ -66,11 +69,11 @@ export class TestMochaAdapter extends MochaAdapterCore {
 	protected activeDebugSession: any;
 
 	constructor(
-		protected readonly workspaceFolderPath: string,
+		readonly workspaceFolderPath: string,
 		protected readonly configReader: IConfigReader,
-		protected readonly testsEmitter = new TestEventCollector<TestLoadStartedEvent | TestLoadFinishedEvent>(),
-		protected readonly testStatesEmitter = new TestEventCollector<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>(),
-		protected readonly retireEmitter = new TestEventCollector<RetireEvent>()
+		readonly testsEmitter = new TestEventCollector<TestLoadStartedEvent | TestLoadFinishedEvent>(),
+		readonly testStatesEmitter = new TestEventCollector<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>(),
+		readonly retireEmitter = new TestEventCollector<RetireEvent>()
 	) {
 		super(new TestOutputChannel(), new TestLog());
 	}

@@ -213,8 +213,38 @@
           "default": null,
           "scope": "resource"
         },
+        "mochaExplorer.hmrBundle": {
+          "description": "HMR (Hot Module Reload) Webpack bundle to watch - this option is NOT compatible with 'files', 'launcherScript' or with 'exit' set to true",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
         "mochaExplorer.launcherScript": {
           "description": "The path of a launcher script (relative to the workspace folder) used for running the tests remotely",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
+        "mochaExplorer.skipFrames": {
+          "description": "When finding location of a test, those file frames will be skipped",
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "default": null,
+          "scope": "resource"
+        },
+        "mochaExplorer.nodeArgs": {
+          "description": "Additional arguments passed to nodes (ex: --harmony-async-iteration)",
           "type": [
             "string",
             "null"

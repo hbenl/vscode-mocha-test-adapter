@@ -2,44 +2,104 @@ import * as fs from 'fs';
 import * as util from 'util';
 import RegExpEscape from 'escape-string-regexp';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
-import { ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
-import { Location } from './patchMocha';
+import { Location, locationSymbol, reRegisterSymbol } from './patchMocha';
+import { IQueueWriter } from './commandQueue';
+import { buildTestId } from './worker-utils';
 
 export async function processTests(
 	suite: Mocha.ISuite,
-	locationSymbol: symbol,
-	sendMessage: (message: any) => Promise<void>,
-	logEnabled: boolean
+	queue: IQueueWriter,
+	hotReload?: 'initial' | 'update',
 ): Promise<void> {
 	try {
 
-		if (logEnabled) await sendMessage('Converting tests and suites');
+		await queue.sendInfo('Converting tests and suites');
 		const fileCache = new Map<string, string>();
-		const rootSuite = convertSuite(suite, locationSymbol, fileCache);
+		const rootSuite = convertSuite(suite, fileCache, hotReload);
+
+		// set hot-reload flag on root suite
+		if (hotReload) {
+			rootSuite.hotReload = hotReload;
+		}
 
 		if (rootSuite.children.length > 0) {
-			await sendMessage(rootSuite);
+			await queue.sendMessage(rootSuite);
 		} else {
-			await sendMessage(null);
+			await queue.sendMessage(null);
 		}
 
 	} catch (err) {
-		if (logEnabled) await sendMessage(`Caught error ${util.inspect(err)}`);
-		await sendMessage(<ErrorInfo>{ type: 'error', errorMessage: util.inspect(err) });
+		await queue.sendInfo(`Caught error ${util.inspect(err)}`);
+		await queue.sendError(err);
 		throw err;
 	}
 }
 
+export function resetSuite(suite: Mocha.ISuite) {
+	const toReReg = [...suite.suites, ...suite.tests]
+		.map(x => (x as any)[reRegisterSymbol])
+		.filter(x => !!x);
+	suite.suites.splice(0, suite.suites.length);
+	suite.tests.splice(0, suite.tests.length);
+
+	for (const r of toReReg) {
+		r();
+	}
+}
+
+const multiHmrError = (f: string) => `HMR does support multiple suites/tests per file in ${f}
+- If this file contains multiple tests, then consider splitting it.
+- If this file is a wrapper of mocha methods ('describe', 'it', ...) then consider adding it to option 'mochaExplorer.skipFrames' in your settings.json`
+
 
 function convertSuite(
 	suite: Mocha.ISuite,
-	locationSymbol: symbol,
-	fileCache: Map<string, string>
+	fileCache: Map<string, string>,
+	hotReload?: 'initial' | 'update',
 ): TestSuiteInfo {
 
-	const childSuites: TestSuiteInfo[] = suite.suites.map((suite) => convertSuite(suite, locationSymbol, fileCache));
-	const childTests: TestInfo[] = suite.tests.map((test) => convertTest(test, locationSymbol, fileCache));
-	const children = (<(TestSuiteInfo | TestInfo)[]>childSuites).concat(childTests);
+	const children: (TestSuiteInfo | TestInfo)[] = [];
+	const unique = new Map<string, TestSuiteInfo | TestInfo>();
+	for (let i = suite.suites.length - 1; i >= 0; i--) {
+		const s = suite.suites[i];
+		const converted = convertSuite(s, fileCache);
+		if (!hotReload) {
+			children.unshift(converted);
+			continue;
+		}
+		const newer = unique.get(converted.file!);
+		if (newer) {
+			if (hotReload === 'initial') {
+				throw new Error(multiHmrError(converted.file!));
+			}
+			// there is a newer version => set flag & remove older
+			newer.hotReload = 'update';
+			suite.suites.splice(i, 1);
+		} else {
+			unique.set(converted.file!, converted);
+			children.unshift(converted);
+		}
+	}
+	for (let i = suite.tests.length - 1; i >= 0; i--) {
+		const s = suite.tests[i];
+		const converted = convertTest(s, fileCache);
+		if (!hotReload) {
+			children.unshift(converted);
+			continue;
+		}
+		const newer = unique.get(converted.file!);
+		if (newer) {
+			if (hotReload === 'initial') {
+				throw new Error(multiHmrError(converted.file!));
+			}
+			// there is a newer version => set flag & remove older
+			newer.hotReload = 'update';
+			suite.tests.splice(i, 1);
+		} else {
+			unique.set(converted.file!, s as any);
+			children.unshift(converted);
+		}
+	}
 
 	let location: Location | undefined = (<any>suite)[locationSymbol];
 	if ((location === undefined) && suite.file) {
@@ -51,7 +111,7 @@ function convertSuite(
 
 	return {
 		type: 'suite',
-		id: `${suite.file}: ${suite.fullTitle()}`,
+		id: buildTestId(suite),
 		label: suite.title,
 		file: location ? location.file : suite.file,
 		line: location ? location.line : undefined,
@@ -61,7 +121,6 @@ function convertSuite(
 
 function convertTest(
 	test: Mocha.ITest,
-	locationSymbol: symbol,
 	fileCache: Map<string, string>
 ): TestInfo {
 
@@ -75,7 +134,7 @@ function convertTest(
 
 	return {
 		type: 'test',
-		id: `${test.file}: ${test.fullTitle()}`,
+		id: buildTestId(test),
 		label: test.title,
 		file: location ? location.file : test.file,
 		line: location ? location.line : undefined,

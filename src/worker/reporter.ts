@@ -2,6 +2,7 @@ import * as path from 'path';
 import stackTrace from 'stack-trace';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
+import {buildTestId} from './worker-utils';
 
 export default (sendMessage: (message: any) => void, stringify: (obj: any) => string, sloppyMatch: boolean) => {
 
@@ -26,7 +27,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 			runner.on('suite', (suite: Mocha.ISuite) => {
 
-				const suiteId = `${suite.file}: ${suite.fullTitle()}`;
+				const suiteId = buildTestId(suite);
 				startTimes.set(suiteId, Date.now());
 
 				const event: TestSuiteEvent = {
@@ -40,7 +41,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 			runner.on('suite end', (suite: Mocha.ISuite) => {
 
-				const suiteId = `${suite.file}: ${suite.fullTitle()}`;
+				const suiteId = buildTestId(suite);
 				const description = getElapsedTime(suiteId);
 
 				const event: TestSuiteEvent = {
@@ -55,7 +56,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 			runner.on('test', (test: Mocha.ITest) => {
 
-				const testId = `${test.file}: ${test.fullTitle()}`;
+				const testId = buildTestId(test);
 				startTimes.set(testId, Date.now());
 
 				const event: TestEvent = {
@@ -69,7 +70,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 			runner.on('pass', (test: Mocha.ITest) => {
 
-				const testId = `${test.file}: ${test.fullTitle()}`;
+				const testId = buildTestId(test);
 				const description = getElapsedTime(testId);
 
 				const event: TestEvent = {
@@ -84,7 +85,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 			runner.on('fail', (test: Mocha.ITest, err: Error & { actual?: any, expected?: any, showDiff?: boolean }) => {
 
-				const testId = `${test.file}: ${test.fullTitle()}`;
+				const testId = buildTestId(test);
 				const description = getElapsedTime(testId);
 
 				let decorations: TestDecoration[] = [];
@@ -119,8 +120,8 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 				let message = err.stack || err.message;
 
-				if ((err.showDiff !== false) && 
-					sameType(err.actual, err.expected) && 
+				if ((err.showDiff !== false) &&
+					sameType(err.actual, err.expected) &&
 					(err.expected !== undefined)) {
 
 					const actualString = stringify(err.actual);
@@ -137,7 +138,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 				const event: TestEvent = {
 					type: 'test',
-					test: `${test.file}: ${test.fullTitle()}`,
+					test: buildTestId(test),
 					state: 'failed',
 					message,
 					decorations,
@@ -149,7 +150,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 			runner.on('pending', (test: Mocha.ITest) => {
 
-				const testId = `${test.file}: ${test.fullTitle()}`;
+				const testId = buildTestId(test);
 				startTimes.delete(testId);
 
 				const event: TestEvent = {

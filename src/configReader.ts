@@ -21,6 +21,7 @@ export interface AdapterConfig {
 
 	monkeyPatch: boolean;
 	pruneFiles: boolean;
+	hmrBundle?: string;
 
 	debuggerPort: number;
 	debuggerConfig: string | undefined;
@@ -33,6 +34,8 @@ export interface AdapterConfig {
 	globs: string[];
 
 	launcherScript: string | undefined;
+	nodeArgs: string | string[] | undefined;
+	skipFrames: string[] | undefined;
 }
 
 export class ConfigReader implements IConfigReader, IDisposable {
@@ -94,7 +97,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			if (isTestFile) {
 
 				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				
+
 				if (isTestFile === 'config') {
 					load();
 				} else {
@@ -155,6 +158,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			cwd,
 			env: await this.getEnv(config, mochaOpts),
 			monkeyPatch: this.getMonkeyPatch(config),
+			hmrBundle: this.lookupHmrBundle(config),
 			pruneFiles: this.getPruneFiles(config),
 			debuggerPort: this.getDebuggerPort(config),
 			debuggerConfig: this.getDebuggerConfig(config),
@@ -163,7 +167,9 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			mochaOptsFile,
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
-			launcherScript: this.getLauncherScript(config)
+			launcherScript: this.getLauncherScript(config),
+			skipFrames: this.getSkipFrames(config),
+			nodeArgs: this.getNodeArgs(config),
 		}
 	}
 
@@ -293,6 +299,14 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		return resolvedFilesFromOptsFile.concat(testFiles);
+	}
+
+	private lookupHmrBundle(config: vscode.WorkspaceConfiguration) {
+		const bundle = config.get<string>(configKeys.hmrBundle.key);
+		if (!bundle) {
+			return undefined;
+		}
+		return path.resolve(this.workspaceFolder.uri.fsPath, bundle);
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
@@ -476,6 +490,18 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getLauncherScript(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.launcherScript.key) || undefined;
+	}
+
+
+	private getSkipFrames(config: vscode.WorkspaceConfiguration): string[] | undefined {
+		const value = config.get<string | string[]>(configKeys.skipFrames.key);
+		if (typeof value === 'string') {
+			return [value];
+		}
+		return value;
+	}
+	private getNodeArgs(config: vscode.WorkspaceConfiguration): string | string[] | undefined {
+		return config.get<string | string[]>(configKeys.nodeArgs.key) || undefined;
 	}
 
 	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {

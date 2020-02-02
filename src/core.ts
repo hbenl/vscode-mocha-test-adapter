@@ -1,21 +1,17 @@
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { ChildProcess, fork } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
 import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
-import { findTests, stringsOnly } from './util';
+import { findTests, stringsOnly, collectFiles } from './util';
 import { AdapterConfig } from './configReader';
+import { IWorkerInstance } from './worker-listener/interfaces';
+import { WorkerInstance } from './worker-listener/listener-instance';
+import { IAdapterCore, IEventEmitter, IOutputChannel, ILog, WorkerArgsAugmented } from './interfaces';
 
 export interface IDisposable {
 	dispose(): void;
-}
-
-export interface IEventEmitter<T> {
-	fire(event: T): void;
-}
-
-export interface IOutputChannel {
-	append(msg: string): void;
 }
 
 export interface IConfigReader {
@@ -23,49 +19,61 @@ export interface IConfigReader {
 	readonly currentConfig: Promise<AdapterConfig | undefined>;
 }
 
-export interface ILog {
-	readonly enabled: boolean;
-	debug(...msg: any[]): void;
-	info(...msg: any[]): void;
-	warn(...msg: any[]): void;
-	error(...msg: any[]): void;
-}
+export abstract class MochaAdapterCore implements IAdapterCore {
 
-export abstract class MochaAdapterCore {
-
-	protected abstract readonly workspaceFolderPath: string;
+	abstract readonly workspaceFolderPath: string;
 
 	protected abstract readonly configReader: IConfigReader;
 
-	protected abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
-	protected abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
-	protected abstract readonly retireEmitter: IEventEmitter<RetireEvent>;
+	abstract readonly testsEmitter: IEventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>;
+	abstract readonly testStatesEmitter: IEventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
+	abstract readonly retireEmitter: IEventEmitter<RetireEvent>;
 
 	protected abstract startDebugging(config: AdapterConfig): Promise<any>;
 	protected abstract onDidTerminateDebugSession(cb: (session: any) => any): IDisposable;
 
-	protected readonly nodesById = new Map<string, TestSuiteInfo | TestInfo>();
+	readonly nodesById = new Map<string, TestSuiteInfo | TestInfo>();
 
 	private readonly workerScript = require.resolve('../out/worker/bundle.js');
 
-	private runningTestProcess: ChildProcess | undefined;
+	private allWorkers: IWorkerInstance[] = [];
+
+	private hmrWorker?: IWorkerInstance;
 
 	constructor(
-		protected readonly outputChannel: IOutputChannel,
-		protected readonly log: ILog
+		readonly outputChannel: IOutputChannel,
+		readonly log: ILog
 	) {}
+
+	private createWorker(config: AdapterConfig): IWorkerInstance {
+		const childProcScript = config.launcherScript
+			? path.resolve(this.workspaceFolderPath, config.launcherScript)
+			: this.workerScript;
+		const ret = new WorkerInstance(this
+			, config
+			, childProcScript);
+
+		this.allWorkers.push(ret);
+		ret.onExit(() => {
+			if (this.hmrWorker === ret) {
+				this.hmrWorker = undefined;
+			}
+			const i = this.allWorkers.indexOf(ret);
+			if (i >= 0) {
+				this.allWorkers.splice(i, 1);
+			}
+		});
+		return ret;
+	}
 
 	async load(changedFiles?: string[]): Promise<void> {
 
 		try {
-
 			if (this.log.enabled) this.log.info(`Loading test files of ${this.workspaceFolderPath}`);
 
-			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-
+			// load config
 			this.configReader.reloadConfig();
 			const config = await this.configReader.currentConfig;
-
 			if (!config) {
 				this.log.info('Adapter disabled for this folder, loading cancelled');
 				this.nodesById.clear();
@@ -73,118 +81,72 @@ export abstract class MochaAdapterCore {
 				return;
 			}
 
-			let testsLoaded = false;
+			// check config
+			if (config.hmrBundle) {
+				if (config.files && config.files.length) {
+					throw new Error('"mochaExplorer.hmrBundle" is not compatible with "mochaExplorer.files" or with a mocha config file');
+				}
+				if (config.launcherScript) {
+					throw new Error('"mochaExplorer.enableHmr" is not compatible with "mochaExplorer.workerScript');
+				}
+				if (config.mochaOpts.exit) {
+					throw new Error('"mochaExplorer.enableHmr" is not compatible with "mochaOpts.exit"');
+				}
+			}
 
-			await new Promise<void>(resolve => {
 
-				const childProcScript = config.launcherScript ?
-					path.resolve(this.workspaceFolderPath, config.launcherScript) :
-					this.workerScript;
-
-				const childProc = fork(
-					childProcScript,
-					[],
-					{
-						execPath: config.nodePath,
-						execArgv: [], // ['--inspect-brk=12345']
-						env: stringsOnly({ ...process.env, ...config.env }),
-						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
-					}
-				);
-
-				const args: WorkerArgs = {
-					action: 'loadTests',
-					cwd: config.cwd,
-					testFiles: config.files,
-					env: config.env,
-					mochaPath: config.mochaPath,
-					mochaOpts: config.mochaOpts,
-					monkeyPatch: config.monkeyPatch,
-					logEnabled: this.log.enabled,
-					workerScript: this.workerScript
-				};
-				childProc.send(args);
-
-				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
-
-					if (typeof info === 'string') {
-
-						if (this.log.enabled) this.log.info(`Worker: ${info}`);
-
-					} else {
-
-						this.nodesById.clear();
-
-						if (info) {
-
-							if (info.type === 'suite') {
-
-								this.log.info('Received tests from worker');
-								info.id = `${this.workspaceFolderPath}: Mocha`;
-								info.label = 'Mocha';
-								this.collectNodesById(info);
-								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: info });
-
-								if (changedFiles) {
-
-									const changedTests = findTests(info, { tests:
-										info => ((info.file !== undefined) && (changedFiles.indexOf(info.file) >= 0))
-									});
-									this.retireEmitter.fire({ tests: [ ...changedTests ].map(info => info.id) })
-
-								} else {
-									this.retireEmitter.fire({});
-								}
-
-							} else { // info.type === 'error'
-
-								this.log.info('Received error from worker');
-								this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
-
-							}
-
-						} else {
-
-							this.log.info('Worker found no tests');
-							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
-
-						}
-
-						testsLoaded = true;
-						if (config.mochaOpts.exit && !config.launcherScript) {
-							childProc.kill();
-						}
-						resolve();
-					}
-				});
-
-				if (this.log.enabled) {
-					childProc.stdout.on('data', data => this.log.info(data.toString()));
-					childProc.stderr.on('data', data => this.log.error(data.toString()));
+			// an HMR worker is running
+			if (config.hmrBundle) {
+				// when HMR running, then ignore file changes
+				if (changedFiles) {
+					return;
 				}
 
-				childProc.on('exit', (code, signal) => {
-					if (this.log.enabled) this.log.info(`Worker finished with code ${code} and signal ${signal}`);
-					if (!testsLoaded) {
-						if (code || signal) {
-							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `The worker process finished with code ${code} and signal ${signal}` });
-						} else {
-							this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
-						}
-						testsLoaded = true;
-						resolve();
-					}
-				});
+				// kill previous workers (this forces a fresh worker reload)
+				for (const w of this.allWorkers) {
+					w.kill();
+				}
+			}
 
-				childProc.on('error', err => {
-					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
-					if (!testsLoaded) {
-						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
-						testsLoaded = true;
-						resolve();
+			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
+
+			// create brand new worker
+			 const worker = this.createWorker(config);
+
+			 // if HMR is enabled, then try to detect HMR
+			 // when detected, then next runs will re-use this worker
+			 if (config.hmrBundle) {
+				worker.onDetectHmr(() => {
+					// stop previous worker (should not happen)
+					if (this.hmrWorker) {
+						this.hmrWorker.kill();
 					}
+
+					// store it for reuse
+					this.hmrWorker = worker;
 				});
-			});
+			 }
+
+			 // launch test scanning
+			 const args: WorkerArgsAugmented = {
+				action: 'loadTests',
+				cwd: config.cwd,
+				testFiles: config.hmrBundle ? [config.hmrBundle] : config.files,
+				env: config.env,
+				mochaPath: config.mochaPath,
+				mochaOpts: config.mochaOpts,
+				monkeyPatch: config.monkeyPatch,
+				logEnabled: this.log.enabled,
+				workerScript: this.workerScript,
+				enableHmr: !!config.hmrBundle,
+				skipFrames: config.skipFrames,
+			};
+			this.nodesById.clear();
+			const session = worker.execute(args, changedFiles);
+
+			// wait until all tests have ben scanned
+			// nb: session will continue after that when enabled HMR
+			await session.waitInitialRun();
 
 		} catch (err) {
 			if (this.log.enabled) this.log.error(`Error while loading tests: ${util.inspect(err)}`);
@@ -192,7 +154,8 @@ export abstract class MochaAdapterCore {
 		}
 	}
 
-	async run(testsToRun: string[], debug = false): Promise<void> {
+
+	async run(testsToRun: string[], attachDebugger?: (worker: IWorkerInstance) => Promise<boolean>): Promise<void> {
 
 		try {
 
@@ -229,8 +192,8 @@ export abstract class MochaAdapterCore {
 				}
 			});
 
-			let _testFiles: string[] | undefined = undefined;
-			if (config.pruneFiles) {
+			let _testFiles: string[] | undefined = config.hmrBundle ? [config.hmrBundle] : undefined;
+			if (!_testFiles && config.pruneFiles) {
 				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
 				if (testFileSet.size > 0) {
 					_testFiles = <string[]>[ ...testFileSet ];
@@ -242,110 +205,55 @@ export abstract class MochaAdapterCore {
 			}
 			const testFiles = _testFiles;
 
-			let childProcessFinished = false;
+			// build worker args
+			const args: WorkerArgsAugmented = {
+				action: 'runTests',
+				cwd: config.cwd,
+				testFiles,
+				tests,
+				env: config.env,
+				mochaPath: config.mochaPath,
+				mochaOpts: config.mochaOpts,
+				logEnabled: this.log.enabled,
+				workerScript: this.workerScript,
+				enableHmr: !!config.hmrBundle,
+				skipFrames: config.skipFrames,
+			};
+			if (attachDebugger && !config.hmrBundle) {
+				args.debuggerPort = config.debuggerPort;
+			}
 
-			await new Promise<void>(resolve => {
+			// get a worker (Running HMR worker, or a brand new worker process)
+			let worker: IWorkerInstance | null = null;
+			if (this.hmrWorker) {
+				if (this.hmrWorker.accepts(args)) {
+					worker = this.hmrWorker;
+				} else if (this.log.enabled) {
+					this.log.info('The test run config is not compatible with the current HMR worker => launching a new worker instance');
+				}
+			}
+			if (!worker) {
+				worker = this.createWorker(config);
+			}
 
-				let runningTest: string | undefined = undefined;
+			// pre-launch
+			worker.spawn(!!attachDebugger);
 
-				const childProcScript = config.launcherScript ?
-					path.resolve(this.workspaceFolderPath, config.launcherScript) :
-					this.workerScript;
-
-				const execArgv = (debug && !config.launcherScript) ? [ `--inspect-brk=${config.debuggerPort}` ] : [];
-
-				this.runningTestProcess = fork(
-					childProcScript,
-					[],
-					{
-						execPath: config.nodePath,
-						execArgv,
-						env: stringsOnly({ ...process.env, ...config.env }),
-						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
-					}
-				);
-
-				const args: WorkerArgs = {
-					action: 'runTests',
-					cwd: config.cwd,
-					testFiles,
-					tests,
-					env: config.env,
-					mochaPath: config.mochaPath,
-					mochaOpts: config.mochaOpts,
-					logEnabled: this.log.enabled,
-					workerScript: this.workerScript,
-					debuggerPort: debug ? config.debuggerPort : undefined
-				};
-				this.runningTestProcess.send(args);
-
-				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent | TestRunFinishedEvent) => {
-
-					if (typeof message === 'string') {
-
-						if (this.log.enabled) this.log.info(`Worker: ${message}`);
-
-					} else {
-
-						if (this.log.enabled) this.log.info(`Received ${JSON.stringify(message)}`);
-
-						if (message.type !== 'finished') {
-
-							this.testStatesEmitter.fire(message);
-
-							if (message.type === 'test') {
-								if (message.state === 'running') {
-									runningTest = (typeof message.test === 'string') ? message.test : message.test.id;
-								} else {
-									runningTest = undefined;
-								}
-							}
-
-						} else if (config.mochaOpts.exit && !config.launcherScript && this.runningTestProcess) {
-							this.runningTestProcess.kill();
-						}
-					}
-				});
-
-				const processOutput = (data: Buffer | string) => {
-
-					this.outputChannel.append(data.toString());
-
-					if (runningTest) {
-						this.testStatesEmitter.fire(<TestEvent>{
-							type: 'test',
-							state: 'running',
-							test: runningTest,
-							message: data.toString()
-						});
+			// try to attach debugger
+			if (attachDebugger) {
+				if (!(await attachDebugger(worker))) {
+					// if it fails, then kill this worker (if it is not reusable)
+					if (this.hmrWorker !== worker) {
+						worker.kill();
 					}
 				}
+			}
 
-				this.runningTestProcess.stdout.on('data', processOutput);
-				this.runningTestProcess.stderr.on('data', processOutput);
+			// launch
+			const session = worker.execute(args);
 
-				this.runningTestProcess.on('exit', () => {
-					this.log.info('Worker finished');
-					runningTest = undefined;
-					this.runningTestProcess = undefined;
-					if (!childProcessFinished) {
-						childProcessFinished = true;
-						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-						resolve();
-					}
-				});
-
-				this.runningTestProcess.on('error', err => {
-					if (this.log.enabled) this.log.error(`Error from child process: ${util.inspect(err)}`);
-					runningTest = undefined;
-					this.runningTestProcess = undefined;
-					if (!childProcessFinished) {
-						childProcessFinished = true;
-						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-						resolve();
-					}
-				});
-			});
+			// wait until everything has ben run
+			await session.waitEnd();
 
 		} catch (err) {
 			if (this.log.enabled) this.log.error(`Error while running tests: ${util.inspect(err)}`);
@@ -364,43 +272,46 @@ export abstract class MochaAdapterCore {
 			return;
 		}
 
-		const testRunPromise = this.run(testsToRun, true);
+		let debugSession: vscode.DebugSession | undefined = undefined;
+		const testRunPromise = this.run(testsToRun, async (worker) => {
+			this.log.info('Starting the debug session');
+			try {
+				debugSession = await this.startDebugging(config);
+			} catch (err) {
+				this.log.error('Failed starting the debug session - aborting', err);
+				return false;
+			}
 
-		this.log.info('Starting the debug session');
-		let debugSession: any;
-		try {
-			debugSession = await this.startDebugging(config);
-		} catch (err) {
-			this.log.error('Failed starting the debug session - aborting', err);
-			this.cancel();
-			return;
-		}
-
-		const subscription = this.onDidTerminateDebugSession((session) => {
-			if (debugSession != session) return;
-			this.log.info('Debug session ended');
-			this.cancel(); // terminate the test run
-			subscription.dispose();
+			const subscription = this.onDidTerminateDebugSession((session) => {
+				if (debugSession != session) return;
+				this.log.info('Debug session ended');
+				 // terminate the test run
+				if (!config.hmrBundle) {
+					worker.kill();
+				}
+				subscription.dispose();
+			});
+			return true;
 		});
 
+		// wait test run
 		await testRunPromise;
+
+		// disconnect debug session (required for HMR because process does not terminate)
+		if (debugSession && debugSession!.customRequest) {
+			// see commands https://github.com/microsoft/vscode-debugadapter-node/blob/e846173f28c6cd23e6e2eb1b78a8b90d8b0b3de9/adapter/src/debugSession.ts
+			await debugSession!.customRequest('disconnect');
+		}
 	}
 
 	cancel(): void {
-		if (this.runningTestProcess) {
-			this.log.info('Killing running test process');
-			this.runningTestProcess.kill();
+		this.log.info('Killing running test processes');
+		for (const w of this.allWorkers) {
+			w.kill();
 		}
+		this.allWorkers = [];
 	}
 
-	private collectNodesById(info: TestSuiteInfo | TestInfo): void {
-		this.nodesById.set(info.id, info);
-		if (info.type === 'suite') {
-			for (const child of info.children) {
-				this.collectNodesById(child);
-			}
-		}
-	}
 
 	private collectTests(info: TestSuiteInfo | TestInfo, tests: TestInfo[]): void {
 		if (info.type === 'suite') {
