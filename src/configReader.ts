@@ -273,7 +273,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		if (this.log.enabled) this.log.debug(`Looking for test files ${JSON.stringify(globs)} in ${this.workspaceFolder.uri.fsPath}`);
 
 		const testFiles: string[] = [];
-		for (const testFilesGlob of globs) {
+		for (let testFilesGlob of globs) {
+			if (testFilesGlob.startsWith('./')) {
+				testFilesGlob = testFilesGlob.substring(2);
+			}
 			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
 			const fileUris = await vscode.workspace.findFiles(relativePattern, 'node_modules');
 			testFiles.push(...fileUris.map(uri => uri.fsPath));
