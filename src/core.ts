@@ -214,6 +214,12 @@ export abstract class MochaAdapterCore {
 					this.collectTests(node, testInfos);
 				}
 			}
+
+			if (testInfos.length === 0) {
+				this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+				return;
+			}
+
 			const tests = testInfos.map(test => {
 				const separatorIndex = test.id.indexOf(': ');
 				if (separatorIndex >= 0) {
