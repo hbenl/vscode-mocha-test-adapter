@@ -95,7 +95,7 @@ export abstract class MochaAdapterCore {
 				const args: WorkerArgs = {
 					action: 'loadTests',
 					cwd: config.cwd,
-					testFiles: config.files,
+					testFiles: config.extraFiles.concat(config.testFiles),
 					env: config.env,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
@@ -238,9 +238,9 @@ export abstract class MochaAdapterCore {
 				}
 			}
 			if (_testFiles === undefined) {
-				_testFiles = config.files;
+				_testFiles = config.testFiles;
 			}
-			const testFiles = _testFiles;
+			const testFiles = config.extraFiles.concat(_testFiles);
 
 			let childProcessFinished = false;
 

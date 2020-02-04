@@ -14,6 +14,7 @@ describe("The pruneFiles option", function() {
 
 		assert.deepStrictEqual(adapter.getMessages(), [
 			'required.js was loaded\n',
+			'setup.js was loaded\n',
 			'test1.js was loaded\n',
 			'test3.js was loaded\n',
 		]);

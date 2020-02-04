@@ -29,8 +29,8 @@ export async function createTestMochaAdapter(
 	};
 	const relativeGlob = mochaOptsAndFiles.globs[0] || 'test/**/*.js';
 	const absoluteGlob = path.resolve(workspaceFolderPath, relativeGlob);
-	const files = await findFiles(absoluteGlob);
-
+	const testFiles = await findFiles(absoluteGlob);
+	const extraFiles = mochaOptsAndFiles.files.map(file => path.resolve(workspaceFolderPath, file));
 	const monkeyPatch = (opts && (opts.monkeyPatch !== undefined)) ? opts.monkeyPatch : true;
 	const env = (opts && opts.env) ? opts.env : {};
 	const pruneFiles = (opts && opts.pruneFiles) || false;
@@ -49,7 +49,8 @@ export async function createTestMochaAdapter(
 		debuggerConfig: undefined,
 
 		mochaOpts,
-		files,
+		testFiles,
+		extraFiles,
 
 		mochaOptsFile: optsFilePath,
 		envFile: undefined,

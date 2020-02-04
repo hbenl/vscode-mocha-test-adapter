@@ -26,7 +26,8 @@ export interface AdapterConfig {
 	debuggerConfig: string | undefined;
 
 	mochaOpts: MochaOpts;
-	files: string[];
+	testFiles: string[];
+	extraFiles: string[];
 
 	mochaOptsFile: string | undefined;
 	envFile: string | undefined;
@@ -149,6 +150,14 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		const envFile = this.getEnvFile(config);
 
+		const testFiles = await this.lookupFiles(config, optsFromFiles.globs);
+
+		const extraFiles = optsFromFiles.files
+			.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
+		if (this.log.enabled && (extraFiles.length > 0)) {
+			this.log.debug(`Adding files ${JSON.stringify(extraFiles)}`);
+		}
+
 		return {
 			nodePath: await this.getNodePath(config),
 			mochaPath: await this.getMochaPath(config),
@@ -159,7 +168,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			debuggerPort: this.getDebuggerPort(config),
 			debuggerConfig: this.getDebuggerConfig(config),
 			mochaOpts,
-			files: await this.lookupFiles(config, optsFromFiles.globs, optsFromFiles.files),
+			testFiles,
+			extraFiles,
 			mochaOptsFile,
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
@@ -265,8 +275,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private async lookupFiles(
 		config: vscode.WorkspaceConfiguration,
-		globsFromOptsFile: string[],
-		filesFromOptsFile: string[]
+		globsFromOptsFile: string[]
 	): Promise<string[]> {
 
 		const globs = this.getTestFilesGlobs(config, globsFromOptsFile);
@@ -282,17 +291,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			testFiles.push(...fileUris.map(uri => uri.fsPath));
 		}
 
-		const resolvedFilesFromOptsFile = filesFromOptsFile
-			.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
-
 		if (this.log.enabled) {
 			this.log.debug(`Found test files ${JSON.stringify(testFiles)}`);
-			if (filesFromOptsFile.length > 0) {
-				this.log.debug(`Adding files ${JSON.stringify(resolvedFilesFromOptsFile)}`);
-			}
 		}
 
-		return resolvedFilesFromOptsFile.concat(testFiles);
+		return testFiles;
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
@@ -337,9 +340,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			}
 		}
 
-		for (const file of config.files) {
-			const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, file);
-			if (absolutePath === resolvedFile) {
+		for (const file of config.extraFiles) {
+			if (absolutePath === file) {
 				return true;
 			}
 		}
