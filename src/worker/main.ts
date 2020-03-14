@@ -11,10 +11,21 @@ import ReporterFactory from './reporter';
 
 (async () => {
 
-	const netOptsJson = (process.argv.length > 2) ? process.argv[2] : '{}';
-	const netOpts: NetworkOptions = JSON.parse(netOptsJson);
+	let netOpts: NetworkOptions | undefined;
 
-	if (netOpts.role && netOpts.port) {
+	const role = process.env['MOCHA_WORKER_IPC_ROLE'];
+	const port = parseInt(process.env['MOCHA_WORKER_IPC_PORT'] || '');
+	const host = process.env['MOCHA_WORKER_IPC_HOST'];
+	if (((role === 'client') || (role === 'server')) && port) {
+		netOpts = { role, port, host };
+	}
+
+	if (!netOpts && (process.argv.length > 2) &&
+		process.argv[2].startsWith('{') && process.argv[2].endsWith('}')) {
+		netOpts = JSON.parse(process.argv[2]);
+	}
+
+	if (netOpts && netOpts.role && netOpts.port) {
 
 		const socket = (netOpts.role === 'client') ?
 			await createConnection(netOpts.port, { host: netOpts.host }) :
