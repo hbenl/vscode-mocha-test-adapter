@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { ChildProcess, fork } from 'child_process';
+import { ChildProcess, fork, spawn } from 'child_process';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
 import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
@@ -91,16 +91,7 @@ export abstract class MochaAdapterCore {
 					path.resolve(this.workspaceFolderPath, config.launcherScript) :
 					this.workerScript;
 
-				const childProc = fork(
-					childProcScript,
-					[],
-					{
-						execPath: config.nodePath,
-						execArgv: [], // ['--inspect-brk=12345']
-						env: stringsOnly({ ...process.env, ...config.env }),
-						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
-					}
-				);
+				const childProc = this.launchWorkerProcess(config, childProcScript, []);
 
 				const args: WorkerArgs = {
 					action: 'loadTests',
@@ -265,16 +256,7 @@ export abstract class MochaAdapterCore {
 
 				const execArgv = (debug && !config.launcherScript) ? [ `--inspect-brk=${config.debuggerPort}` ] : [];
 
-				this.runningTestProcess = fork(
-					childProcScript,
-					[],
-					{
-						execPath: config.nodePath,
-						execArgv,
-						env: stringsOnly({ ...process.env, ...config.env }),
-						stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
-					}
-				);
+				this.runningTestProcess = this.launchWorkerProcess(config, childProcScript, execArgv);
 
 				const args: WorkerArgs = {
 					action: 'runTests',
@@ -402,6 +384,33 @@ export abstract class MochaAdapterCore {
 		if (this.runningTestProcess) {
 			this.log.info('Killing running test process');
 			this.runningTestProcess.kill();
+		}
+	}
+
+	private launchWorkerProcess(config: AdapterConfig, childProcScript: string, execArgv: string[]): ChildProcess {
+
+		if (config.nodePath) {
+
+			return spawn(
+				config.nodePath,
+				[ ...execArgv, childProcScript ],
+				{
+					env: stringsOnly({ ...process.env, ...config.env }),
+					stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
+				}
+			);
+
+		} else {
+
+			return fork(
+				childProcScript,
+				[],
+				{
+					execArgv,
+					env: stringsOnly({ ...process.env, ...config.env }),
+					stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
+				}
+			);
 		}
 	}
 
