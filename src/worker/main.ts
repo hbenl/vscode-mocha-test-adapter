@@ -9,7 +9,7 @@ import { patchMocha } from './patchMocha';
 import { processTests } from './processTests';
 import ReporterFactory from './reporter';
 
-(async () => {
+export default (async () => {
 
 	let netOpts: NetworkOptions | undefined;
 
