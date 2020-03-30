@@ -76,8 +76,16 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			);
 		}
 
-		const cwd = process.cwd();
-		module.paths.push(cwd, path.join(cwd, 'node_modules'));
+		const cwd = path.normalize(process.cwd());
+		module.paths.push(cwd);
+		let dir = cwd;
+		while (true) {
+			module.paths.push(path.join(dir, 'node_modules'));
+			const next = path.dirname(dir);
+			if (next === dir) break;
+			dir = next;
+		}
+
 		for (let req of args.mochaOpts.requires) {
 
 			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
@@ -113,7 +121,7 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			const regExp = new RegExp(args.tests!.map(RegExEscape).join('|'));
 			mocha.grep(regExp);
 			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled));
-	
+
 			if (args.logEnabled) sendMessage('Running tests');
 			mocha.run(() => {
 				sendMessage({ type: 'finished' });
