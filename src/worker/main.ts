@@ -41,7 +41,7 @@ import ReporterFactory from './reporter';
 	}
 })();
 
-function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>, onFinished?: () => void): void {
+async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>, onFinished?: () => void): Promise<void> {
 
 	let logEnabled = args.logEnabled;
 	let sendErrorInfo = (args.action === 'loadTests');
@@ -99,6 +99,11 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			mocha.addFile(file);
 		}
 
+		if ((mocha as any).loadFilesAsync) {
+			sendMessage('Trying to use Mocha\'s experimental ESM module loader');
+			await mocha.loadFilesAsync();
+		}
+
 		if (args.action === 'loadTests') {
 
 			mocha.grep('$^');
@@ -113,7 +118,7 @@ function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<void>,
 			const regExp = new RegExp(args.tests!.map(RegExEscape).join('|'));
 			mocha.grep(regExp);
 			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled));
-	
+
 			if (args.logEnabled) sendMessage('Running tests');
 			mocha.run(() => {
 				sendMessage({ type: 'finished' });
