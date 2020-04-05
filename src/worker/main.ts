@@ -78,6 +78,13 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 
 		const cwd = process.cwd();
 		module.paths.push(cwd, path.join(cwd, 'node_modules'));
+		let dir = mochaPath;
+		while (true) {
+			module.paths.push(path.join(dir, 'node_modules'));
+			const next = path.dirname(dir);
+			if (next === dir) break;
+			dir = next;
+		}
 		for (let req of args.mochaOpts.requires) {
 
 			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
