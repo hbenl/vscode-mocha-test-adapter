@@ -101,7 +101,8 @@ export abstract class MochaAdapterCore {
 					mochaOpts: config.mochaOpts,
 					monkeyPatch: config.monkeyPatch,
 					logEnabled: this.log.enabled,
-					workerScript: this.workerScript
+					workerScript: this.workerScript,
+					esmLoader: config.esmLoader
 				};
 				childProc.send(args);
 
@@ -275,7 +276,8 @@ export abstract class MochaAdapterCore {
 					mochaOpts: config.mochaOpts,
 					logEnabled: this.log.enabled,
 					workerScript: this.workerScript,
-					debuggerPort: debug ? config.debuggerPort : undefined
+					debuggerPort: debug ? config.debuggerPort : undefined,
+					esmLoader: config.esmLoader
 				};
 				this.runningTestProcess.send(args);
 

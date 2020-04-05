@@ -25,7 +25,8 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	monkeyPatch: { onChange: 'reloadTests' },
 	debuggerPort: { onChange: 'reloadConfig' },
 	debuggerConfig: { onChange: 'reloadConfig' },
-	launcherScript: { onChange: 'reloadTests'},
+	esmLoader: { onChange: 'reloadTests' },
+	launcherScript: { onChange: 'reloadTests' },
 	logpanel: {},
 	logfile: {},
 };

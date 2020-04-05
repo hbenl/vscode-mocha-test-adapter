@@ -11,7 +11,8 @@ export async function createTestMochaAdapter(
 	opts?: {
 		monkeyPatch?: boolean,
 		env?: EnvVars,
-		pruneFiles?: boolean
+		pruneFiles?: boolean,
+		esmLoader?: boolean
 	}
 ): Promise<TestMochaAdapter> {
 
@@ -34,6 +35,7 @@ export async function createTestMochaAdapter(
 	const monkeyPatch = (opts && (opts.monkeyPatch !== undefined)) ? opts.monkeyPatch : true;
 	const env = (opts && opts.env) ? opts.env : {};
 	const pruneFiles = (opts && opts.pruneFiles) || false;
+	const esmLoader = (opts && (opts.esmLoader !== undefined)) ? opts.esmLoader : true;
 
 	const config = {
 
@@ -55,6 +57,8 @@ export async function createTestMochaAdapter(
 		mochaOptsFile: optsFilePath,
 		envFile: undefined,
 		globs: mochaOptsAndFiles.globs,
+
+		esmLoader,
 
 		launcherScript: undefined
 	};

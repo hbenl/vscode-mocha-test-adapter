@@ -33,6 +33,8 @@ export interface AdapterConfig {
 	envFile: string | undefined;
 	globs: string[];
 
+	esmLoader: boolean;
+
 	launcherScript: string | undefined;
 }
 
@@ -173,6 +175,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			mochaOptsFile,
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
+			esmLoader: this.getEsmLoader(config),
 			launcherScript: this.getLauncherScript(config)
 		}
 	}
@@ -470,6 +473,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getPruneFiles(config: vscode.WorkspaceConfiguration): boolean {
 		return config.get<boolean>(configKeys.pruneFiles.key) || false;
+	}
+
+	private getEsmLoader(config: vscode.WorkspaceConfiguration): boolean {
+		const esmLoader = config.get<boolean>(configKeys.esmLoader.key);
+		return (esmLoader !== undefined) ? esmLoader : true;
 	}
 
 	private getEnvFile(config: vscode.WorkspaceConfiguration): string | undefined {

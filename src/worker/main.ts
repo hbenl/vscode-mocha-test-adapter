@@ -99,7 +99,7 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 			mocha.addFile(file);
 		}
 
-		if ((mocha as any).loadFilesAsync) {
+		if (args.esmLoader && (mocha as any).loadFilesAsync) {
 			sendMessage('Trying to use Mocha\'s experimental ESM module loader');
 			await mocha.loadFilesAsync();
 		}

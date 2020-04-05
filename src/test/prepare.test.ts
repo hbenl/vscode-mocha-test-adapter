@@ -6,7 +6,7 @@ describe("Tests using mocha-prepare", function() {
 	it("should be loaded", async function() {
 
 		const workspaceFolderName = 'javascript/prepare';
-		const adapter = await createTestMochaAdapter(workspaceFolderName);
+		const adapter = await createTestMochaAdapter(workspaceFolderName, { esmLoader: false });
 	
 		await adapter.load();
 
@@ -21,7 +21,7 @@ describe("Tests using mocha-prepare", function() {
 	it("should be run", async function() {
 
 		const workspaceFolderName = 'javascript/prepare';
-		const adapter = await createTestMochaAdapter(workspaceFolderName);
+		const adapter = await createTestMochaAdapter(workspaceFolderName, { esmLoader: false });
 
 		await adapter.load();
 		const rootSuite = adapter.getLoadedTests();

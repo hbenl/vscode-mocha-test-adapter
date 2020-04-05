@@ -50,7 +50,7 @@
     "stack-trace": "0.0.10",
     "tslib": "^1.11.1",
     "vscode-test-adapter-api": "^1.8.0",
-    "vscode-test-adapter-remoting-util": "^0.8.1",
+    "vscode-test-adapter-remoting-util": "^0.9.0",
     "vscode-test-adapter-util": "^0.7.0"
   },
   "devDependencies": {
@@ -211,6 +211,12 @@
             "null"
           ],
           "default": null,
+          "scope": "resource"
+        },
+        "mochaExplorer.esmLoader": {
+          "description": "Use Mocha's experimental ESM module loader if it is available",
+          "type": "boolean",
+          "default": true,
           "scope": "resource"
         },
         "mochaExplorer.launcherScript": {
