@@ -27,6 +27,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	debuggerConfig: { onChange: 'reloadConfig' },
 	esmLoader: { onChange: 'reloadTests' },
 	launcherScript: { onChange: 'reloadTests' },
+	autoload: { onChange: 'reloadConfig' },
 	logpanel: {},
 	logfile: {},
 };

@@ -111,6 +111,7 @@ Property                        | Description
 `mochaExplorer.pruneFiles`      | Only load the test files needed for the current test run (default: `false` - load all configured files)
 `mochaExplorer.esmLoader`       | Use Mocha's experimental ESM module loader if it is available (default: `true`)
 `mochaExplorer.launcherScript`  | The path to a launcher script (relative to the workspace folder) for [running your tests remotely](https://github.com/hbenl/vscode-test-adapter-remoting-util)
+`mochaExplorer.autoload`        | Automatically (re)load the tests when source files or relevant settings are changed and/or when VS Code is started (`true`, `false`, or `"onStart"`; default: `true`)
 `testExplorer.codeLens`         | Show a CodeLens above each test or suite for running or debugging the tests
 `testExplorer.gutterDecoration` | Show the state of each test in the editor using Gutter Decorations
 `testExplorer.onStart`          | Retire or reset all test states whenever a test run is started

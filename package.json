@@ -228,8 +228,22 @@
           "default": null,
           "scope": "resource"
         },
+        "mochaExplorer.autoload": {
+          "description": "Automatically (re)load the tests when source files or relevant settings are changed and/or when VS Code is started",
+          "type": [
+            "boolean",
+            "string"
+          ],
+          "enum": [
+            true,
+            false,
+            "onStart"
+          ],
+          "default": true,
+          "scope": "resource"
+        },
         "mochaExplorer.logpanel": {
-          "description": "Write diagnotic logs to an output panel",
+          "description": "Write diagnostic logs to an output panel",
           "type": "boolean",
           "scope": "resource"
         },

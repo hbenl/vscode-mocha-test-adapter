@@ -46,6 +46,8 @@ export abstract class MochaAdapterCore {
 
 	protected readonly nodesById = new Map<string, TestSuiteInfo | TestInfo>();
 
+	protected skipNextLoadRequest = false;
+
 	private readonly workerScript = require.resolve('../out/worker/bundle.js');
 
 	private runningTestProcess: ChildProcess | undefined;
@@ -56,6 +58,14 @@ export abstract class MochaAdapterCore {
 	) {}
 
 	async load(changedFiles?: string[]): Promise<void> {
+
+		if (this.skipNextLoadRequest) {
+			if (this.log.enabled) this.log.info(`Skipping the initial load request for ${this.workspaceFolderPath}`);
+			this.skipNextLoadRequest = false;
+			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
+			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
+			return;
+		}
 
 		try {
 

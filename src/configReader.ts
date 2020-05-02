@@ -36,6 +36,8 @@ export interface AdapterConfig {
 	esmLoader: boolean;
 
 	launcherScript: string | undefined;
+
+	autoload: boolean | 'onStart';
 }
 
 export class ConfigReader implements IConfigReader, IDisposable {
@@ -62,20 +64,27 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		this.enabledStateKey = `enable ${this.workspaceFolder.uri.fsPath}`;
 
-		this.disposables.push(vscode.workspace.onDidChangeConfiguration(configChange => {
+		this.disposables.push(vscode.workspace.onDidChangeConfiguration(async configChange => {
 
 			this.log.info('Configuration changed');
 
 			let configKey: string | undefined;
 
 			if (configKey = this.configChangeRequires(configChange, 'reloadTests')) {
-				if (this.log.enabled) this.log.info(`Reloading because ${configKey} changed`);
-				load();
+				const config = await this.currentConfig;
+				if (config?.autoload === true) {
+					if (this.log.enabled) this.log.info(`Reloading tests because ${configKey} changed`);
+					load();
+				} else {
+					if (this.log.enabled) this.log.info(`Reloading tests cancelled because the adapter or autoloading is disabled`);
+					this.reloadConfig();
+					retire();
+				}
 				return;
 			}
 
 			if (configKey = this.configChangeRequires(configChange, 'retire')) {
-				if (this.log.enabled) this.log.info(`Sending autorun event because ${configKey} changed`);
+				if (this.log.enabled) this.log.info(`Sending retire event because ${configKey} changed`);
 				this.reloadConfig();
 				retire();
 				return;
@@ -89,6 +98,12 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}));
 
 		this.disposables.push(vscode.workspace.onDidSaveTextDocument(async document => {
+
+			const config = await this.currentConfig;
+			if (config?.autoload !== true) {
+				if (this.log.enabled) this.log.info(`Reloading cancelled because the adapter or autoloading is disabled`);
+				return;
+			}
 
 			const filename = document.uri.fsPath;
 			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
@@ -105,7 +120,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 				}
 
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
-				this.log.info('Sending autorun event');
+				this.log.info('Sending retire event');
 				retire();
 			}
 		}));
@@ -121,6 +136,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	async disableAdapter(): Promise<void> {
 		await this.workspaceState.update(this.enabledStateKey, false);
+	}
+
+	getAutoload(config: vscode.WorkspaceConfiguration): boolean | 'onStart' {
+		const autoload = config.get<boolean | 'onStart'>(configKeys.autoload.key);
+		return (autoload !== undefined) ? autoload : true;
 	}
 
 	private async readConfig(): Promise<AdapterConfig | undefined> {
@@ -176,7 +196,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
 			esmLoader: this.getEsmLoader(config),
-			launcherScript: this.getLauncherScript(config)
+			launcherScript: this.getLauncherScript(config),
+			autoload: this.getAutoload(config)
 		}
 	}
 

@@ -60,7 +60,9 @@ export async function createTestMochaAdapter(
 
 		esmLoader,
 
-		launcherScript: undefined
+		launcherScript: undefined,
+
+		autoload: true
 	};
 
 	return new TestMochaAdapter(workspaceFolderPath, new TestConfigReader(config));

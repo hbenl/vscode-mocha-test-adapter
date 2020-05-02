@@ -3,6 +3,7 @@ import { TestAdapter, TestEvent, TestSuiteEvent, TestLoadStartedEvent, TestLoadF
 import { Log } from 'vscode-test-adapter-util';
 import { ConfigReader, AdapterConfig } from './configReader';
 import { MochaAdapterCore, IDisposable } from './core';
+import { configSection } from './configKeys';
 
 export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisposable {
 
@@ -51,6 +52,10 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 		this.disposables.push(this.testStatesEmitter);
 		this.disposables.push(this.retireEmitter);
 
+		const config = vscode.workspace.getConfiguration(configSection, this.workspaceFolder.uri);
+		if (this.configReader.getAutoload(config) === false) {
+			this.skipNextLoadRequest = true;
+		}
 	}
 
 	async enable(): Promise<void> {
