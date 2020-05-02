@@ -109,6 +109,7 @@ Property                        | Description
 `mochaExplorer.monkeyPatch`     | Apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
 `mochaExplorer.debuggerPort`    | The port to use for debugging sessions (default: `9229`)
 `mochaExplorer.pruneFiles`      | Only load the test files needed for the current test run (default: `false` - load all configured files)
+`mochaExplorer.esmLoader`       | Use Mocha's experimental ESM module loader if it is available (default: `true`)
 `mochaExplorer.launcherScript`  | The path to a launcher script (relative to the workspace folder) for [running your tests remotely](https://github.com/hbenl/vscode-test-adapter-remoting-util)
 `testExplorer.codeLens`         | Show a CodeLens above each test or suite for running or debugging the tests
 `testExplorer.gutterDecoration` | Show the state of each test in the editor using Gutter Decorations
