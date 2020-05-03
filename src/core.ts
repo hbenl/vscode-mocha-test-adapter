@@ -1,7 +1,9 @@
 import * as path from 'path';
 import { ChildProcess, fork, spawn } from 'child_process';
+import { Socket } from 'net';
 import * as util from 'util';
 import { TestSuiteInfo, TestEvent, TestInfo, TestSuiteEvent, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, RetireEvent } from 'vscode-test-adapter-api';
+import { createConnection, receiveConnection, readMessages, writeMessage } from 'vscode-test-adapter-remoting-util';
 import { ErrorInfo, WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { findTests, stringsOnly } from './util';
 import { AdapterConfig } from './configReader';
@@ -85,13 +87,18 @@ export abstract class MochaAdapterCore {
 
 			let testsLoaded = false;
 
-			await new Promise<void>(resolve => {
+			await new Promise<void>(async resolve => {
 
 				const childProcScript = config.launcherScript ?
 					path.resolve(this.workspaceFolderPath, config.launcherScript) :
 					this.workerScript;
 
 				const childProc = this.launchWorkerProcess(config, childProcScript, []);
+
+				if (this.log.enabled) {
+					childProc.stdout.on('data', data => this.log.info(`Worker (stdout): ${data.toString()}`));
+					childProc.stderr.on('data', data => this.log.error(`Worker (stderr): ${data.toString()}`));
+				}
 
 				const args: WorkerArgs = {
 					action: 'loadTests',
@@ -105,9 +112,8 @@ export abstract class MochaAdapterCore {
 					workerScript: this.workerScript,
 					esmLoader: config.esmLoader
 				};
-				childProc.send(args);
 
-				childProc.on('message', (info: string | TestSuiteInfo | ErrorInfo | null) => {
+				const handler = (info: string | TestSuiteInfo | ErrorInfo | null) => {
 
 					if (typeof info === 'string') {
 
@@ -158,11 +164,19 @@ export abstract class MochaAdapterCore {
 						}
 						resolve();
 					}
-				});
+				};
 
-				if (this.log.enabled) {
-					childProc.stdout.on('data', data => this.log.info(data.toString()));
-					childProc.stderr.on('data', data => this.log.error(data.toString()));
+				try {
+
+					await this.connectToWorkerProcess(config, childProc, args, handler);
+
+				} catch (err) {
+					this.log.error(`Couldn't establish IPC: ${util.inspect(err)}`);
+					if (!testsLoaded) {
+						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `Couldn't establish IPC:\n${err.stack}` });
+						testsLoaded = true;
+						resolve();
+					}
 				}
 
 				childProc.on('exit', (code, signal) => {
@@ -246,7 +260,7 @@ export abstract class MochaAdapterCore {
 
 			let childProcessFinished = false;
 
-			await new Promise<void>(resolve => {
+			await new Promise<void>(async resolve => {
 
 				let runningTest: string | undefined = undefined;
 
@@ -257,6 +271,23 @@ export abstract class MochaAdapterCore {
 				const execArgv = (debug && !config.launcherScript) ? [ `--inspect-brk=${config.debuggerPort}` ] : [];
 
 				this.runningTestProcess = this.launchWorkerProcess(config, childProcScript, execArgv);
+
+				const processOutput = (data: Buffer | string) => {
+
+					this.outputChannel.append(data.toString());
+
+					if (runningTest) {
+						this.testStatesEmitter.fire(<TestEvent>{
+							type: 'test',
+							state: 'running',
+							test: runningTest,
+							message: data.toString()
+						});
+					}
+				}
+
+				this.runningTestProcess.stdout.on('data', processOutput);
+				this.runningTestProcess.stderr.on('data', processOutput);
 
 				const args: WorkerArgs = {
 					action: 'runTests',
@@ -271,9 +302,8 @@ export abstract class MochaAdapterCore {
 					debuggerPort: debug ? config.debuggerPort : undefined,
 					esmLoader: config.esmLoader
 				};
-				this.runningTestProcess.send(args);
 
-				this.runningTestProcess.on('message', (message: string | TestSuiteEvent | TestEvent | TestRunFinishedEvent) => {
+				const handler = (message: string | TestSuiteEvent | TestEvent | TestRunFinishedEvent) => {
 
 					if (typeof message === 'string') {
 
@@ -299,24 +329,20 @@ export abstract class MochaAdapterCore {
 							this.runningTestProcess.kill();
 						}
 					}
-				});
+				};
 
-				const processOutput = (data: Buffer | string) => {
+				try {
 
-					this.outputChannel.append(data.toString());
+					await this.connectToWorkerProcess(config, this.runningTestProcess, args, handler);
 
-					if (runningTest) {
-						this.testStatesEmitter.fire(<TestEvent>{
-							type: 'test',
-							state: 'running',
-							test: runningTest,
-							message: data.toString()
-						});
+				} catch (err) {
+					this.log.error(`Couldn't establish IPC: ${util.inspect(err)}`)
+					if (!childProcessFinished) {
+						childProcessFinished = true;
+						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `Couldn't establish IPC:\n${err.stack}` });
+						resolve();
 					}
 				}
-
-				this.runningTestProcess.stdout.on('data', processOutput);
-				this.runningTestProcess.stderr.on('data', processOutput);
 
 				this.runningTestProcess.on('exit', () => {
 					this.log.info('Worker finished');
@@ -389,11 +415,20 @@ export abstract class MochaAdapterCore {
 
 	private launchWorkerProcess(config: AdapterConfig, childProcScript: string, execArgv: string[]): ChildProcess {
 
+		const ipcOpts = {
+			role: config.ipcRole ? ((config.ipcRole === 'client') ? 'server' : 'client') : undefined,
+			port: config.ipcRole ? config.ipcPort : undefined,
+			host: config.ipcRole ? config.ipcHost : undefined
+		};
+		const ipcOptsString = JSON.stringify(ipcOpts);
+
 		if (config.nodePath) {
+
+			if (this.log.enabled) this.log.debug(`Spawning ${childProcScript} with IPC options ${ipcOptsString}`);
 
 			return spawn(
 				config.nodePath,
-				[ ...execArgv, childProcScript ],
+				[ ...execArgv, childProcScript, ipcOptsString ],
 				{
 					env: stringsOnly({ ...process.env, ...config.env }),
 					stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
@@ -402,15 +437,39 @@ export abstract class MochaAdapterCore {
 
 		} else {
 
+			if (this.log.enabled) this.log.debug(`Forking ${childProcScript} with IPC options ${ipcOptsString}`);
+
 			return fork(
 				childProcScript,
-				[],
+				[ ipcOptsString ],
 				{
 					execArgv,
 					env: stringsOnly({ ...process.env, ...config.env }),
 					stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
 				}
 			);
+		}
+	}
+
+	private async connectToWorkerProcess(config: AdapterConfig, childProc: ChildProcess, args: WorkerArgs, handler: (msg: any) => void): Promise<void> {
+
+		if (config.ipcRole) {
+
+			let ipcSocket: Socket | undefined;
+			if (config.ipcRole === 'client') {
+				ipcSocket = await createConnection(config.ipcPort, { host: config.ipcHost });
+			} else {
+				ipcSocket = await receiveConnection(config.ipcPort, { host: config.ipcHost });
+			}
+
+			readMessages(ipcSocket, handler);
+			writeMessage(ipcSocket, args);
+
+		} else {
+
+			childProc.on('message', handler);
+			childProc.send(args);
+
 		}
 	}
 

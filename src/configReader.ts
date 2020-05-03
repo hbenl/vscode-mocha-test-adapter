@@ -36,6 +36,9 @@ export interface AdapterConfig {
 	esmLoader: boolean;
 
 	launcherScript: string | undefined;
+	ipcRole: 'client' | 'server' | undefined;
+	ipcPort: number;
+	ipcHost: string | undefined;
 
 	autoload: boolean | 'onStart';
 }
@@ -197,6 +200,9 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
 			esmLoader: this.getEsmLoader(config),
 			launcherScript: this.getLauncherScript(config),
+			ipcRole: this.getIpcRole(config),
+			ipcPort: this.getIpcPort(config),
+			ipcHost: this.getIpcHost(config),
 			autoload: this.getAutoload(config)
 		}
 	}
@@ -507,6 +513,18 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getLauncherScript(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.launcherScript.key) || undefined;
+	}
+
+	private getIpcRole(config: vscode.WorkspaceConfiguration): 'client' | 'server' | undefined {
+		return config.get<'client' | 'server' | null>('ipcRole') || undefined;
+	}
+
+	private getIpcPort(config: vscode.WorkspaceConfiguration): number {
+		return config.get<number>('ipcPort') || 9449;
+	}
+
+	private getIpcHost(config: vscode.WorkspaceConfiguration): string | undefined {
+		return config.get<string | null>('ipcHost') || undefined;
 	}
 
 	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {

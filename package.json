@@ -228,6 +228,36 @@
           "default": null,
           "scope": "resource"
         },
+        "mochaExplorer.ipcRole": {
+          "description": "Use a TCP connection instead of Node's IPC mechanism for talking to worker processes. This is only needed with some launcher scripts.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "client",
+            "server"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
+        "mochaExplorer.ipcPort": {
+          "description": "The TCP port that worker processes use to send their results to VS Code if `mochaExplorer.ipcRole` is set",
+          "type": [
+            "number"
+          ],
+          "default": 9449,
+          "scope": "resource"
+        },
+        "mochaExplorer.ipcHost": {
+          "description": "The TCP host used for communication with worker processes. If `mochaExplorer.ipcRole` is set to `client`, this is the address that Mocha Explorer tries to connect to, if it is set to `server`, this is the address on which Mocha Explorer will listen for a connection.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "localhost",
+          "scope": "resource"
+        },
         "mochaExplorer.autoload": {
           "description": "Automatically (re)load the tests when source files or relevant settings are changed and/or when VS Code is started",
           "type": [

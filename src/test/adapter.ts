@@ -37,7 +37,7 @@ export async function createTestMochaAdapter(
 	const pruneFiles = (opts && opts.pruneFiles) || false;
 	const esmLoader = (opts && (opts.esmLoader !== undefined)) ? opts.esmLoader : true;
 
-	const config = {
+	const config: AdapterConfig = {
 
 		nodePath: undefined,
 		mochaPath: path.dirname(require.resolve('mocha')),
@@ -61,6 +61,9 @@ export async function createTestMochaAdapter(
 		esmLoader,
 
 		launcherScript: undefined,
+		ipcRole: undefined,
+		ipcPort: 9449,
+		ipcHost: 'localhost',
 
 		autoload: true
 	};
