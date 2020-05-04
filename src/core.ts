@@ -422,6 +422,14 @@ export abstract class MochaAdapterCore {
 		};
 		const ipcOptsString = JSON.stringify(ipcOpts);
 
+		const env = stringsOnly({ ...process.env, ...config.env });
+		if (config.ipcRole) {
+			env['VSCODE_WORKSPACE_PATH'] = this.workspaceFolderPath;
+			env['MOCHA_WORKER_PATH'] = this.workerScript;
+		}
+
+		const stdio: ('pipe' | 'ipc')[] = [ 'pipe', 'pipe', 'pipe', 'ipc' ];
+
 		if (config.nodePath) {
 
 			if (this.log.enabled) this.log.debug(`Spawning ${childProcScript} with IPC options ${ipcOptsString}`);
@@ -429,10 +437,7 @@ export abstract class MochaAdapterCore {
 			return spawn(
 				config.nodePath,
 				[ ...execArgv, childProcScript, ipcOptsString ],
-				{
-					env: stringsOnly({ ...process.env, ...config.env }),
-					stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
-				}
+				{ env, stdio }
 			);
 
 		} else {
@@ -442,11 +447,7 @@ export abstract class MochaAdapterCore {
 			return fork(
 				childProcScript,
 				[ ipcOptsString ],
-				{
-					execArgv,
-					env: stringsOnly({ ...process.env, ...config.env }),
-					stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
-				}
+				{ execArgv, env, stdio }
 			);
 		}
 	}
