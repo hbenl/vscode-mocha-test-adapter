@@ -12,7 +12,7 @@ export default {
 		sourcemap: true
 	},
 
-	external: [ 'fs', 'util', 'path', 'net', 'stream', 'buffer', 'string_decoder' ],
+	external: [ 'os', 'fs', 'util', 'path', 'net', 'stream', 'buffer', 'string_decoder' ],
 
 	plugins: [
 		nodeResolve(),
