@@ -2,8 +2,9 @@ import * as path from 'path';
 import stackTrace from 'stack-trace';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
+import { retrieveSourceMap } from 'source-map-support';
 
-export default (sendMessage: (message: any) => void, stringify: (obj: any) => string, sloppyMatch: boolean) => {
+export default (sendMessage: (message: any) => void, stringify: (obj: any) => string, useSourceMapSupport: boolean) => {
 
 	return class Reporter {
 
@@ -95,11 +96,18 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 						if (typeof filename === 'string') {
 							filename = path.resolve(filename);
 							let matchFound = false;
-							if (sloppyMatch && test.file) {
-								const f1 = filename.substring(0, filename.length - path.extname(filename).length);
-								const f2 = test.file.substring(0, test.file.length - path.extname(test.file).length);
-								if (f1 === f2) {
-									matchFound = true;
+							if (useSourceMapSupport && test.file) {
+								const mapAndUrl = retrieveSourceMap(test.file);
+								if (mapAndUrl && (typeof mapAndUrl.map === 'string')) {
+									const parsedSourcemap = JSON.parse(mapAndUrl.map);
+									if (parsedSourcemap.sources.length === 1) {
+										const dirname = path.dirname(mapAndUrl.url);
+										const sourceRoot = parsedSourcemap.sourceRoot || '';
+										const originalSource = path.join(dirname, sourceRoot + parsedSourcemap.sources[0]);
+										if (originalSource === filename) {
+											matchFound = true;
+										}
+									}
 								}
 							} else {
 								if (filename === test.file) {
