@@ -10,6 +10,5 @@
   "[json]": {
     "editor.insertSpaces": true,
     "editor.tabSize": 2
-  },
-  "mochaExplorer.optsFile": "src/test/mocha.opts"
+  }
 }

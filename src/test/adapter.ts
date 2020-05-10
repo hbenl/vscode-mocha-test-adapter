@@ -17,10 +17,9 @@ export async function createTestMochaAdapter(
 ): Promise<TestMochaAdapter> {
 
 	const workspaceFolderPath = path.resolve(__dirname, 'workspaces/' + workspaceName);
-	const optsFilePath = path.join(workspaceFolderPath, 'test/mocha.opts');
 
 	const optsReader = new MochaOptsReader(new TestLog());
-	const mochaOptsAndFiles = await optsReader.readMochaOptsFile(optsFilePath);
+	const mochaOptsAndFiles = await optsReader.readOptsUsingMocha(workspaceFolderPath);
 	const mochaOpts: MochaOpts = {
 		ui: mochaOptsAndFiles.mochaOpts.ui || 'bdd',
 		timeout: mochaOptsAndFiles.mochaOpts.timeout || 1000,
@@ -54,7 +53,7 @@ export async function createTestMochaAdapter(
 		testFiles,
 		extraFiles,
 
-		mochaOptsFile: optsFilePath,
+		mochaOptsFile: undefined,
 		envFile: undefined,
 		globs: mochaOptsAndFiles.globs,
 

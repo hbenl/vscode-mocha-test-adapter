@@ -1,0 +1,5 @@
+{
+  "spec": "src/test/*.test.ts",
+  "require": "ts-node/register/transpile-only",
+  "timeout": 10000
+}

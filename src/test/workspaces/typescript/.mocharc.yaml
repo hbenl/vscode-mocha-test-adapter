@@ -1,0 +1,2 @@
+spec: 'test/*.ts'
+require: 'ts-node/register/transpile-only'
