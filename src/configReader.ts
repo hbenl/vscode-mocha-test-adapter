@@ -246,7 +246,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		const relativePattern = new vscode.RelativePattern(this.workspaceFolder, 'test/**/*.js');
-		const fileUris = await vscode.workspace.findFiles(relativePattern, 'node_modules');
+		const fileUris = await vscode.workspace.findFiles(relativePattern, null);
 		if (fileUris.length > 0) {
 
 			let msg = `The workspace folder ${this.workspaceFolder.name} contains test files, but I'm not sure if they should be run using Mocha. `;
@@ -317,7 +317,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 				testFilesGlob = testFilesGlob.substring(2);
 			}
 			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
-			const fileUris = await vscode.workspace.findFiles(relativePattern, 'node_modules');
+			const fileUris = await vscode.workspace.findFiles(relativePattern, null);
 			testFiles.push(...fileUris.map(uri => uri.fsPath));
 		}
 
