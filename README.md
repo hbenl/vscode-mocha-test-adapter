@@ -40,6 +40,28 @@ If you use a transpiler for your test sources, there are 2 ways to make the test
   "mochaExplorer.require": "source-map-support/register"
   ```
 
+## Running VS Code extension tests using vscode-test
+
+Mocha Test Explorer supports running VS Code extension tests using [`vscode-test`](https://github.com/Microsoft/vscode-test):
+Install the `mocha-explorer-launcher-scripts` package and add the following settings to your project:
+```
+"mochaExplorer.launcherScript": "node_modules/mocha-explorer-launcher-scripts/vscode-test",
+"mochaExplorer.autoload": false,
+"mochaExplorer.ipcRole": "server",
+"mochaExplorer.env": {
+  "VSCODE_VERSION": "insiders",
+  "ELECTRON_RUN_AS_NODE": null
+}
+```
+Depending on the structure of your project's tests you may have to add more settings
+(e.g. `mochaExplorer.files`, `mochaExplorer.ui` or `mochaExplorer.require`).
+The environment variable `VSCODE_VERSION` is passed to the `runTests()` function from the `vscode-test` package,
+it specifies the version of VS Code to be used for testing. Note that this needs to be different from the version
+you're using for development, so if you're using VS Code Insiders, then you must set this variable to `"stable"`.
+
+A sample project for running `vscode-test` tests using Mocha Test Explorer is available
+[here](https://github.com/hbenl/vscode-extension-samples/tree/test-explorer-integration/helloworld-test-sample).
+
 ## Running tests remotely
 
 If you want/need to run your tests in a remote environment (e.g. in a docker container or on another machine via ssh),
