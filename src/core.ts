@@ -54,6 +54,8 @@ export abstract class MochaAdapterCore {
 
 	private runningTestProcess: ChildProcess | undefined;
 
+	private nextTestRunId = 0;
+
 	constructor(
 		protected readonly outputChannel: IOutputChannel,
 		protected readonly log: ILog
@@ -210,6 +212,8 @@ export abstract class MochaAdapterCore {
 
 	async run(testsToRun: string[], debug = false): Promise<void> {
 
+		const testRunId = String(this.nextTestRunId++);
+
 		try {
 
 			if (this.log.enabled) this.log.info(`Running test(s) ${JSON.stringify(testsToRun)} of ${this.workspaceFolderPath}`);
@@ -221,7 +225,7 @@ export abstract class MochaAdapterCore {
 				return;
 			}
 
-			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun });
+			this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests: testsToRun, testRunId });
 
 			const testInfos: TestInfo[] = [];
 			for (const suiteOrTestId of testsToRun) {
@@ -232,7 +236,7 @@ export abstract class MochaAdapterCore {
 			}
 
 			if (testInfos.length === 0) {
-				this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+				this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished', testRunId });
 				return;
 			}
 
@@ -281,7 +285,8 @@ export abstract class MochaAdapterCore {
 							type: 'test',
 							state: 'running',
 							test: runningTest,
-							message: data.toString()
+							message: data.toString(),
+							testRunId
 						});
 					}
 				}
@@ -315,7 +320,7 @@ export abstract class MochaAdapterCore {
 
 						if (message.type !== 'finished') {
 
-							this.testStatesEmitter.fire(message);
+							this.testStatesEmitter.fire({ ...message, testRunId });
 
 							if (message.type === 'test') {
 								if (message.state === 'running') {
@@ -350,7 +355,7 @@ export abstract class MochaAdapterCore {
 					this.runningTestProcess = undefined;
 					if (!childProcessFinished) {
 						childProcessFinished = true;
-						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished', testRunId });
 						resolve();
 					}
 				});
@@ -361,7 +366,7 @@ export abstract class MochaAdapterCore {
 					this.runningTestProcess = undefined;
 					if (!childProcessFinished) {
 						childProcessFinished = true;
-						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+						this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished', testRunId });
 						resolve();
 					}
 				});
@@ -369,7 +374,7 @@ export abstract class MochaAdapterCore {
 
 		} catch (err) {
 			if (this.log.enabled) this.log.error(`Error while running tests: ${util.inspect(err)}`);
-			this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+			this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished', testRunId });
 		}
 	}
 
