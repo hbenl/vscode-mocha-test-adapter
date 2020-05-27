@@ -116,72 +116,86 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 			"type": "started",
 			"tests": [
 				workspaceFolderPath + ": Mocha"
-			]
+			],
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": "undefined: ",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": dynamicTestFilePath + ": Suite #3",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": dynamicTestFilePath + ": Suite #3 Test #3.1",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": dynamicTestFilePath + ": Suite #3 Test #3.1",
-			"state": "skipped"
+			"state": "skipped",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": dynamicTestFilePath + ": Suite #3 Test #3.2",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": dynamicTestFilePath + ": Suite #3 Test #3.2",
-			"state": "passed"
+			"state": "passed",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": dynamicTestFilePath + ": Suite #3 Test #3.3",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": dynamicTestFilePath + ": Suite #3 Test #3.3",
-			"state": "passed"
+			"state": "passed",
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": dynamicTestFilePath + ": Suite #3",
-			"state": "completed"
+			"state": "completed",
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": staticTestFilePath + ": Suite #1",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": staticTestFilePath + ": Suite #1 Test #1.1",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": staticTestFilePath + ": Suite #1 Test #1.1",
-			"state": "passed"
+			"state": "passed",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": staticTestFilePath + ": Suite #1 Test #1.2",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
@@ -193,40 +207,48 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 					"message": "1 == 2"
 				}
 			],
-			"message": `AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static.${extension}:10:10)\n    at processImmediate (internal/timers.js:456:21)\n\n+ expected - actual\n\n-1\n+2\n`
+			"message": `AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static.${extension}:10:10)\n    at processImmediate (internal/timers.js:456:21)\n\n+ expected - actual\n\n-1\n+2\n`,
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": staticTestFilePath + ": Suite #1 Test #1.3",
-			"state": "skipped"
+			"state": "skipped",
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": staticTestFilePath + ": Suite #1",
-			"state": "completed"
+			"state": "completed",
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": staticTestFilePath + ": Suite #2",
-			"state": "running"
+			"state": "running",
+			"testRunId": "0"
 		},
 		{
 			"type": "test",
 			"test": staticTestFilePath + ": Suite #2 Test #2.1",
-			"state": "skipped"
+			"state": "skipped",
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": staticTestFilePath + ": Suite #2",
-			"state": "completed"
+			"state": "completed",
+			"testRunId": "0"
 		},
 		{
 			"type": "suite",
 			"suite": "undefined: ",
-			"state": "completed"
+			"state": "completed",
+			"testRunId": "0"
 		},
 		{
-			"type": "finished"
+			"type": "finished",
+			"testRunId": "0"
 		}
 	];
 }
