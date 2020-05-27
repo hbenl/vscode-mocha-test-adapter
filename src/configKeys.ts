@@ -18,6 +18,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	timeout: { onChange: 'retire' },
 	retries: { onChange: 'retire' },
 	require: { onChange: 'reloadTests' },
+	fullTrace: { onChange: 'reloadConfig' },
 	exit: { onChange: 'reloadConfig' },
 	optsFile: { onChange: 'reloadTests' },
 	nodePath: { onChange: 'reloadTests' },

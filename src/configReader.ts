@@ -425,6 +425,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			timeout: this.mergeOpts<number>(configKeys.timeout.key, mochaOptsFromFile.timeout, config),
 			retries: this.mergeOpts<number>(configKeys.retries.key, mochaOptsFromFile.retries, config),
 			requires,
+			fullTrace: this.mergeOpts<boolean>(configKeys.fullTrace.key, mochaOptsFromFile.fullTrace, config),
 			exit: this.mergeOpts<boolean>(configKeys.exit.key, mochaOptsFromFile.exit, config)
 		}
 

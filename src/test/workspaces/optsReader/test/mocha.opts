@@ -9,4 +9,5 @@ test/*.ts
 --colors
 --require setup.js
 -w
+--full-trace
 test*.js

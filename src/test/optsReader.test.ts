@@ -17,6 +17,7 @@ describe("The OptsReader", function() {
 				requires: undefined,
 				timeout: 2000,
 				retries: undefined,
+				fullTrace: undefined,
 				exit: undefined
 			},
 			files: [],
@@ -36,6 +37,7 @@ describe("The OptsReader", function() {
 				requires: [ 'ts-node/register', 'setup.js' ],
 				timeout: 1000,
 				retries: 2,
+				fullTrace: true,
 				exit: true
 			},
 			files: [ 'first.js' ],
@@ -68,6 +70,7 @@ describe("The OptsReader", function() {
 				requires: [ 'ts-node/register', 'setup.js' ],
 				timeout: 1000,
 				retries: 2,
+				fullTrace: true,
 				exit: true
 			},
 			files: [ 'first.js' ],

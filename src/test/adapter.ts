@@ -25,6 +25,7 @@ export async function createTestMochaAdapter(
 		timeout: mochaOptsAndFiles.mochaOpts.timeout || 1000,
 		retries: mochaOptsAndFiles.mochaOpts.retries || 0,
 		requires: mochaOptsAndFiles.mochaOpts.requires || [],
+		fullTrace: mochaOptsAndFiles.mochaOpts.fullTrace || false,
 		exit: mochaOptsAndFiles.mochaOpts.exit || false
 	};
 	const relativeGlob = mochaOptsAndFiles.globs[0] || 'test/**/*.js';

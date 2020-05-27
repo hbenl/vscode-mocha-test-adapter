@@ -89,14 +89,15 @@ For `mocha.opts`, this adapter will use the path `test/mocha.opts` by default bu
 
 Alternatively, you can put supported options into VS Code's settings:
 
-Property                | Corresponding command line option
-------------------------|----------------------------------
-`mochaExplorer.ui`      | `-u`, `--ui` (default: `"bdd"`)
-`mochaExplorer.timeout` | `-t`, `--timeout` (default: `2000`)
-`mochaExplorer.retries` | `--retries` (default: `0`)
-`mochaExplorer.require` | `-r`, `--require` (default: `[]`)
-`mochaExplorer.exit`    | `--exit` (default: `false`)
-`mochaExplorer.optsFile`| `--opts` (default: `"test/mocha.opts"`)
+Property                 | Corresponding command line option
+-------------------------|----------------------------------
+`mochaExplorer.ui`       | `-u`, `--ui` (default: `"bdd"`)
+`mochaExplorer.timeout`  | `-t`, `--timeout` (default: `2000`)
+`mochaExplorer.retries`  | `--retries` (default: `0`)
+`mochaExplorer.require`  | `-r`, `--require` (default: `[]`)
+`mochaExplorer.fullTrace`| `--full-trace` (default: `false`)
+`mochaExplorer.exit`     | `--exit` (default: `false`)
+`mochaExplorer.optsFile` | `--opts` (default: `"test/mocha.opts"`)
 
 Options from VS Code's settings will override those found in a mocha configuration file.
 

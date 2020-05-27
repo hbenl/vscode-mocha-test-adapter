@@ -163,6 +163,12 @@
           },
           "scope": "resource"
         },
+        "mochaExplorer.fullTrace": {
+          "description": "Display the full stack trace in the log for test failures. By default Mocha will create a shortened stack trace containing relative file paths.",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
+        },
         "mochaExplorer.exit": {
           "description": "Shutdown the Mocha process (using process.exit()) after the last test has been run",
           "type": "boolean",
