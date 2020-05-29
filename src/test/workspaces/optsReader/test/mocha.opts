@@ -9,5 +9,6 @@ test/*.ts
 --colors
 --require setup.js
 -w
+--delay
 --full-trace
 test*.js

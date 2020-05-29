@@ -92,10 +92,11 @@ export class MochaOptsReader {
 					const retriesString = this.findOptValue(['--retries'], opts);
 					const retries = retriesString ? Number.parseInt(retriesString) : undefined;
 					const requires = this.findOptValues(['-r', '--require'], opts);
-					const exit = (opts.indexOf('--exit') >= 0) ? true : undefined;
+					const delay = (opts.indexOf('--delay') >= 0) ? true : undefined;
 					const fullTrace = (opts.indexOf('--full-trace') >= 0) ? true : undefined;
+					const exit = (opts.indexOf('--exit') >= 0) ? true : undefined;
 
-					const mochaOpts = { ui, timeout, retries, requires, fullTrace, exit };
+					const mochaOpts = { ui, timeout, retries, requires, delay, fullTrace, exit };
 					if (this.log.enabled) {
 						this.log.debug(`Options from mocha.opts file: ${JSON.stringify(mochaOpts)}`);
 						this.log.debug(`Globs from mocha.opts file: ${JSON.stringify(globs)}`);
@@ -158,6 +159,7 @@ export class MochaOptsReader {
 				requires: options.require,
 				timeout: +options.timeout,
 				retries: (options.retries !== undefined) ? +options.retries : undefined,
+				delay: options.delay,
 				fullTrace: options['full-trace'],
 				exit: options.exit
 			}

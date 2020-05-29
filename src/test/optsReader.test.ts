@@ -17,6 +17,7 @@ describe("The OptsReader", function() {
 				requires: undefined,
 				timeout: 2000,
 				retries: undefined,
+				delay: undefined,
 				fullTrace: undefined,
 				exit: undefined
 			},
@@ -37,6 +38,7 @@ describe("The OptsReader", function() {
 				requires: [ 'ts-node/register', 'setup.js' ],
 				timeout: 1000,
 				retries: 2,
+				delay: true,
 				fullTrace: true,
 				exit: true
 			},
@@ -70,6 +72,7 @@ describe("The OptsReader", function() {
 				requires: [ 'ts-node/register', 'setup.js' ],
 				timeout: 1000,
 				retries: 2,
+				delay: true,
 				fullTrace: true,
 				exit: true
 			},

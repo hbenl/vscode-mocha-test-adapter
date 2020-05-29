@@ -111,6 +111,7 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		mocha.ui(args.mochaOpts.ui);
 		mocha.timeout(args.mochaOpts.timeout);
 		mocha.suite.retries(args.mochaOpts.retries);
+		if (args.mochaOpts.delay) mocha.delay();
 		if (args.mochaOpts.fullTrace) mocha.fullTrace();
 
 		if (logEnabled) sendMessage('Loading files');

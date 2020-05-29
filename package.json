@@ -169,6 +169,12 @@
           "default": false,
           "scope": "resource"
         },
+        "mochaExplorer.delay": {
+          "description": "Enable delayed root suite support",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
+        },
         "mochaExplorer.exit": {
           "description": "Shutdown the Mocha process (using process.exit()) after the last test has been run",
           "type": "boolean",

@@ -95,6 +95,7 @@ Property                 | Corresponding command line option
 `mochaExplorer.timeout`  | `-t`, `--timeout` (default: `2000`)
 `mochaExplorer.retries`  | `--retries` (default: `0`)
 `mochaExplorer.require`  | `-r`, `--require` (default: `[]`)
+`mochaExplorer.delay`    | `--delay` (default: `false`)
 `mochaExplorer.fullTrace`| `--full-trace` (default: `false`)
 `mochaExplorer.exit`     | `--exit` (default: `false`)
 `mochaExplorer.optsFile` | `--opts` (default: `"test/mocha.opts"`)
