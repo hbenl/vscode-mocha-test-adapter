@@ -384,11 +384,25 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		let resultEnv: EnvVars = config.get(configKeys.env.key) || {};
 		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(resultEnv)}`);
 
-		const envPath: string | undefined = config.get<string>(configKeys.envPath.key);
+		let envPath: string | undefined = config.get<string>(configKeys.envPath.key);
 		if (envPath) {
+
+			envPath = path.resolve(this.workspaceFolder.uri.fsPath, envPath);
 			if (this.log.enabled) this.log.debug(`Reading environment variables from ${envPath}`);
-			const dotenvFile = await readFile(path.resolve(this.workspaceFolder.uri.fsPath, envPath));
-			resultEnv = { ...dotenvParse(dotenvFile), ...resultEnv };
+
+			try {
+
+				const dotenvFile = await readFile(envPath);
+				resultEnv = { ...dotenvParse(dotenvFile), ...resultEnv };
+
+			} catch (e) {
+				const envPathSettings = config.inspect<string>(configKeys.envPath.key);
+				if (envPathSettings?.workspaceFolderValue || envPathSettings?.workspaceValue) {
+					throw e;
+				} else {
+					if (this.log.enabled) this.log.info(`Ignoring globally configured envPath because ${envPath} can't be read`);
+				}
+			}
 		}
 
 		// workaround for esm not working when mocha is loaded programmatically (see #12)
