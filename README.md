@@ -138,6 +138,7 @@ Property                        | Description
 `mochaExplorer.ipcRole`         | Use a TCP connection instead of Node's IPC mechanism for talking to worker processes. This is only needed with some launcher scripts.
 `mochaExplorer.ipcPort`         | The TCP port that worker processes use to send their results to VS Code if `mochaExplorer.ipcRole` is set (default: `9449`)
 `mochaExplorer.ipcHost`         | The TCP host used for communication with worker processes. If `mochaExplorer.ipcRole` is set to `client`, this is the address that Mocha Explorer tries to connect to, if it is set to `server`, this is the address on which Mocha Explorer will listen for a connection, if it is set to `null`, Mocha Explorer will listen on all addresses. (default: `localhost`)
+`mochaExplorer.ipcTimeout`      | The timeout in milliseconds for establishing a TCP connection to a worker process if `mochaExplorer.ipcRole` is set (default: `5000`)
 `mochaExplorer.autoload`        | Automatically (re)load the tests when source files or relevant settings are changed and/or when VS Code is started (`true`, `false`, or `"onStart"`; default: `true`)
 `testExplorer.codeLens`         | Show a CodeLens above each test or suite for running or debugging the tests
 `testExplorer.gutterDecoration` | Show the state of each test in the editor using Gutter Decorations

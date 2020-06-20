@@ -271,6 +271,14 @@
           "default": "localhost",
           "scope": "resource"
         },
+        "mochaExplorer.ipcTimeout": {
+          "description": "The timeout in milliseconds for establishing a TCP connection to a worker process if `mochaExplorer.ipcRole` is set",
+          "type": [
+            "number"
+          ],
+          "default": 5000,
+          "scope": "resource"
+        },
         "mochaExplorer.autoload": {
           "description": "Automatically (re)load the tests when source files or relevant settings are changed and/or when VS Code is started",
           "type": [

@@ -39,6 +39,7 @@ export interface AdapterConfig {
 	ipcRole: 'client' | 'server' | undefined;
 	ipcPort: number;
 	ipcHost: string | undefined;
+	ipcTimeout: number;
 
 	autoload: boolean | 'onStart';
 }
@@ -203,6 +204,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			ipcRole: this.getIpcRole(config),
 			ipcPort: this.getIpcPort(config),
 			ipcHost: this.getIpcHost(config),
+			ipcTimeout: this.getIpcTimeout(config),
 			autoload: this.getAutoload(config)
 		}
 	}
@@ -541,6 +543,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getIpcHost(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string | null>('ipcHost') || undefined;
+	}
+
+	private getIpcTimeout(config: vscode.WorkspaceConfiguration): number {
+		return config.get<number>('ipcTimeout') || 5000;
 	}
 
 	private configChangeRequires(configChange: vscode.ConfigurationChangeEvent, action: OnChange): string | undefined {

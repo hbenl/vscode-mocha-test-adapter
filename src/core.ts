@@ -464,9 +464,9 @@ export abstract class MochaAdapterCore {
 
 			let ipcSocket: Socket | undefined;
 			if (config.ipcRole === 'client') {
-				ipcSocket = await createConnection(config.ipcPort, { host: config.ipcHost });
+				ipcSocket = await createConnection(config.ipcPort, { host: config.ipcHost, timeout: config.ipcTimeout });
 			} else {
-				ipcSocket = await receiveConnection(config.ipcPort, { host: config.ipcHost });
+				ipcSocket = await receiveConnection(config.ipcPort, { host: config.ipcHost, timeout: config.ipcTimeout });
 			}
 
 			readMessages(ipcSocket, handler);

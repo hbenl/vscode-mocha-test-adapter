@@ -32,6 +32,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	ipcRole: { onChange: 'reloadTests' },
 	ipcPort: { onChange: 'reloadTests' },
 	ipcHost: { onChange: 'reloadTests' },
+	ipcTimeout: { onChange: 'reloadTests' },
 	autoload: { onChange: 'reloadConfig' },
 	logpanel: {},
 	logfile: {},

@@ -65,6 +65,7 @@ export async function createTestMochaAdapter(
 		ipcRole: undefined,
 		ipcPort: 9449,
 		ipcHost: 'localhost',
+		ipcTimeout: 5000,
 
 		autoload: true
 	};
