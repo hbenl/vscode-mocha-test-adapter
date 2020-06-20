@@ -434,6 +434,7 @@ export abstract class MochaAdapterCore {
 		}
 
 		const stdio: ('pipe' | 'ipc')[] = [ 'pipe', 'pipe', 'pipe', 'ipc' ];
+		const cwd = config.cwd;
 
 		if (config.nodePath) {
 
@@ -442,7 +443,7 @@ export abstract class MochaAdapterCore {
 			return spawn(
 				config.nodePath,
 				[ ...execArgv, childProcScript, ipcOptsString ],
-				{ env, stdio }
+				{ env, stdio, cwd }
 			);
 
 		} else {
@@ -452,7 +453,7 @@ export abstract class MochaAdapterCore {
 			return fork(
 				childProcScript,
 				[ ipcOptsString ],
-				{ execArgv, env, stdio }
+				{ execArgv, env, stdio, cwd }
 			);
 		}
 	}
