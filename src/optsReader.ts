@@ -120,7 +120,7 @@ export class MochaOptsReader {
 			const childProc = fork(
 				require.resolve('../out/worker/loadConfig.js'),
 				[],
-				{ cwd, execArgv: [] }
+				{ cwd, execArgv: [], stdio: 'pipe' }
 			);
 	
 			let finished = false;
@@ -149,6 +149,11 @@ export class MochaOptsReader {
 					reject(new Error(msg));
 				}
 			});
+
+			if (this.log.enabled) {
+				childProc.stdout.on('data', data => this.log.info(`Worker (stdout): ${data.toString()}`));
+				childProc.stderr.on('data', data => this.log.error(`Worker (stderr): ${data.toString()}`));
+			}
 		});
 
 		return {
