@@ -135,7 +135,7 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		} else {
 
 			const stringify: (obj: any) => string = require(`${mochaPath}/lib/utils`).stringify;
-			const regExp = new RegExp(args.tests!.map(RegExEscape).join('|'));
+			const regExp = new RegExp('^(' + args.tests!.map(RegExEscape).join('|') + ')$');
 			mocha.grep(regExp);
 			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled));
 
