@@ -1,11 +1,11 @@
 {
   "name": "vscode-mocha-test-adapter",
-  "displayName": "Mocha Test Explorer",
+  "displayName": "Mocha Test Explorer - HMR Support",
   "description": "Run your Mocha tests in the Sidebar of Visual Studio Code",
-  "icon": "img/icon.png",
+  "imcon": "img/icon.png",
   "author": "Holger Benl <hbenl@evandor.de>",
-  "publisher": "hbenl",
-  "version": "2.1.2",
+  "publisher": "oguimbal",
+  "version": "2.1.17",
   "license": "MIT",
   "homepage": "https://github.com/hbenl/vscode-mocha-test-adapter",
   "repository": {
@@ -25,11 +25,13 @@
   ],
   "main": "out/main.js",
   "scripts": {
+    "start": "concurrently --kill-others \"npm run watch-worker\" \"npm run watch-extension\"",
     "reinstall": "rimraf node_modules package-lock.json && npm install",
     "clean": "rimraf out .rpt2_cache vscode-mocha-test-adapter-*.vsix",
     "build-extension": "tsc",
     "watch-extension": "tsc -w",
     "build-worker": "rollup -c",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
     "watch-worker": "rollup --watch -c",
     "build-tests": "cd src/test/workspaces/sourcemap ; tsc",
     "build": "npm run build-extension && npm run build-worker",
@@ -66,6 +68,7 @@
     "@types/split": "^1.0.0",
     "@types/stack-trace": "0.0.29",
     "@types/vscode": "~1.31.0",
+    "concurrently": "^5.0.0",
     "esm": "^3.2.25",
     "glob": "^7.1.4",
     "mocha-prepare": "^0.1.0",
@@ -233,7 +236,7 @@
           "scope": "resource"
         },
         "mochaExplorer.skipFrames": {
-          "description": "When finding location of a test, those file frames will be skipped",
+          "description": "When finding location of a test, those file frames will be skipped (useful if you are using `describe()` or `it()` wrappers)",
           "type": [
             "string",
             "array"
@@ -245,9 +248,10 @@
           "scope": "resource"
         },
         "mochaExplorer.nodeArgs": {
-          "description": "Additional arguments passed to nodes (ex: --harmony-async-iteration)",
+          "description": "Additional arguments passed to node (ex: --harmony-async-iteration)",
           "type": [
             "string",
+            "array",
             "null"
           ],
           "default": null,
