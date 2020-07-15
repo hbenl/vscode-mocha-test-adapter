@@ -43,7 +43,7 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 	constructor(
 		readonly outputChannel: IOutputChannel,
 		readonly log: ILog
-	) {}
+	) { }
 
 	private createWorker(config: AdapterConfig): IWorkerInstance {
 		const childProcScript = config.launcherScript
@@ -111,11 +111,11 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
 			// create brand new worker
-			 const worker = this.createWorker(config);
+			const worker = this.createWorker(config);
 
-			 // if HMR is enabled, then try to detect HMR
-			 // when detected, then next runs will re-use this worker
-			 if (config.hmrBundle) {
+			// if HMR is enabled, then try to detect HMR
+			// when detected, then next runs will re-use this worker
+			if (config.hmrBundle) {
 				worker.onDetectHmr(() => {
 					// stop previous worker (should not happen)
 					if (this.hmrWorker) {
@@ -125,10 +125,10 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 					// store it for reuse
 					this.hmrWorker = worker;
 				});
-			 }
+			}
 
-			 // launch test scanning
-			 const args: WorkerArgsAugmented = {
+			// launch test scanning
+			const args: WorkerArgsAugmented = {
 				action: 'loadTests',
 				cwd: config.cwd,
 				testFiles: config.hmrBundle ? [config.hmrBundle] : config.files,
@@ -150,7 +150,16 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 
 		} catch (err) {
 			if (this.log.enabled) this.log.error(`Error while loading tests: ${util.inspect(err)}`);
-			this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: util.inspect(err) });
+			this.testsEmitter.fire(<TestLoadFinishedEvent>{
+				type: 'finished',
+				errorMessage: `Unexpected error in the worker intialization 😨
+
+Please file an issue here: https://github.com/oguimbal/vscode-mocha-test-adapter/issues
+
+===== ERROR DETAILS ========
+
+${util.inspect(err)}`,
+			});
 		}
 	}
 
@@ -190,7 +199,7 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 			if (!_testFiles && config.pruneFiles) {
 				const testFileSet = new Set(testInfos.map(test => test.file).filter(file => (file !== undefined)));
 				if (testFileSet.size > 0) {
-					_testFiles = <string[]>[ ...testFileSet ];
+					_testFiles = <string[]>[...testFileSet];
 					if (this.log.enabled) this.log.debug(`Using test files ${JSON.stringify(_testFiles)}`);
 				}
 			}
@@ -276,10 +285,10 @@ export abstract class MochaAdapterCore implements IAdapterCore {
 				return false;
 			}
 
-			const subscription = this.onDidTerminateDebugSession((session) => {
+			const subscription = this.onDidTerminateDebugSession((session) => {
 				if (debugSession != session) return;
 				this.log.info('Debug session ended');
-				 // terminate the test run
+				// terminate the test run
 				if (!config.hmrBundle) {
 					worker.kill();
 				}

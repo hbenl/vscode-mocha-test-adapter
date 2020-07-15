@@ -2,6 +2,7 @@ import { WorkerArgs, ErrorInfo } from 'vscode-test-adapter-remoting-util/out/moc
 import { deepEqual, areCompatibleRunners } from '../util';
 import * as util from 'util';
 import { WorkerArgsAugmented } from '../interfaces';
+import { TestEvent, TestSuiteEvent, TestSuiteInfo } from 'vscode-test-adapter-api';
 
 export interface Pipe {
 	subscribe(messageProcessor: (messgage: any) => void): void;
@@ -15,12 +16,15 @@ export interface ICommandProcessor {
 	initialize(writer: IQueueWriter, args: WorkerArgs): Promise<void>;
 	dispose(): void;
 }
+
+type Msg = TestSuiteInfo | TestSuiteEvent | TestEvent | { type: 'finished' } | null;
 export interface IQueueWriter {
 	preventStopping(): void;
 	stop(): void;
+	sendDebug(info: string): Promise<void>;
 	sendInfo(info: string): Promise<void>;
 	sendError(err: any): Promise<void>;
-	sendMessage(message: any): Promise<void>;
+	sendMessage(message: Msg): Promise<void>;
 }
 
 export class CommandQueue {
@@ -94,7 +98,16 @@ export class CommandQueue {
 				return;
 			}
 		} catch (e) {
-			await this.defaultWriter.sendError(e);
+			await this.defaultWriter.sendError(`Mocha HMR worker has failed to initialize.
+This is probably due to an error in your script, or some missing libraries.
+
+👉 Fix syntax/build errors
+👉 Install missing libraries
+👉 Reload your tests
+
+========= ERROR DETAILS =======
+
+${util.inspect(e)}`);
 			// this.stop();
 		}
 	}
@@ -113,10 +126,18 @@ class QueueWriter implements IQueueWriter {
 		}
 	}
 
+	async sendDebug(info: string) {
+		if (!this.owner.initArgs || this.owner.initArgs.logEnabled) {
+			await this.owner.pipe.write(info);
+		}
+	}
+
 	async sendError(err: any) {
 		await this.sendMessage(<ErrorInfo>{
 			type: 'error',
-			errorMessage: util.inspect(err)
+			errorMessage: typeof err === 'string'
+				? err
+				: util.inspect(err)
 		});
 	}
 

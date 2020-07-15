@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import RegExEscape from 'escape-string-regexp';
-import { patchMocha, patchWebpackInternals } from './patchMocha';
+import { patchMocha } from './patchMocha';
 import { processTests, resetSuite } from './processTests';
 import ReporterFactory from './reporter';
 import { ICommandProcessor, IQueueWriter } from './commandQueue';
@@ -24,7 +24,7 @@ export class CommandProcessor implements ICommandProcessor {
 	 */
 	async initialize(writer: IQueueWriter, _args: WorkerArgsAugmented): Promise<void> {
 		const args = extractInit(_args);
-		this.sourceMapSupportEnabled = args.mochaOpts.requires.includes('source-map-support/register');
+		this.sourceMapSupportEnabled = args.enableHmr || args.mochaOpts.requires.includes('source-map-support/register');
 
 		process.chdir(args.cwd);
 
@@ -50,9 +50,7 @@ export class CommandProcessor implements ICommandProcessor {
 				args.mochaOpts.ui,
 				this.sourceMapSupportEnabled ? args.cwd : undefined,
 				args.skipFrames,
-				_args.logEnabled
-					? msg => writer.sendInfo(msg)
-					: undefined
+				writer,
 			);
 		}
 
@@ -66,10 +64,6 @@ export class CommandProcessor implements ICommandProcessor {
 
 			writer.sendInfo(`Trying require('${req}')`);
 			require(req);
-		}
-
-		if (this.sourceMapSupportEnabled) {
-			patchWebpackInternals(args.cwd);
 		}
 
 		this.mocha = new Mocha();
@@ -158,7 +152,7 @@ export class CommandProcessor implements ICommandProcessor {
 		const stringify: (obj: any) => string = require(`${this.mochaPath}/lib/utils`).stringify;
 		const regExp = new RegExp(tests!.map(RegExEscape).join('|'));
 		this.mocha.grep(regExp);
-		this.mocha.reporter(<any>ReporterFactory(m => writer.sendMessage(m), stringify, this.sourceMapSupportEnabled));
+		this.mocha.reporter(<any>ReporterFactory(writer, stringify, this.sourceMapSupportEnabled));
 
 
 

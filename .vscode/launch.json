@@ -11,13 +11,42 @@
       ],
       "outFiles": [
         "${workspaceFolder}/out"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "resources/app/**"
       ]
     },
     {
       "type": "node",
       "request": "attach",
       "name": "Mocha worker",
-      "processId": "${command:PickProcess}"
-    }
+      "processId": "${command:PickProcess}",
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/object.assign/**",
+        "node_modules/core-js/**",
+        "**/loader.js", // webpack hmr reloader
+      ]
+    },
+    {
+      "name": "Debug Mocha Tests",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "protocol": "inspector",
+      "timeout": 30000,
+      // "smartStep": true,
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/core-js/**",
+        "node_modules/typescript/**",
+        "object.assign",
+        "node_modules/object.assign/**",
+        "node_modules/@babel/**",
+        "**/loader.js", // webpack hmr reloader
+      ]
+    },
   ]
 }

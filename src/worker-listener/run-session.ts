@@ -66,7 +66,10 @@ export class RunSession implements IWorkerSession {
 
 		if (info.type === 'error') {
 			this.logInfo('Received error from worker');
-			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
+			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{
+				type: 'finished',
+				errorMessage: info.errorMessage,
+			});
 			return 'stop';
 		}
 

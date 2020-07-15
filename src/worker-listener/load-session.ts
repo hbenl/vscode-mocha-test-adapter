@@ -1,8 +1,8 @@
-import { WorkerEvent, WorkerRunEvent, WorkerLoadEvent, IAdapterCore } from '../interfaces';
+import { WorkerEvent, WorkerRunEvent, WorkerLoadEvent, IAdapterCore, WorkerArgsAugmented } from '../interfaces';
 import { TestLoadFinishedEvent, TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { IWorkerSession, IWorkerInstance } from './interfaces';
 import * as util from 'util';
-import { collectFiles, findTests } from '../util';
+import { collectFiles, findTests, workerFailureMessage } from '../util';
 
 export class LoadSession implements IWorkerSession {
 	private testsLoaded: boolean = false;
@@ -17,6 +17,7 @@ export class LoadSession implements IWorkerSession {
 
 	constructor(private adapter: IAdapterCore
 		, private owner: IWorkerInstance
+		, private args: WorkerArgsAugmented
 		, private changedFiles?: string[]) {
 	}
 
@@ -54,7 +55,10 @@ export class LoadSession implements IWorkerSession {
 
 		if (!this.isFinished) {
 			if (err) {
-				this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `The worker process finished: ${util.inspect(err)}` });
+				this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{
+					type: 'finished',
+					 errorMessage: workerFailureMessage(err, this.args.debuggerPort)
+				});
 			} else {
 				this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: undefined });
 			}
@@ -72,7 +76,10 @@ export class LoadSession implements IWorkerSession {
 		if (info.type === 'error') {
 			this.isFinished = true;
 			this.logInfo('Received error from worker');
-			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: info.errorMessage });
+			this.adapter.testsEmitter.fire(<TestLoadFinishedEvent>{
+				type: 'finished',
+				errorMessage: info.errorMessage,
+			});
 			return 'stop';
 		}
 

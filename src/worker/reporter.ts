@@ -3,8 +3,10 @@ import stackTrace from 'stack-trace';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
 import {buildTestId} from './worker-utils';
+import { parseStackTrace } from './stack-trace';
+import { IQueueWriter } from './commandQueue';
 
-export default (sendMessage: (message: any) => void, stringify: (obj: any) => string, sloppyMatch: boolean) => {
+export default (writer: IQueueWriter, stringify: (obj: any) => string, sloppyMatch: boolean) => {
 
 	return class Reporter {
 
@@ -36,7 +38,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 					state: 'running'
 				};
 
-				sendMessage(event);
+				writer.sendMessage(event);
 			});
 
 			runner.on('suite end', (suite: Mocha.ISuite) => {
@@ -51,7 +53,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 					description
 				};
 
-				sendMessage(event);
+				writer.sendMessage(event);
 			});
 
 			runner.on('test', (test: Mocha.ITest) => {
@@ -65,7 +67,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 					state: 'running'
 				};
 
-				sendMessage(event);
+				writer.sendMessage(event);
 			});
 
 			runner.on('pass', (test: Mocha.ITest) => {
@@ -80,7 +82,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 					description
 				};
 
-				sendMessage(event);
+				writer.sendMessage(event);
 			});
 
 			runner.on('fail', (test: Mocha.ITest, err: Error & { actual?: any, expected?: any, showDiff?: boolean }) => {
@@ -90,9 +92,9 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 				let decorations: TestDecoration[] = [];
 				if (err.stack) {
-					const parsedStack = stackTrace.parse(err);
+					const parsedStack = parseStackTrace(err);
 					for (const stackFrame of parsedStack) {
-						let filename = stackFrame.getFileName();
+						let filename = stackFrame.fileName;
 						if (typeof filename === 'string') {
 							filename = path.resolve(filename);
 							let matchFound = false;
@@ -109,7 +111,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 							}
 							if (matchFound) {
 								decorations.push({
-									line: stackFrame.getLineNumber() - 1,
+									line: stackFrame.lineNumber! - 1,
 									message: err.message
 								});
 								break;
@@ -145,7 +147,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 					description
 				};
 
-				sendMessage(event);
+				writer.sendMessage(event);
 			});
 
 			runner.on('pending', (test: Mocha.ITest) => {
@@ -160,7 +162,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 					description: ''
 				};
 
-				sendMessage(event);
+				writer.sendMessage(event);
 			});
 		}
 	}

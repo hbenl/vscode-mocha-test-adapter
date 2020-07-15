@@ -1,5 +1,8 @@
-	import stackTrace, { StackFrame } from 'stack-trace';
+import {parseStackTrace} from './stack-trace';
 import path from 'path';
+import { IQueueWriter } from './commandQueue';
+import { writer } from 'repl';
+import * as util from 'util';
 
 export const locationSymbol = Symbol('location');
 export const reRegisterSymbol = Symbol('re-register');
@@ -14,7 +17,7 @@ export function patchMocha(
 	ui: string,
 	baseDir: string | undefined,
 	skipFrames: string[] | undefined,
-	log?: (message: any) => void
+	log: IQueueWriter
 ): void {
 	baseDir = normalizeFileName(baseDir);
 	if (skipFrames && baseDir) {
@@ -64,7 +67,7 @@ function patchInterface(
 	functionNames: string[],
 	skipFrames: string[] | undefined,
 	baseDir: string | undefined,
-	log?: (message: any) => void
+	log: IQueueWriter
 ): MochaInterface {
 	return (suite: Mocha.Suite) => {
 
@@ -73,7 +76,7 @@ function patchInterface(
 		suite.on('pre-require', (context: any, file) => {
 			for (const functionName of functionNames) {
 
-				if (log) log(`Patching ${functionName}`);
+				log.sendDebug(`Patching ${functionName}`);
 				const origFunction = context[functionName];
 				file = normalizeFileName(file);
 				const patchedFunction = patchFunction(origFunction, file, skipFrames, baseDir, log);
@@ -81,12 +84,12 @@ function patchInterface(
 				for (const property in origFunction) {
 					if ((property === 'skip') || (property === 'only')) {
 
-						if (log) log(`Patching ${functionName}.${property}`);
+						log.sendDebug(`Patching ${functionName}.${property}`);
 						patchedFunction[property] = patchFunction(origFunction[property], file, skipFrames, baseDir, log);
 
 					} else {
 
-						if (log) log(`Copying ${functionName}.${property}`);
+						log.sendDebug(`Copying ${functionName}.${property}`);
 						patchedFunction[property] = origFunction[property];
 					}
 				}
@@ -102,17 +105,40 @@ function patchFunction(
 	file: string,
 	skipFrames: string[] | undefined,
 	baseDir: string | undefined,
-	log?: (message: any) => void
+	log: IQueueWriter
 ): any {
 	return function(this: any, ...args: any[]) {
 
 		let location: any;
 		const register = () => {
-			const result = origFunction.apply(this, args);
+			location = location || findCallLocation(file, baseDir, skipFrames, log);
+			const suiteName = typeof args[0] === 'string' ? args[0] : '<unkonwn test suite>';
+			let result;
+			try {
+				// register this suite
+				result = origFunction.apply(this, args);
+			} catch (e) {
+				// log.sendError
+				log.sendError(`The suite initialization "${suiteName}" has failed.
+This usually happens when something threw an exception in the describe() function.
+Please follow this best practice, then reload your tests:
+
+	describe('some name', () => {
+
+		// <== ⛔ NO CODE HERE... only in hook functions (it, beforeEach, ...)
+
+		it ('does something, () => {
+			// <== ✅ code here
+		})
+	})
+
+======== THROWN ERROR ========
+
+				 ${util.inspect(e)}`)
+			}
 			if (!result) {
 				return result;
 			}
-			location = location || findCallLocation(file, baseDir, skipFrames, log);
 			if (location !== undefined) {
 				result[locationSymbol] = location;
 			}
@@ -144,59 +170,42 @@ export function hookStack() {
 	return () => Error.prepareStackTrace = originalPrepare;
 }
 
-/**
- * Webpack eval source maps are producing (who knows why) stacks like:
- * webpack-internal://./path/to/my/file.ts
- * This function patches it by replacing those with actual paths.
- */
-export function patchWebpackInternals(cwd: string) {
-	const basePath = path.resolve(cwd).replace(/\\/g, '/');
-	const originalPrepare: any = Error.prepareStackTrace;
-	Error.prepareStackTrace = function(this: any, error: any, stack: any[]) {
-		error.stack = error.stack.replace(/webpack\-internal:\/\/\/\./g, basePath);
-		if (originalPrepare) {
-			const ret = originalPrepare.apply(this, arguments);
-			return ret;
-		}
-	};
-
-}
 
 function findCallLocation(
 	runningFile: string,
 	baseDir: string | undefined,
 	skipFrames: string[] | undefined,
-	log?: (message: any) => void
+	log: IQueueWriter
 ): Location | undefined {
 
 	const dispose = hookStack();
 	const err = new Error();
-	const stackFrames = stackTrace.parse(err);
+	const stackFrames = parseStackTrace(err);
 	const originalFiles = (err as any)[originalSource];
 	dispose();
 
 	if (!baseDir) {
 
-		if (log) log(`Looking for ${runningFile} in ${err.stack}`);
+		log.sendDebug(`Looking for ${runningFile} in ${err.stack}`);
 
 		for (var i = 0; i < stackFrames.length - 1; i++) {
 			const stackFrame = stackFrames[i];
-			let file = normalizeFileName(stackFrame.getFileName());
+			let file = normalizeFileName(stackFrame.fileName!);
 			if (file === runningFile) {
-				return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
+				return { file: runningFile, line: stackFrame.lineNumber! - 1 };
 			}
 		}
 
 	} else {
 
-		if (log) log(`Looking for ${baseDir} in ${err.stack}`);
+		log.sendDebug(`Looking for ${baseDir} in ${err.stack}`);
 
 		if (baseDir) {
 			for (var i = 0; i < stackFrames.length - 1; i++) {
 				const stackFrame = stackFrames[i];
 				// const originalFile = originalFiles[i];
 				// console.log(originalFile);
-				let file = normalizeFileName(stackFrame.getFileName());
+				let file = normalizeFileName(stackFrame.fileName!);
 				if (!file) {
 					continue;
 				}
@@ -204,7 +213,7 @@ function findCallLocation(
 					if((skipFrames || []).find(x => file.startsWith(x))) {
 						continue;
 					}
-					return { file, line: stackFrame.getLineNumber() - 1 };
+					return { file, line: stackFrame.lineNumber! - 1 };
 				}
 			}
 		}

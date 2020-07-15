@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as util from 'util';
 import { TestInfo, TestSuiteInfo } from 'vscode-test-adapter-api';
 import { WorkerArgs } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { WorkerArgsAugmented } from './interfaces';
@@ -133,4 +134,23 @@ export function extractInit(x: WorkerArgsAugmented) {
 		testFiles: x.testFiles,
 		skipFrames: x.skipFrames,
 	}
+}
+
+export function workerFailureMessage(err: any, port?: any) {
+	return `Worker finished with code (${util.inspect(err)}).
+
+This usually happens in one of those situations:
+	- The port on which the worker listens is already being used.
+		⛔ You may have several instances of vscode using mocha-hmr configured to use the same port (port ${port || '<unkown. check your config>'}).
+		👉 To fix that, you can change the port via adding "mochaExplorer.debuggerPort" in your .vscode/settings.json config file (and use a random port)
+
+	- There is an infinite loop or a memory leak in your code, that allocates memory, and your worker crashed out-of-memory
+		👉 If it crashed after a long time of normal behaviour, just reload your tests.
+		👉 Else, this is a hard one. Try to attach a debugger to your worker (port ${port || '<unkown. check your config>'}) before it crashes to understand what's going on.
+
+	- There is a syntax error in your compiled code
+		👉 Check for build errors, then reload.
+
+Alternatively, you can file an issue: https://github.com/oguimbal/vscode-mocha-test-adapter/issues
+	`;
 }

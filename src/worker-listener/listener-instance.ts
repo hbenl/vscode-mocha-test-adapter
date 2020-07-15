@@ -1,6 +1,6 @@
 import { AdapterConfig } from '../configReader';
 import { ChildProcess, fork } from 'child_process';
-import { stringsOnly, areCompatibleRunners } from '../util';
+import { stringsOnly, areCompatibleRunners, workerFailureMessage } from '../util';
 import { WorkerArgsAugmented, WorkerEvent, IAdapterCore } from '../interfaces';
 import { IWorkerInstance, IWorkerSession } from './interfaces';
 import { LoadSession } from './load-session';
@@ -142,7 +142,7 @@ export class WorkerInstance implements IWorkerInstance {
 
 		// on exit
 		this.childProc.on('exit', (code, signal) => {
-			this.logInfo(`Worker finished with code ${code} and signal ${signal}`);
+			this.logInfo(workerFailureMessage({code, signal}));
 			const err = code || signal
 				? { code, signal }
 				: undefined;
@@ -194,7 +194,7 @@ export class WorkerInstance implements IWorkerInstance {
 		if (args.action === 'runTests') {
 			session = new RunSession(this.adapter, this);
 		} else if (args.action === 'loadTests') {
-			session = new LoadSession(this.adapter, this, changedFiles);
+			session = new LoadSession(this.adapter, this, args, changedFiles);
 		} else {
 			throw new Error('Unknown worker action: ' + args.action);
 		}
@@ -239,7 +239,15 @@ export class WorkerInstance implements IWorkerInstance {
 			this.childProc.kill()
 		} else {
 			try {
+				const cp = this.childProc;
 				this.childProc.send({ exit: true });
+				setTimeout(() => {
+					try {
+						cp.kill();
+					} catch (e) {
+						this.logWarn('Failed to kill worker process');
+					}
+				}, 100);
 			} catch (e) {
 				this.logWarn('Failed to gracefully stop worker process => killing it')
 				this.childProc.kill()

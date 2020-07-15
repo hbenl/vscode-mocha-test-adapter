@@ -5,6 +5,8 @@
     "out": true,
     ".rpt2_cache": true
   },
+  "mochaExplorer.debuggerConfig": "Debug Mocha Tests",
+  "mochaExplorer.timeout": 1000000000,
   "editor.insertSpaces": false,
   "editor.tabSize": 4,
   "[json]": {
