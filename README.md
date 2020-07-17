@@ -111,12 +111,18 @@ Here's the default debugging configuration used by this adapter:
 ```
 {
   "name": "Debug Mocha Tests",
-  "type": "node",
+  "type": "pwa-node",
   "request": "attach",
   "port": 9229,
-  "protocol": "inspector",
-  "timeout": 5000,
-  "stopOnEntry": false
+  "continueOnAttach": true,
+  "autoAttachChildProcesses": false,
+  "resolveSourceMapLocations": [
+    "!**/node_modules/**",
+    "!**/.vscode/extensions/hbenl.vscode-mocha-test-adapter-*/**"
+  ],
+  "skipFiles": [
+    "<node_internals>/**"
+  ]
 }
 ```
 

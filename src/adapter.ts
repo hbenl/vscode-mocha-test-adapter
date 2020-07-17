@@ -73,12 +73,18 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 		const debuggerConfigName = config.debuggerConfig || 'Debug Mocha Tests';
 		const debuggerConfig = config.debuggerConfig || {
 			name: debuggerConfigName,
-			type: 'node',
+			type: 'pwa-node',
 			request: 'attach',
 			port: config.debuggerPort,
-			protocol: 'inspector',
-			timeout: 5000,
-			stopOnEntry: false
+			continueOnAttach: true,
+			autoAttachChildProcesses: false,
+			resolveSourceMapLocations: [
+				"!**/node_modules/**",
+				"!**/.vscode/extensions/hbenl.vscode-mocha-test-adapter-*/**"
+			],
+			skipFiles: [
+				"<node_internals>/**"
+			]
 		};
 
 		const debugSessionPromise = new Promise<vscode.DebugSession>((resolve, reject) => {
