@@ -151,8 +151,8 @@ export class MochaOptsReader {
 			});
 
 			if (this.log.enabled) {
-				childProc.stdout.on('data', data => this.log.info(`Worker (stdout): ${data.toString()}`));
-				childProc.stderr.on('data', data => this.log.error(`Worker (stderr): ${data.toString()}`));
+				childProc.stdout!.on('data', data => this.log.info(`Worker (stdout): ${data.toString()}`));
+				childProc.stderr!.on('data', data => this.log.error(`Worker (stderr): ${data.toString()}`));
 			}
 		});
 

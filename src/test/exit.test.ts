@@ -31,13 +31,13 @@ function throwIfWorkerProcessIsRunning(): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		const server = net.createServer();
 		// check if port 12345 is still occupied - it shouldn't be
-		server.listen(12345, (e: any) => {
+		server.listen(12345, ((e: any) => {
 			if (e) {
 				reject(e);
 			} else {
 				server.close();
 				resolve();
 			}
-		})
+		}) as (() => void));
 	});
 }

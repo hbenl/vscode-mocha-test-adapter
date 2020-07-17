@@ -43,7 +43,7 @@ export default (async () => {
 			process.once('message', resolve);
 		});
 
-		execute(args, async msg => process.send!(msg));
+		execute(args, async msg => { process.send!(msg); });
 
 	} else {
 

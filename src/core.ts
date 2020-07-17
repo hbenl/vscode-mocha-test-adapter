@@ -98,8 +98,8 @@ export abstract class MochaAdapterCore {
 				const childProc = this.launchWorkerProcess(config, childProcScript, []);
 
 				if (this.log.enabled) {
-					childProc.stdout.on('data', data => this.log.info(`Worker (stdout): ${data.toString()}`));
-					childProc.stderr.on('data', data => this.log.error(`Worker (stderr): ${data.toString()}`));
+					childProc.stdout!.on('data', data => this.log.info(`Worker (stdout): ${data.toString()}`));
+					childProc.stderr!.on('data', data => this.log.error(`Worker (stderr): ${data.toString()}`));
 				}
 
 				const args: WorkerArgs = {
@@ -291,8 +291,8 @@ export abstract class MochaAdapterCore {
 					}
 				}
 
-				this.runningTestProcess.stdout.on('data', processOutput);
-				this.runningTestProcess.stderr.on('data', processOutput);
+				this.runningTestProcess.stdout!.on('data', processOutput);
+				this.runningTestProcess.stderr!.on('data', processOutput);
 
 				const args: WorkerArgs = {
 					action: 'runTests',
