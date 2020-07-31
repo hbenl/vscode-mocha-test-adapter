@@ -8,6 +8,7 @@ import { WorkerArgs, ErrorInfo, NetworkOptions } from 'vscode-test-adapter-remot
 import { patchMocha } from './patchMocha';
 import { processTests } from './processTests';
 import ReporterFactory from './reporter';
+import { fileExists } from '../util';
 
 export default (async () => {
 
@@ -75,6 +76,13 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		if (args.logEnabled) sendMessage(`Using the mocha package at ${mochaPath}`);
 		const Mocha: typeof import('mocha') = require(mochaPath);
 
+		let requireOrImport: ((file: string) => Promise<any>) | undefined;
+		const esmUtilsPath = path.join(mochaPath, 'lib/esm-utils.js');
+		if (await fileExists(esmUtilsPath)) {
+			const esmUtils = require(esmUtilsPath);
+			requireOrImport = esmUtils.requireOrImport;
+		}
+
 		const locationSymbol = Symbol('location');
 		if ((args.action === 'loadTests') && args.monkeyPatch) {
 			if (args.logEnabled) sendMessage('Patching Mocha');
@@ -102,8 +110,13 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 				req = path.resolve(req);
 			}
 
-			if (args.logEnabled) sendMessage(`Trying require('${req}')`);
-			require(req);
+			if (requireOrImport) {
+				if (args.logEnabled) sendMessage(`Trying requireOrImport('${req}')`);
+				requireOrImport(req);
+			} else {
+				if (args.logEnabled) sendMessage(`Trying require('${req}')`);
+				require(req);
+			}
 		}
 
 		const mocha = new Mocha();
