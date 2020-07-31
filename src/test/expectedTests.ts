@@ -252,3 +252,20 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 		}
 	];
 }
+
+export function removeStackTraces(
+	events: (TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent)[]
+): (TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent)[] {
+
+	return events.map(event => {
+
+		if ((event.type === 'test') && event.message) {
+
+			const message = event.message.split('\n')[0];
+			return { ...event, message };
+
+		} else {
+			return event;
+		}
+	})
+}

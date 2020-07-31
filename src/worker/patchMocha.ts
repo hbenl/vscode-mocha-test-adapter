@@ -1,3 +1,4 @@
+import os from 'os';
 import stackTrace from 'stack-trace';
 
 export interface Location {
@@ -121,8 +122,14 @@ function findCallLocation(
 
 		for (var i = 0; i < stackFrames.length - 1; i++) {
 			const stackFrame = stackFrames[i];
-			if (stackFrame.getFileName() === runningFile) {
-				return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
+			let filename = stackFrame.getFileName();
+			if (typeof filename === 'string') {
+				if (filename.startsWith('file://')) {
+					filename = filename.substring((os.platform() === 'win32') ? 8 : 7);
+				}
+				if (filename === runningFile) {
+					return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
+				}
 			}
 		}
 
