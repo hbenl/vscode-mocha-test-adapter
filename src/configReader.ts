@@ -159,7 +159,13 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		let optsFromFiles: MochaOptsAndFiles;
 		const optsReader = new MochaOptsReader(this.log);
+		const defaultMochaOptsFile = 'test/mocha.opts';
 		let mochaOptsFile = this.getMochaOptsFile(config);
+		if (!mochaOptsFile) {
+			if (await fileExists(path.resolve(this.workspaceFolder.uri.fsPath, defaultMochaOptsFile))) {
+				mochaOptsFile = defaultMochaOptsFile;
+			}
+		}
 		if (mochaOptsFile) {
 
 			const resolvedFile = path.resolve(this.workspaceFolder.uri.fsPath, mochaOptsFile);
@@ -168,7 +174,6 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		} else {
 
 			optsFromFiles = await optsReader.readOptsUsingMocha(cwd);
-			mochaOptsFile = 'test/mocha.opts';
 
 		}
 

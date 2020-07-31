@@ -26,27 +26,6 @@ describe("The OptsReader", function() {
 		});
 	});
 
-	it("should load all supported options using mocha's parser", async function() {
-
-		const optsReader = new MochaOptsReader(new TestLog());
-
-		const optsAndFiles = await optsReader.readOptsUsingMocha(path.resolve(__dirname, 'workspaces/optsReader'));
-
-		assert.deepStrictEqual(optsAndFiles, <MochaOptsAndFiles>{
-			mochaOpts: {
-				ui: 'tdd',
-				requires: [ 'ts-node/register', 'setup.js' ],
-				timeout: 1000,
-				retries: 2,
-				delay: true,
-				fullTrace: true,
-				exit: true
-			},
-			files: [ 'first.js' ],
-			globs: [ 'test/*.ts', 'test*.js' ]
-		});
-	});
-
 	it("should return an empty result using the legacy parser if there is no config file", async function() {
 
 		const optsReader = new MochaOptsReader(new TestLog());
