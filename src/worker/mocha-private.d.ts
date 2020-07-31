@@ -4,12 +4,17 @@ declare namespace Mocha {
 	}
 	interface ISuite {
 		file?: string;
+		title: string;
+		fullTitle(): string;
 		suites: ISuite[];
 		tests: ITest[];
 		retries(n?: number | string): ISuite | number;
 	}
 	interface ITest {
 		file?: string;
+		title: string;
+		fullTitle(): string;
+		pending?: boolean;
 	}
 	interface IRunner {
 		on(event: string, listener: Function): this;
