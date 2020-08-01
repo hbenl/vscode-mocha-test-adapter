@@ -77,10 +77,12 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		const Mocha: typeof import('mocha') = require(mochaPath);
 
 		let requireOrImport: ((file: string) => Promise<any>) | undefined;
-		const esmUtilsPath = path.join(mochaPath, 'lib/esm-utils.js');
-		if (await fileExists(esmUtilsPath)) {
-			const esmUtils = require(esmUtilsPath);
-			requireOrImport = esmUtils.requireOrImport;
+		if (args.esmLoader) {
+			const esmUtilsPath = path.join(mochaPath, 'lib/esm-utils.js');
+			if (await fileExists(esmUtilsPath)) {
+				const esmUtils = require(esmUtilsPath);
+				requireOrImport = esmUtils.requireOrImport;
+			}
 		}
 
 		const locationSymbol = Symbol('location');
