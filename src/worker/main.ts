@@ -106,6 +106,8 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 			if (next === dir) break;
 			dir = next;
 		}
+
+		let requires = []
 		for (let req of args.mochaOpts.requires) {
 
 			if (fs.existsSync(req) || fs.existsSync(`${req}.js`)) {
@@ -114,10 +116,10 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 
 			if (requireOrImport) {
 				if (args.logEnabled) sendMessage(`Trying requireOrImport('${req}')`);
-				requireOrImport(req);
+				requires.push(await requireOrImport(req));
 			} else {
 				if (args.logEnabled) sendMessage(`Trying require('${req}')`);
-				require(req);
+				requires.push(require(req));
 			}
 		}
 
@@ -126,6 +128,12 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		mocha.ui(args.mochaOpts.ui);
 		mocha.timeout(args.mochaOpts.timeout);
 		mocha.suite.retries(args.mochaOpts.retries);
+
+		requires
+			.filter(e=>e.mochaHooks)
+			.map(e=>e.mochaHooks)
+			.forEach(e=>mocha.rootHooks(e))
+
 		if (args.mochaOpts.delay) mocha.delay();
 		if (args.mochaOpts.fullTrace) mocha.fullTrace();
 
