@@ -5,6 +5,7 @@
 --recursive
 --exit
 --require ts-node/register
+--ignore test/*.no-test.js
 test/*.ts
 --colors
 --require setup.js

@@ -131,6 +131,7 @@ Here's the default debugging configuration used by this adapter:
 Property                        | Description
 --------------------------------|---------------------------------------------------------------
 `mochaExplorer.files`           | The glob(s) describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`). These globs will be _added to_ the globs found in a mocha configuration file
+`mochaExplorer.ignore`          | Glob(s) of files to be ignored (relative to the workspace folder). These globs will be _added to_ the globs found in a mocha configuration file
 `mochaExplorer.env`             | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`). These environment variables will be _added to_ the environment of the process running mocha. To _remove_ an environment variable, set its value to `null`
 `mochaExplorer.envPath`         | Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests. If you set both `mochaExplorer.env` and `mochaExplorer.envPath`, the environment variables will be merged (with those from `mochaExplorer.env` overriding those from `mochaExplorer.envPath`)
 `mochaExplorer.cwd`             | The working directory where mocha is run (relative to the workspace folder)

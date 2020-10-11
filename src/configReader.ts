@@ -32,6 +32,7 @@ export interface AdapterConfig {
 	mochaOptsFile: string | undefined;
 	envFile: string | undefined;
 	globs: string[];
+	ignores: string[];
 
 	esmLoader: boolean;
 
@@ -181,7 +182,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		const envFile = this.getEnvFile(config);
 
-		const testFiles = await this.lookupFiles(config, optsFromFiles.globs);
+		const testFiles = await this.lookupFiles(config, optsFromFiles.globs, optsFromFiles.ignores);
 
 		const extraFiles = optsFromFiles.files
 			.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
@@ -204,6 +205,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			mochaOptsFile,
 			envFile,
 			globs: this.getTestFilesGlobs(config, optsFromFiles.globs),
+			ignores: this.getIgnores(config, optsFromFiles.ignores),
 			esmLoader: this.getEsmLoader(config),
 			launcherScript: this.getLauncherScript(config),
 			ipcRole: this.getIpcRole(config),
@@ -310,12 +312,25 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 	}
 
+	private getIgnores(config: vscode.WorkspaceConfiguration, ignoresFromOptsFile: string[]): string[] {
+
+		let ignoresFromConfig = config.get<string | string[]>(configKeys.ignore.key) || [];
+
+		if (typeof ignoresFromConfig === 'string') {
+			ignoresFromConfig = [ ignoresFromConfig ];
+		}
+
+		return [ ...ignoresFromConfig, ...ignoresFromOptsFile ];
+	}
+
 	private async lookupFiles(
 		config: vscode.WorkspaceConfiguration,
-		globsFromOptsFile: string[]
+		globsFromOptsFile: string[],
+		ignoresFromOptsFile: string[]
 	): Promise<string[]> {
 
 		const globs = this.getTestFilesGlobs(config, globsFromOptsFile);
+		const ignores = this.getIgnores(config, ignoresFromOptsFile);
 		if (this.log.enabled) this.log.debug(`Looking for test files ${JSON.stringify(globs)} in ${this.workspaceFolder.uri.fsPath}`);
 
 		const testFiles: string[] = [];
@@ -325,7 +340,11 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			}
 			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
 			const fileUris = await vscode.workspace.findFiles(relativePattern, null);
-			testFiles.push(...fileUris.map(uri => uri.fsPath));
+			for (const uri of fileUris) {
+				if (ignores.every(ignore => !this.absolutePathMatchesRelativeGlob(uri.fsPath, ignore))) {
+					testFiles.push(uri.fsPath);
+				}
+			}
 		}
 
 		if (this.log.enabled) {
@@ -333,6 +352,12 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		return testFiles;
+	}
+
+	private absolutePathMatchesRelativeGlob(absolutePath: string, relativeGlob: string): boolean {
+		const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
+		const matcher = new Minimatch(absoluteGlob);
+		return matcher.match(absolutePath);
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
@@ -372,7 +397,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		for (const relativeGlob of globs) {
 			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
 			const matcher = new Minimatch(absoluteGlob);
-			if (matcher.match(absolutePath)) {
+			if (matcher.match(absolutePath) &&
+				config.ignores.every(ignore => !this.absolutePathMatchesRelativeGlob(absolutePath, ignore))) {
 				return true;
 			}
 		}

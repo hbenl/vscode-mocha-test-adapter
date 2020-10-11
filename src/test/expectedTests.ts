@@ -207,7 +207,7 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 					"message": "1 == 2"
 				}
 			],
-			"message": `AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static.${extension}:10:10)\n    at processImmediate (internal/timers.js:458:21)\n\n+ expected - actual\n\n-1\n+2\n`,
+			"message": `AssertionError [ERR_ASSERTION]: 1 == 2\n    at Context.<anonymous> (test/static.${extension}:10:10)\n    at processImmediate (internal/timers.js:461:21)\n\n+ expected - actual\n\n-1\n+2\n`,
 			"testRunId": "0"
 		},
 		{

@@ -102,6 +102,17 @@
           "default": "test/**/*.js",
           "scope": "resource"
         },
+        "mochaExplorer.ignore": {
+          "description": "Glob(s) of files to be ignored (relative to the workspace folder)",
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "scope": "resource"
+        },
         "mochaExplorer.pruneFiles": {
           "description": "Only load the test files needed for the current test run (the default is to load all configured files)",
           "type": "boolean",

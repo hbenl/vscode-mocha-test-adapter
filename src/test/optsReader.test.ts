@@ -22,6 +22,7 @@ describe("The OptsReader", function() {
 				exit: undefined
 			},
 			files: [],
+			ignores: [],
 			globs: []
 		});
 	});
@@ -35,6 +36,7 @@ describe("The OptsReader", function() {
 		assert.deepStrictEqual(optsAndFiles, <MochaOptsAndFiles>{
 			mochaOpts: {},
 			files: [],
+			ignores: [],
 			globs: []
 		});
 	});
@@ -56,7 +58,8 @@ describe("The OptsReader", function() {
 				exit: true
 			},
 			files: [ 'first.js' ],
-			globs: [ 'test/*.ts', 'test*.js' ]
+			globs: [ 'test/*.ts', 'test*.js' ],
+			ignores: [ 'test/*.no-test.js' ]
 		});
 	});
 });

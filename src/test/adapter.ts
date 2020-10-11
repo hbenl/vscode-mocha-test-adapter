@@ -58,6 +58,7 @@ export async function createTestMochaAdapter(
 		mochaOptsFile: undefined,
 		envFile: undefined,
 		globs: mochaOptsAndFiles.globs,
+		ignores: mochaOptsAndFiles.ignores,
 
 		esmLoader,
 

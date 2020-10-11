@@ -7,6 +7,7 @@ import { ILog } from './core';
 export interface MochaOptsAndFiles {
 	mochaOpts: Partial<MochaOpts>;
 	globs: string[];
+	ignores: string[];
 	files: string[];
 }
 
@@ -72,7 +73,7 @@ export class MochaOptsReader {
 							this.log.debug(`Couldn't read mocha.opts file: ${util.inspect(err)}`);
 						}
 					}
-					resolve({ mochaOpts: {}, globs: [], files: [] });
+					resolve({ mochaOpts: {}, globs: [], ignores: [], files: [] });
 					return;
 				}
 
@@ -86,6 +87,7 @@ export class MochaOptsReader {
 
 					const globs = this.findPositionalArgs(opts);
 					const files = this.findOptValues(['--file'], opts);
+					const ignores = this.findOptValues(['--ignore', '--exclude'], opts);
 					const ui = this.findOptValue(['-u', '--ui'], opts);
 					const timeoutString = this.findOptValue(['-t', '--timeout'], opts);
 					const timeout = timeoutString ? Number.parseInt(timeoutString) : undefined;
@@ -103,11 +105,11 @@ export class MochaOptsReader {
 						this.log.debug(`Files from mocha.opts file: ${JSON.stringify(files)}`);
 					}
 
-					resolve({ mochaOpts, globs, files });
+					resolve({ mochaOpts, globs, ignores, files });
 
 				} catch (err) {
 					if (this.log.enabled) this.log.debug(`Couldn't parse mocha.opts file: ${util.inspect(err)}`);
-					resolve({ mochaOpts: {}, globs: [], files: [] });
+					resolve({ mochaOpts: {}, globs: [], ignores: [], files: [] });
 				}
 			});
 		});
@@ -158,6 +160,7 @@ export class MochaOptsReader {
 
 		return {
 			files: options.file || [],
+			ignores: options.ignore || [],
 			globs: options._ || [],
 			mochaOpts: {
 				ui: options.ui,
