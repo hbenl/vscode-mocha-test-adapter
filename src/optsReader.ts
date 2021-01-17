@@ -97,8 +97,9 @@ export class MochaOptsReader {
 					const delay = (opts.indexOf('--delay') >= 0) ? true : undefined;
 					const fullTrace = (opts.indexOf('--full-trace') >= 0) ? true : undefined;
 					const exit = (opts.indexOf('--exit') >= 0) ? true : undefined;
+					const asyncOnly = (opts.indexOf('-A') >= 0) || (opts.indexOf('--async-only') >= 0);
 
-					const mochaOpts = { ui, timeout, retries, requires, delay, fullTrace, exit };
+					const mochaOpts = { ui, timeout, retries, requires, delay, fullTrace, exit, asyncOnly };
 					if (this.log.enabled) {
 						this.log.debug(`Options from mocha.opts file: ${JSON.stringify(mochaOpts)}`);
 						this.log.debug(`Globs from mocha.opts file: ${JSON.stringify(globs)}`);
@@ -169,7 +170,8 @@ export class MochaOptsReader {
 				retries: (options.retries !== undefined) ? +options.retries : undefined,
 				delay: options.delay,
 				fullTrace: options['full-trace'],
-				exit: options.exit
+				exit: options.exit,
+				asyncOnly: options.asyncOnly
 			}
 		}
 	}

@@ -12,4 +12,5 @@ test/*.ts
 -w
 --delay
 --full-trace
+--async-only
 test*.js

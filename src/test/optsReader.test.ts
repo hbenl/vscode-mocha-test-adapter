@@ -19,7 +19,8 @@ describe("The OptsReader", function() {
 				retries: undefined,
 				delay: undefined,
 				fullTrace: undefined,
-				exit: undefined
+				exit: undefined,
+				asyncOnly: undefined
 			},
 			files: [],
 			ignores: [],
@@ -55,7 +56,8 @@ describe("The OptsReader", function() {
 				retries: 2,
 				delay: true,
 				fullTrace: true,
-				exit: true
+				exit: true,
+				asyncOnly: true
 			},
 			files: [ 'first.js' ],
 			globs: [ 'test/*.ts', 'test*.js' ],

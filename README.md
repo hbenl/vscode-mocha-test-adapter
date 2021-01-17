@@ -98,6 +98,9 @@ Property                 | Corresponding command line option
 `mochaExplorer.delay`    | `--delay` (default: `false`)
 `mochaExplorer.fullTrace`| `--full-trace` (default: `false`)
 `mochaExplorer.exit`     | `--exit` (default: `false`)
+`mochaExplorer.asyncOnly`| `-A`, `--async-only` (default: `false`)
+`mochaExplorer.parallel` | `-p`, `--parallel` (default: `false`)
+`mochaExplorer.jobs`     | `-j`, `--jobs` (default: (number of CPU cores - 1))
 `mochaExplorer.optsFile` | `--opts` (default: `"test/mocha.opts"`)
 
 Options from VS Code's settings will override those found in a mocha configuration file.

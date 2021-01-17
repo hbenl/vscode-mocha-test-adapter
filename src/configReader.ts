@@ -474,7 +474,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			requires,
 			delay: this.mergeOpts<boolean>(configKeys.delay.key, mochaOptsFromFile.delay, config),
 			fullTrace: this.mergeOpts<boolean>(configKeys.fullTrace.key, mochaOptsFromFile.fullTrace, config),
-			exit: this.mergeOpts<boolean>(configKeys.exit.key, mochaOptsFromFile.exit, config)
+			exit: this.mergeOpts<boolean>(configKeys.exit.key, mochaOptsFromFile.exit, config),
+			asyncOnly: this.mergeOpts<boolean>(configKeys.asyncOnly.key, mochaOptsFromFile.asyncOnly, config),
+			parallel: this.mergeOpts<boolean>(configKeys.parallel.key, mochaOptsFromFile.parallel, config),
+			jobs: this.mergeOpts<number | null>(configKeys.jobs.key, mochaOptsFromFile.jobs, config) || undefined
 		}
 
 		if (this.log.enabled) this.log.debug(`Using Mocha options: ${JSON.stringify(mochaOpts)}`);

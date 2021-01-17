@@ -27,7 +27,10 @@ export async function createTestMochaAdapter(
 		requires: mochaOptsAndFiles.mochaOpts.requires || [],
 		delay: mochaOptsAndFiles.mochaOpts.delay || false,
 		fullTrace: mochaOptsAndFiles.mochaOpts.fullTrace || false,
-		exit: mochaOptsAndFiles.mochaOpts.exit || false
+		exit: mochaOptsAndFiles.mochaOpts.exit || false,
+		asyncOnly: mochaOptsAndFiles.mochaOpts.asyncOnly || false,
+		parallel: mochaOptsAndFiles.mochaOpts.parallel || false,
+		jobs: mochaOptsAndFiles.mochaOpts.jobs
 	};
 	const relativeGlob = mochaOptsAndFiles.globs[0] || 'test/**/*.js';
 	const absoluteGlob = path.resolve(workspaceFolderPath, relativeGlob);

@@ -192,6 +192,27 @@
           "default": false,
           "scope": "resource"
         },
+        "mochaExplorer.asyncOnly": {
+          "description": "Require all tests to use a callback (async) or return a Promise",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
+        },
+        "mochaExplorer.parallel": {
+          "description": "Run tests in parallel",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
+        },
+        "mochaExplorer.jobs": {
+          "description": "Number of concurrent jobs when running tests in parallel",
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
         "mochaExplorer.optsFile": {
           "description": "The location of the mocha.opts file (relative to the workspace folder). If you set this option, the mocha.opts file will be parsed using a legacy parser and all other mocha configuration files will be ignored. Otherwise, all mocha configuration files will be parsed using mocha's parser.",
           "type": "string",
