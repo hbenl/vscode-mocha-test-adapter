@@ -44,6 +44,7 @@
     "diff": "^5.0.0",
     "dotenv": "^8.2.0",
     "escape-string-regexp": "^4.0.0",
+    "glob": "^7.1.6",
     "minimatch": "^3.0.4",
     "mocha": "^8.3.0",
     "source-map-support": "^0.5.19",
@@ -68,7 +69,6 @@
     "@types/stack-trace": "0.0.29",
     "@types/vscode": "~1.47.0",
     "esm": "^3.2.25",
-    "glob": "^7.1.6",
     "mocha-prepare": "^0.1.0",
     "rimraf": "^3.0.2",
     "rollup": "^2.39.0",
@@ -262,6 +262,15 @@
           "description": "Use Mocha's experimental ESM module loader if it is available",
           "type": "boolean",
           "default": true,
+          "scope": "resource"
+        },
+        "mochaExplorer.globImplementation": {
+          "description": "The glob implementation to use. `\"glob\"` (the default) is more compatible, `\"vscode\"` (the old default) may be faster.",
+          "enum": [
+            "glob",
+            "vscode"
+          ],
+          "default": "glob",
           "scope": "resource"
         },
         "mochaExplorer.launcherScript": {

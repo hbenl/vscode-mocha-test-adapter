@@ -32,6 +32,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	debuggerPort: { onChange: 'reloadConfig' },
 	debuggerConfig: { onChange: 'reloadConfig' },
 	esmLoader: { onChange: 'reloadTests' },
+	globImplementation: { onChange: 'reloadTests' },
 	launcherScript: { onChange: 'reloadTests' },
 	ipcRole: { onChange: 'reloadTests' },
 	ipcPort: { onChange: 'reloadTests' },

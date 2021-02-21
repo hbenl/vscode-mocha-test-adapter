@@ -131,29 +131,30 @@ Here's the default debugging configuration used by this adapter:
 
 ### Other options
 
-Property                        | Description
---------------------------------|---------------------------------------------------------------
-`mochaExplorer.files`           | The glob(s) describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`). These globs will be _added to_ the globs found in a mocha configuration file
-`mochaExplorer.ignore`          | Glob(s) of files to be ignored (relative to the workspace folder). These globs will be _added to_ the globs found in a mocha configuration file
-`mochaExplorer.env`             | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`). These environment variables will be _added to_ the environment of the process running mocha. To _remove_ an environment variable, set its value to `null`
-`mochaExplorer.envPath`         | Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests. If you set both `mochaExplorer.env` and `mochaExplorer.envPath`, the environment variables will be merged (with those from `mochaExplorer.env` overriding those from `mochaExplorer.envPath`)
-`mochaExplorer.cwd`             | The working directory where mocha is run (relative to the workspace folder)
-`mochaExplorer.nodePath`        | The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
-`mochaExplorer.mochaPath`       | The path to the mocha package to use (absolute or relative to the workspace folder). By default it looks for a directory `node_modules/mocha` in your workspace and uses that if it exists, otherwise or if this option is set to `null`, it uses a bundled version of mocha
-`mochaExplorer.monkeyPatch`     | Apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
-`mochaExplorer.debuggerPort`    | The port to use for debugging sessions (default: `9229`)
-`mochaExplorer.pruneFiles`      | Only load the test files needed for the current test run (default: `false` - load all configured files)
-`mochaExplorer.esmLoader`       | Use Mocha's experimental ESM module loader if it is available (default: `true`)
-`mochaExplorer.launcherScript`  | The path to a launcher script (relative to the workspace folder) for [running your tests remotely](https://github.com/hbenl/vscode-test-adapter-remoting-util)
-`mochaExplorer.ipcRole`         | Use a TCP connection instead of Node's IPC mechanism for talking to worker processes. This is only needed with some launcher scripts.
-`mochaExplorer.ipcPort`         | The TCP port that worker processes use to send their results to VS Code if `mochaExplorer.ipcRole` is set (default: `9449`)
-`mochaExplorer.ipcHost`         | The TCP host used for communication with worker processes. If `mochaExplorer.ipcRole` is set to `client`, this is the address that Mocha Explorer tries to connect to, if it is set to `server`, this is the address on which Mocha Explorer will listen for a connection, if it is set to `null`, Mocha Explorer will listen on all addresses. (default: `localhost`)
-`mochaExplorer.ipcTimeout`      | The timeout in milliseconds for establishing a TCP connection to a worker process if `mochaExplorer.ipcRole` is set (default: `5000`)
-`mochaExplorer.autoload`        | Automatically (re)load the tests when source files or relevant settings are changed and/or when VS Code is started (`true`, `false`, or `"onStart"`; default: `true`)
-`testExplorer.codeLens`         | Show a CodeLens above each test or suite for running or debugging the tests
-`testExplorer.gutterDecoration` | Show the state of each test in the editor using Gutter Decorations
-`testExplorer.onStart`          | Retire or reset all test states whenever a test run is started
-`testExplorer.onReload`         | Retire or reset all test states whenever the test tree is reloaded
+Property                           | Description
+-----------------------------------|---------------------------------------------------------------
+`mochaExplorer.files`              | The glob(s) describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`). These globs will be _added to_ the globs found in a mocha configuration file
+`mochaExplorer.ignore`             | Glob(s) of files to be ignored (relative to the workspace folder). These globs will be _added to_ the globs found in a mocha configuration file
+`mochaExplorer.env`                | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`). These environment variables will be _added to_ the environment of the process running mocha. To _remove_ an environment variable, set its value to `null`
+`mochaExplorer.envPath`            | Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests. If you set both `mochaExplorer.env` and `mochaExplorer.envPath`, the environment variables will be merged (with those from `mochaExplorer.env` overriding those from `mochaExplorer.envPath`)
+`mochaExplorer.cwd`                | The working directory where mocha is run (relative to the workspace folder)
+`mochaExplorer.nodePath`           | The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
+`mochaExplorer.mochaPath`          | The path to the mocha package to use (absolute or relative to the workspace folder). By default it looks for a directory `node_modules/mocha` in your workspace and uses that if it exists, otherwise or if this option is set to `null`, it uses a bundled version of mocha
+`mochaExplorer.monkeyPatch`        | Apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
+`mochaExplorer.debuggerPort`       | The port to use for debugging sessions (default: `9229`)
+`mochaExplorer.pruneFiles`         | Only load the test files needed for the current test run (default: `false` - load all configured files)
+`mochaExplorer.esmLoader`          | Use Mocha's experimental ESM module loader if it is available (default: `true`)
+`mochaExplorer.globImplementation` | The glob implementation to use. `\"glob\"` (the default) is more compatible, `\"vscode\"` (the old default) may be faster.
+`mochaExplorer.launcherScript`     | The path to a launcher script (relative to the workspace folder) for [running your tests remotely](https://github.com/hbenl/vscode-test-adapter-remoting-util)
+`mochaExplorer.ipcRole`            | Use a TCP connection instead of Node's IPC mechanism for talking to worker processes. This is only needed with some launcher scripts.
+`mochaExplorer.ipcPort`            | The TCP port that worker processes use to send their results to VS Code if `mochaExplorer.ipcRole` is set (default: `9449`)
+`mochaExplorer.ipcHost`            | The TCP host used for communication with worker processes. If `mochaExplorer.ipcRole` is set to `client`, this is the address that Mocha Explorer tries to connect to, if it is set to `server`, this is the address on which Mocha Explorer will listen for a connection, if it is set to `null`, Mocha Explorer will listen on all addresses. (default: `localhost`)
+`mochaExplorer.ipcTimeout`         | The timeout in milliseconds for establishing a TCP connection to a worker process if `mochaExplorer.ipcRole` is set (default: `5000`)
+`mochaExplorer.autoload`           | Automatically (re)load the tests when source files or relevant settings are changed and/or when VS Code is started (`true`, `false`, or `"onStart"`; default: `true`)
+`testExplorer.codeLens`            | Show a CodeLens above each test or suite for running or debugging the tests
+`testExplorer.gutterDecoration`    | Show the state of each test in the editor using Gutter Decorations
+`testExplorer.onStart`             | Retire or reset all test states whenever a test run is started
+`testExplorer.onReload`            | Retire or reset all test states whenever the test tree is reloaded
 
 ## Commands
 

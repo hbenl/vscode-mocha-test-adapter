@@ -2,7 +2,8 @@ import * as path from 'path';
 import fs from 'fs';
 import { readFile, fileExists } from './util';
 import * as vscode from 'vscode';
-import { Minimatch } from 'minimatch';
+import { glob } from 'glob';
+import minimatch from 'minimatch';
 import { parse as dotenvParse } from 'dotenv';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { IDisposable, IConfigReader } from './core';
@@ -254,9 +255,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		} catch (err) {
 		}
 
-		const relativePattern = new vscode.RelativePattern(this.workspaceFolder, 'test/**/*.js');
-		const fileUris = await vscode.workspace.findFiles(relativePattern, null);
-		if (fileUris.length > 0) {
+		const filePaths = await this.globFiles(config, 'test/**/*.js');
+		if (filePaths.length > 0) {
 
 			let msg = `The workspace folder ${this.workspaceFolder.name} contains test files, but I'm not sure if they should be run using Mocha. `;
 			msg += 'Do you want to enable Mocha Test Explorer for this workspace folder?';
@@ -335,14 +335,9 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		const testFiles: string[] = [];
 		for (let testFilesGlob of globs) {
-			if (testFilesGlob.startsWith('./')) {
-				testFilesGlob = testFilesGlob.substring(2);
-			}
-			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, testFilesGlob);
-			const fileUris = await vscode.workspace.findFiles(relativePattern, null);
-			for (const uri of fileUris) {
-				if (ignores.every(ignore => !this.absolutePathMatchesRelativeGlob(uri.fsPath, ignore))) {
-					testFiles.push(uri.fsPath);
+			for (const path of await this.globFiles(config, testFilesGlob)) {
+				if (ignores.every(ignore => !this.absolutePathMatchesRelativeGlob(path, ignore))) {
+					testFiles.push(path);
 				}
 			}
 		}
@@ -354,10 +349,37 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return testFiles;
 	}
 
+	private async globFiles(config: vscode.WorkspaceConfiguration, relativeGlob: string) {
+		if (this.getGlobImplementation(config) === 'glob') {
+
+			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
+			return await new Promise<string[]>(
+				(resolve, reject) => glob(
+					absoluteGlob,
+					{ nodir: true },
+					(err, matches) => {
+						if (err) {
+							reject(err);
+						} else {
+							resolve(matches);
+						}
+					}
+			));
+
+		} else {
+
+			if (relativeGlob.startsWith('./')) {
+				relativeGlob = relativeGlob.substring(2);
+			}
+			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, relativeGlob);
+			const fileUris = await vscode.workspace.findFiles(relativePattern, null);
+			return fileUris.map(uri => uri.fsPath);
+		}
+	}
+
 	private absolutePathMatchesRelativeGlob(absolutePath: string, relativeGlob: string): boolean {
 		const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
-		const matcher = new Minimatch(absoluteGlob);
-		return matcher.match(absolutePath);
+		return minimatch(absolutePath, absoluteGlob);
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
@@ -396,8 +418,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		const globs = config.globs;
 		for (const relativeGlob of globs) {
 			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
-			const matcher = new Minimatch(absoluteGlob);
-			if (matcher.match(absolutePath) &&
+			if (minimatch(absolutePath, absoluteGlob) &&
 				config.ignores.every(ignore => !this.absolutePathMatchesRelativeGlob(absolutePath, ignore))) {
 				return true;
 			}
@@ -561,6 +582,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 	private getEnvFile(config: vscode.WorkspaceConfiguration): string | undefined {
 		return config.get<string>(configKeys.envPath.key) || undefined;
+	}
+
+	private getGlobImplementation(config: vscode.WorkspaceConfiguration): 'glob' | 'vscode' {
+		return config.get<'glob' | 'vscode'>(configKeys.globImplementation.key) || 'glob';
 	}
 
 	private getLauncherScript(config: vscode.WorkspaceConfiguration): string | undefined {
