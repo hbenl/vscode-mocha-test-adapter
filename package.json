@@ -46,7 +46,7 @@
     "escape-string-regexp": "^4.0.0",
     "glob": "^7.1.6",
     "minimatch": "^3.0.4",
-    "mocha": "^8.3.0",
+    "mocha": "~8.2.1",
     "source-map-support": "^0.5.19",
     "split": "^1.0.1",
     "stack-trace": "0.0.10",
