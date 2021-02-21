@@ -84,8 +84,10 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				sendMessage(event);
 			});
 
-			runner.on('fail', (test, err: Error & { actual?: any, expected?: any, showDiff?: boolean }) => {
+			runner.on('fail', (testOrHook, err) => {
 
+				const test = (testOrHook.type === "test") ? testOrHook : testOrHook.ctx?.currentTest;
+				if (!test) return;
 				const testId = `${test.file}: ${test.fullTitle()}`;
 				const description = getElapsedTime(testId);
 
