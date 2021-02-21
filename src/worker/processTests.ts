@@ -6,7 +6,7 @@ import { ErrorInfo } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { Location } from './patchMocha';
 
 export async function processTests(
-	suite: Mocha.ISuite,
+	suite: Mocha.Suite,
 	locationSymbol: symbol,
 	sendMessage: (message: any) => Promise<void>,
 	logEnabled: boolean
@@ -32,7 +32,7 @@ export async function processTests(
 
 
 function convertSuite(
-	suite: Mocha.ISuite,
+	suite: Mocha.Suite,
 	locationSymbol: symbol,
 	fileCache: Map<string, string>
 ): TestSuiteInfo {
@@ -60,7 +60,7 @@ function convertSuite(
 }
 
 function convertTest(
-	test: Mocha.ITest,
+	test: Mocha.Test,
 	locationSymbol: symbol,
 	fileCache: Map<string, string>
 ): TestInfo {

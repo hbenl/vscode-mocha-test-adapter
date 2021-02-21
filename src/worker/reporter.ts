@@ -9,7 +9,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 
 	return class Reporter {
 
-		constructor(runner: Mocha.IRunner) {
+		constructor(runner: Mocha.Runner) {
 
 			const startTimes = new Map<string, number>();
 
@@ -26,7 +26,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				}
 			}
 
-			runner.on('suite', (suite: Mocha.ISuite) => {
+			runner.on('suite', suite => {
 
 				const suiteId = `${suite.file}: ${suite.fullTitle()}`;
 				startTimes.set(suiteId, Date.now());
@@ -40,7 +40,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				sendMessage(event);
 			});
 
-			runner.on('suite end', (suite: Mocha.ISuite) => {
+			runner.on('suite end', suite => {
 
 				const suiteId = `${suite.file}: ${suite.fullTitle()}`;
 				const description = getElapsedTime(suiteId);
@@ -55,7 +55,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				sendMessage(event);
 			});
 
-			runner.on('test', (test: Mocha.ITest) => {
+			runner.on('test', test => {
 
 				const testId = `${test.file}: ${test.fullTitle()}`;
 				startTimes.set(testId, Date.now());
@@ -69,7 +69,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				sendMessage(event);
 			});
 
-			runner.on('pass', (test: Mocha.ITest) => {
+			runner.on('pass', test => {
 
 				const testId = `${test.file}: ${test.fullTitle()}`;
 				const description = getElapsedTime(testId);
@@ -84,7 +84,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				sendMessage(event);
 			});
 
-			runner.on('fail', (test: Mocha.ITest, err: Error & { actual?: any, expected?: any, showDiff?: boolean }) => {
+			runner.on('fail', (test, err: Error & { actual?: any, expected?: any, showDiff?: boolean }) => {
 
 				const testId = `${test.file}: ${test.fullTitle()}`;
 				const description = getElapsedTime(testId);
@@ -159,7 +159,7 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				sendMessage(event);
 			});
 
-			runner.on('pending', (test: Mocha.ITest) => {
+			runner.on('pending', test => {
 
 				const testId = `${test.file}: ${test.fullTitle()}`;
 				startTimes.delete(testId);
