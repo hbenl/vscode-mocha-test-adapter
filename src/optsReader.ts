@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as util from 'util';
-import { fork } from 'child_process';
+import { ChildProcess, fork, spawn } from 'child_process';
 import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { ILog } from './core';
 
@@ -116,16 +116,20 @@ export class MochaOptsReader {
 		});
 	}
 
-	async readOptsUsingMocha(cwd: string): Promise<MochaOptsAndFiles> {
+	async readOptsUsingMocha(cwd: string, nodePath?: string): Promise<MochaOptsAndFiles> {
 
 		const options = await new Promise<any>((resolve, reject) => {
 
-			const childProc = fork(
-				require.resolve('../out/worker/loadConfig.js'),
-				[],
-				{ cwd, execArgv: [], stdio: 'pipe' }
-			);
-	
+			const childProcScript = require.resolve('../out/worker/loadConfig.js');
+			const stdio: ('pipe' | 'ipc')[] = [ 'pipe', 'pipe', 'pipe', 'ipc' ];
+
+			let childProc: ChildProcess;
+			if (nodePath) {
+				childProc = spawn(nodePath, [ childProcScript ], { cwd, stdio });
+			} else {
+				childProc = fork(childProcScript, [], { cwd, execArgv: [], stdio });
+			}
+
 			let finished = false;
 
 			childProc.once('message', (options: {}) => {

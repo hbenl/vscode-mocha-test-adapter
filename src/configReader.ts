@@ -158,6 +158,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		const cwd = this.getCwd(config);
+		const nodePath = await this.getNodePath(config);
 
 		let optsFromFiles: MochaOptsAndFiles;
 		const optsReader = new MochaOptsReader(this.log);
@@ -175,7 +176,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		} else {
 
-			optsFromFiles = await optsReader.readOptsUsingMocha(cwd);
+			optsFromFiles = await optsReader.readOptsUsingMocha(cwd, nodePath);
 
 		}
 
@@ -192,7 +193,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		return {
-			nodePath: await this.getNodePath(config),
+			nodePath,
 			mochaPath: await this.getMochaPath(config),
 			cwd,
 			env: await this.getEnv(config, mochaOpts),
