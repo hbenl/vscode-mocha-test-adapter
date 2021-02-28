@@ -25,7 +25,7 @@
   ],
   "main": "out/main.js",
   "scripts": {
-    "reinstall": "rimraf node_modules yarn.lock && yarn",
+    "reinstall": "rimraf node_modules package-lock.json && npm install",
     "clean": "rimraf out .rpt2_cache vscode-mocha-test-adapter-*.vsix",
     "build-extension": "tsc",
     "watch-extension": "tsc -w",
@@ -34,8 +34,8 @@
     "build-tests": "cd src/test/workspaces/sourcemap ; tsc",
     "build": "npm run build-extension && npm run build-worker",
     "rebuild": "npm run clean && npm run build",
-    "package": "vsce package --yarn",
-    "publish": "vsce publish --yarn"
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "extensionDependencies": [
     "hbenl.vscode-test-explorer"
@@ -46,7 +46,7 @@
     "escape-string-regexp": "^4.0.0",
     "glob": "^7.1.6",
     "minimatch": "^3.0.4",
-    "mocha": "~8.2.1",
+    "mocha": "^8.3.0",
     "source-map-support": "^0.5.19",
     "split": "^1.0.1",
     "stack-trace": "0.0.10",
@@ -56,9 +56,11 @@
     "vscode-test-adapter-util": "^0.7.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.17",
-    "@babel/preset-env": "^7.12.17",
-    "@babel/register": "^7.12.13",
+    "@babel/core": "^7.13.8",
+    "@babel/preset-env": "^7.13.8",
+    "@babel/register": "^7.13.8",
+    "@rollup/plugin-commonjs": "^17.1.0",
+    "@rollup/plugin-node-resolve": "^11.2.0",
     "@types/diff": "^5.0.0",
     "@types/glob": "^7.1.3",
     "@types/minimatch": "^3.0.3",
@@ -71,13 +73,11 @@
     "esm": "^3.2.25",
     "mocha-prepare": "^0.1.0",
     "rimraf": "^3.0.2",
-    "rollup": "^2.39.0",
-    "@rollup/plugin-commonjs": "^17.1.0",
-    "@rollup/plugin-node-resolve": "^11.2.0",
+    "rollup": "^2.40.0",
     "rollup-plugin-typescript2": "^0.30.0",
     "ts-node": "^9.1.1",
-    "typescript": "^4.1.5",
-    "vsce": "^1.85.0"
+    "typescript": "^4.2.2",
+    "vsce": "^1.85.1"
   },
   "engines": {
     "vscode": "^1.47.0"
