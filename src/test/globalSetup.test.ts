@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import { createTestMochaAdapter } from './adapter';
 
-describe("Root hooks", function () {
+describe("Global fixtures", function () {
 
 	it("should be supported", async function() {
 
-		const workspaceFolderName = 'javascript/rootHooks';
+		const workspaceFolderName = 'javascript/globalSetup';
 		const adapter = await createTestMochaAdapter(workspaceFolderName);
 
 		await adapter.load();

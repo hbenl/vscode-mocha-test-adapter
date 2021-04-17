@@ -129,10 +129,17 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		mocha.timeout(args.mochaOpts.timeout);
 		mocha.suite.retries(args.mochaOpts.retries);
 
-		requires
-			.filter(e=>e.mochaHooks)
-			.map(e=>e.mochaHooks)
-			.forEach(e=>mocha.rootHooks(e))
+		for (const req of requires) {
+			if (req.mochaHooks) {
+				mocha.rootHooks(req.mochaHooks);
+			}
+			if (req.mochaGlobalSetup) {
+				mocha.globalSetup(req.mochaGlobalSetup);
+			}
+			if (req.mochaGlobalTeardown) {
+				mocha.globalTeardown(req.mochaGlobalTeardown);
+			}
+		}
 
 		if (args.mochaOpts.delay) mocha.delay();
 		if (args.mochaOpts.fullTrace) mocha.fullTrace();
