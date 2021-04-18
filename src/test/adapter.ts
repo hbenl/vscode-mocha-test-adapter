@@ -58,6 +58,8 @@ export async function createTestMochaAdapter(
 		testFiles,
 		extraFiles,
 
+		mochaConfigFile: undefined,
+		packageFile: undefined,
 		mochaOptsFile: undefined,
 		envFile: undefined,
 		globs: mochaOptsAndFiles.globs,

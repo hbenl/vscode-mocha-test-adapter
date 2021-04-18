@@ -25,6 +25,8 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	asyncOnly: { onChange: 'retire' },
 	parallel: {},
 	jobs: {},
+	configFile: { onChange: 'reloadTests' },
+	pkgFile: { onChange: 'reloadTests' },
 	optsFile: { onChange: 'reloadTests' },
 	nodePath: { onChange: 'reloadTests' },
 	mochaPath: { onChange: 'reloadTests' },
