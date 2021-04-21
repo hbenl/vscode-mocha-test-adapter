@@ -1,5 +1,7 @@
+import path from 'path';
 import os from 'os';
 import stackTrace from 'stack-trace';
+import url from 'url';
 
 export interface Location {
 	file: string;
@@ -116,20 +118,18 @@ function findCallLocation(
 	const err = new Error();
 	const stackFrames = stackTrace.parse(err);
 
+	runningFile = normalizePath(runningFile);
+	baseDir = normalizePath(baseDir);
+
 	if (!baseDir) {
 
 		if (log) log(`Looking for ${runningFile} in ${err.stack}`);
 
 		for (var i = 0; i < stackFrames.length - 1; i++) {
 			const stackFrame = stackFrames[i];
-			let filename = stackFrame.getFileName();
-			if (typeof filename === 'string') {
-				if (filename.startsWith('file://')) {
-					filename = filename.substring((os.platform() === 'win32') ? 8 : 7);
-				}
-				if (filename === runningFile) {
-					return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
-				}
+			const filename = normalizePath(stackFrame.getFileName());
+			if (filename && filename === runningFile) {
+				return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
 			}
 		}
 
@@ -140,8 +140,8 @@ function findCallLocation(
 		if (baseDir) {
 			for (var i = 0; i < stackFrames.length - 1; i++) {
 				const stackFrame = stackFrames[i];
-				const file = stackFrame.getFileName();
-				if (file.startsWith(baseDir)) {
+				const file = normalizePath(stackFrame.getFileName());
+				if (file && file.startsWith(baseDir)) {
 					return { file, line: stackFrame.getLineNumber() - 1 };
 				}
 			}
@@ -149,4 +149,16 @@ function findCallLocation(
 	}
 
 	return undefined;
+}
+
+function normalizePath(p: string | undefined): string {
+	if (!p) {
+		return "";
+	}
+
+	if (p.startsWith("file://")) {
+		p = url.fileURLToPath(p);
+	}
+
+	return path.normalize(p);
 }
