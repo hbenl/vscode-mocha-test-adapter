@@ -26,7 +26,9 @@ describe("ESM tests using the esm package from npm", function() {
 		const rootSuite = adapter.getLoadedTests();
 		await adapter.run([ rootSuite!.id ]);
 
-		assert.deepStrictEqual(adapter.getTestRunEvents(), getExpectedTestRunEvents(workspaceFolderName));
+		assert.deepStrictEqual(
+			removeStackTraces(adapter.getTestRunEvents()), 
+			removeStackTraces(getExpectedTestRunEvents(workspaceFolderName)));
 	});
 });
 

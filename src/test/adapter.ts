@@ -5,6 +5,7 @@ import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputCha
 import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { MochaOptsReader } from '../optsReader';
 import { AdapterConfig, EnvVars } from '../configReader';
+import { normalizePath } from '../util';
 
 export async function createTestMochaAdapter(
 	workspaceName: string,
@@ -16,7 +17,7 @@ export async function createTestMochaAdapter(
 	}
 ): Promise<TestMochaAdapter> {
 
-	const workspaceFolderPath = path.resolve(__dirname, 'workspaces/' + workspaceName);
+	const workspaceFolderPath = normalizePath(path.resolve(__dirname, 'workspaces/' + workspaceName));
 
 	const optsReader = new MochaOptsReader(new TestLog());
 	const mochaOptsAndFiles = await optsReader.readOptsUsingMocha(workspaceFolderPath);
@@ -44,7 +45,7 @@ export async function createTestMochaAdapter(
 	const config: AdapterConfig = {
 
 		nodePath: undefined,
-		mochaPath: path.dirname(require.resolve('mocha')),
+		mochaPath: normalizePath(path.dirname(require.resolve('mocha'))),
 		cwd: workspaceFolderPath,
 		env,
 
@@ -120,7 +121,7 @@ export class TestMochaAdapter extends MochaAdapterCore {
 			.filter(event => ((event.type === 'test') && (event.state !== 'running')))
 			.map(event => {
 				let id = (event as TestEvent).test as string;
-				id = id.substr(id.indexOf(':') + 2);
+				id = id.substr(id.lastIndexOf(':') + 2);
 				const result = (event as TestEvent).state as 'passed' | 'failed' | 'skipped' | 'errored';
 				return { id, result };
 			});
@@ -191,7 +192,7 @@ async function findFiles(glob: string): Promise<string[]> {
 			if (err) {
 				reject(err);
 			} else {
-				resolve(files);
+				resolve(files.map(normalizePath));
 			}
 		})
 	})

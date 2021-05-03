@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { createTestMochaAdapter } from "./adapter";
-import { getExpectedTests, getExpectedTestRunEvents } from './expectedTests';
+import { getExpectedTests, getExpectedTestRunEvents, removeStackTraces } from './expectedTests';
 
 describe("Babel tests", function() {
 
@@ -27,6 +27,8 @@ describe("Babel tests", function() {
 		await adapter.run([ rootSuite!.id ]);
 
 		const expectedTestRunEvents = getExpectedTestRunEvents(workspaceFolderName);
-		assert.deepStrictEqual(adapter.getTestRunEvents(), expectedTestRunEvents);
+		assert.deepStrictEqual(
+			removeStackTraces(adapter.getTestRunEvents()), 
+			removeStackTraces(expectedTestRunEvents));
 	});
 });

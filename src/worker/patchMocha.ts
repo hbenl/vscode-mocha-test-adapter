@@ -1,5 +1,8 @@
+import path from 'path';
 import os from 'os';
 import stackTrace from 'stack-trace';
+import url from 'url';
+import { normalizePath, normalizePathOrFileUrlToPath } from '../util';
 
 export interface Location {
 	file: string;
@@ -124,9 +127,7 @@ function findCallLocation(
 			const stackFrame = stackFrames[i];
 			let filename = stackFrame.getFileName();
 			if (typeof filename === 'string') {
-				if (filename.startsWith('file://')) {
-					filename = filename.substring((os.platform() === 'win32') ? 8 : 7);
-				}
+				filename = normalizePathOrFileUrlToPath(filename);
 				if (filename === runningFile) {
 					return { file: runningFile, line: stackFrame.getLineNumber() - 1 };
 				}
@@ -140,7 +141,7 @@ function findCallLocation(
 		if (baseDir) {
 			for (var i = 0; i < stackFrames.length - 1; i++) {
 				const stackFrame = stackFrames[i];
-				const file = stackFrame.getFileName();
+				const file = normalizePathOrFileUrlToPath(stackFrame.getFileName());
 				if (file.startsWith(baseDir)) {
 					return { file, line: stackFrame.getLineNumber() - 1 };
 				}
