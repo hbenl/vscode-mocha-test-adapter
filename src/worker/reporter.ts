@@ -4,6 +4,7 @@ import stackTrace from 'stack-trace';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
 import { retrieveSourceMap } from 'source-map-support';
+import { normalizePath, normalizePathOrFileUrlToPath } from '../util';
 
 export default (sendMessage: (message: any) => void, stringify: (obj: any) => string, useSourceMapSupport: boolean) => {
 
@@ -95,11 +96,8 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 				if (err.stack) {
 					const parsedStack = stackTrace.parse(err);
 					for (const stackFrame of parsedStack) {
-						let filename = stackFrame.getFileName();
+						let filename = normalizePathOrFileUrlToPath(stackFrame.getFileName());
 						if (typeof filename === 'string') {
-							if (filename.startsWith('file://')) {
-								filename = filename.substring((os.platform() === 'win32') ? 8 : 7);
-							}
 							filename = path.resolve(filename);
 							let matchFound = false;
 							if (useSourceMapSupport && test.file) {

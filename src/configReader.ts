@@ -1,6 +1,6 @@
 import * as path from 'path';
 import fs from 'fs';
-import { readFile, fileExists } from './util';
+import { readFile, fileExists, normalizePath } from './util';
 import * as vscode from 'vscode';
 import { glob } from 'glob';
 import minimatch from 'minimatch';
@@ -387,7 +387,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private async globFiles(config: vscode.WorkspaceConfiguration, relativeGlob: string) {
 		if (this.getGlobImplementation(config) === 'glob') {
 
-			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
+			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob));
 			return await new Promise<string[]>(
 				(resolve, reject) => glob(
 					absoluteGlob,
@@ -396,7 +396,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 						if (err) {
 							reject(err);
 						} else {
-							resolve(matches);
+							resolve(matches.map(normalizePath));
 						}
 					}
 			));
@@ -408,21 +408,23 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			}
 			const relativePattern = new vscode.RelativePattern(this.workspaceFolder, relativeGlob);
 			const fileUris = await vscode.workspace.findFiles(relativePattern, null);
-			return fileUris.map(uri => uri.fsPath);
+			return fileUris.map(uri => normalizePath(uri.fsPath));
 		}
 	}
 
 	private absolutePathMatchesRelativeGlob(absolutePath: string, relativeGlob: string): boolean {
-		const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
+		absolutePath = normalizePath(absolutePath);
+		const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob));
 		return minimatch(absolutePath, absoluteGlob);
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
+		absolutePath = normalizePath(absolutePath);
 
-		if (!absolutePath.startsWith(this.workspaceFolder.uri.fsPath)) {
+		if (!absolutePath.startsWith(normalizePath(this.workspaceFolder.uri.fsPath))) {
 			return false;
 		}
-		const settingsPath = path.resolve(this.workspaceFolder.uri.fsPath, '.vscode/settings.json');
+		const settingsPath = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, '.vscode/settings.json'));
 		if (absolutePath === settingsPath) {
 			return false;
 		}
@@ -439,13 +441,13 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		if (!config) {
-			const testFolderPath = path.resolve(this.workspaceFolder.uri.fsPath, 'test');
+			const testFolderPath = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, 'test'));
 			return absolutePath.startsWith(testFolderPath);
 		}
 
 		for (const configFile of [ config.mochaConfigFile, config.packageFile, config.mochaOptsFile, config.envFile, config.launcherScript ]) {
 			if (configFile) {
-				const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
+				const resolvedConfigFile = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, configFile));
 				if (absolutePath === resolvedConfigFile) {
 					return 'config';
 				}
@@ -454,7 +456,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		const globs = config.globs;
 		for (const relativeGlob of globs) {
-			const absoluteGlob = path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob);
+			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob));
 			if (minimatch(absolutePath, absoluteGlob) &&
 				config.ignores.every(ignore => !this.absolutePathMatchesRelativeGlob(absolutePath, ignore))) {
 				return true;
@@ -505,7 +507,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	}
 
 	private getCwd(config: vscode.WorkspaceConfiguration): string {
-		const dirname = this.workspaceFolder.uri.fsPath;
+		const dirname = normalizePath(this.workspaceFolder.uri.fsPath);
 		const configCwd = config.get<string>(configKeys.cwd.key);
 		const cwd = configCwd ? path.resolve(dirname, configCwd) : dirname;
 		if (this.log.enabled) this.log.debug(`Using working directory: ${cwd}`);

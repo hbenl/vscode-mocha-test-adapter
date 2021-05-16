@@ -1,11 +1,13 @@
 import * as path from 'path';
-import { TestSuiteInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from "vscode-test-adapter-api";
+import { TestSuiteInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestInfo } from "vscode-test-adapter-api";
+import { normalizePath } from '../util';
+	
 
 export function getExpectedTests(workspaceName: string): TestSuiteInfo {
 
 	const extension = (['typescript', 'sourcemap'].includes(workspaceName)) ? 'ts' : 'js'
 	const extensionInID = (['typescript'].includes(workspaceName)) ? 'ts' : 'js'
-	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
+	const workspaceFolderPath = normalizePath(path.resolve(__dirname, './workspaces/' + workspaceName));
 	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extension);
 	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extension);
 	const staticTestFilePathInID = path.join(workspaceFolderPath, 'test/static.' + extensionInID);
@@ -107,7 +109,7 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 
 	const extension = (['typescript', 'sourcemap'].includes(workspaceName)) ? 'ts' : 'js';
 	const extensionInID = (['typescript'].includes(workspaceName)) ? 'ts' : 'js';
-	const workspaceFolderPath = path.resolve(__dirname, './workspaces/' + workspaceName);
+	const workspaceFolderPath = normalizePath(path.resolve(__dirname, './workspaces/' + workspaceName));
 	const staticTestFilePath = path.join(workspaceFolderPath, 'test/static.' + extensionInID);
 	const dynamicTestFilePath = path.join(workspaceFolderPath, 'test/dynamic.' + extensionInID);
 
@@ -253,19 +255,34 @@ export function getExpectedTestRunEvents(workspaceName: string): (TestRunStarted
 	];
 }
 
-export function removeStackTraces(
-	events: (TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent)[]
-): (TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent)[] {
+type Node = TestRunStartedEvent | TestRunFinishedEvent | TestEvent | TestSuiteEvent | TestSuiteInfo | TestInfo
+export function removeStackTraces<T extends Node | Node[] | undefined>(input: T): T {
+	if (!input) {
+		return input;
+	}
 
-	return events.map(event => {
+	if (Array.isArray(input)) {
+		return input.map(removeStackTraces) as T;
+	}
 
-		if ((event.type === 'test') && event.message) {
+	if ("children" in input) {
+		return {
+			...input,
+			message: removeStackTrace(input.message),
+			children: removeStackTraces(input.children),
+		};
+	}
 
-			const message = event.message.split('\n')[0];
-			return { ...event, message };
-
-		} else {
-			return event;
+	if ("message" in input && input.message) {
+		return {
+			...input,
+			message: removeStackTrace(input.message),
 		}
-	})
+	}
+
+	return input;
+}
+
+export function removeStackTrace(message?: string) {
+	return message?.split('\n')[0];
 }
