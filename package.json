@@ -85,6 +85,12 @@
   "activationEvents": [
     "*"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Mocha Test Explorer will not run in an untrusted workspace because it runs code (the tests) from that workspace"
+    }
+  },
   "contributes": {
     "configuration": {
       "type": "object",
