@@ -110,6 +110,7 @@ export abstract class MochaAdapterCore {
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
 					monkeyPatch: config.monkeyPatch,
+					multiFileSuites: config.multiFileSuites,
 					logEnabled: this.log.enabled,
 					workerScript: this.workerScript,
 					esmLoader: config.esmLoader
@@ -302,6 +303,7 @@ export abstract class MochaAdapterCore {
 					env: config.env,
 					mochaPath: config.mochaPath,
 					mochaOpts: config.mochaOpts,
+					multiFileSuites: config.multiFileSuites,
 					logEnabled: this.log.enabled,
 					workerScript: this.workerScript,
 					debuggerPort: debug ? config.debuggerPort : undefined,

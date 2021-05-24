@@ -143,6 +143,7 @@ Property                           | Description
 `mochaExplorer.nodePath`           | The path to the node executable to use. By default it will attempt to find it on your PATH, if it can't find it or if this option is set to `null`, it will use the one shipped with VS Code
 `mochaExplorer.mochaPath`          | The path to the mocha package to use (absolute or relative to the workspace folder). By default it looks for a directory `node_modules/mocha` in your workspace and uses that if it exists, otherwise or if this option is set to `null`, it uses a bundled version of mocha
 `mochaExplorer.monkeyPatch`        | Apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites (default: `true`)
+`mochaExplorer.multiFileSuites`    | Ignore Mocha's idea of which file a test is located in. This is necessary for the worker to find the correct test and error locations when a suite includes tests from other files.
 `mochaExplorer.debuggerPort`       | The port to use for debugging sessions (default: `9229`)
 `mochaExplorer.pruneFiles`         | Only load the test files needed for the current test run (default: `false` - load all configured files)
 `mochaExplorer.esmLoader`          | Use Mocha's experimental ESM module loader if it is available (default: `true`)

@@ -21,6 +21,7 @@ export interface AdapterConfig {
 	env: EnvVars;
 
 	monkeyPatch: boolean;
+	multiFileSuites: boolean;
 	pruneFiles: boolean;
 
 	debuggerPort: number;
@@ -222,6 +223,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			cwd,
 			env: await this.getEnv(config, mochaOpts),
 			monkeyPatch: this.getMonkeyPatch(config),
+			multiFileSuites: this.getMultiFileSuites(config),
 			pruneFiles: this.getPruneFiles(config),
 			debuggerPort: this.getDebuggerPort(config),
 			debuggerConfig: this.getDebuggerConfig(config),
@@ -600,6 +602,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private getMonkeyPatch(config: vscode.WorkspaceConfiguration): boolean {
 		let monkeyPatch = config.get<boolean>(configKeys.monkeyPatch.key);
 		return (monkeyPatch !== undefined) ? monkeyPatch : true;
+	}
+
+	private getMultiFileSuites(config: vscode.WorkspaceConfiguration): boolean {
+		return config.get<boolean>(configKeys.multiFileSuites.key) || false;
 	}
 
 	private getDebuggerPort(config: vscode.WorkspaceConfiguration): number {

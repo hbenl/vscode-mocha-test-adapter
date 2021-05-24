@@ -1,12 +1,16 @@
 import * as path from 'path';
-import * as os from 'os';
 import stackTrace from 'stack-trace';
 import { createPatch } from 'diff';
 import { TestEvent, TestSuiteEvent, TestDecoration } from 'vscode-test-adapter-api';
 import { retrieveSourceMap } from 'source-map-support';
-import { normalizePath, normalizePathOrFileUrlToPath } from '../util';
+import { normalizePathOrFileUrlToPath } from '../util';
 
-export default (sendMessage: (message: any) => void, stringify: (obj: any) => string, useSourceMapSupport: boolean) => {
+export default (
+	sendMessage: (message: any) => void,
+	stringify: (obj: any) => string,
+	useSourceMapSupport: boolean,
+	baseDir?: string
+) => {
 
 	return class Reporter {
 
@@ -114,8 +118,14 @@ export default (sendMessage: (message: any) => void, stringify: (obj: any) => st
 									}
 								}
 							} else {
-								if (filename === test.file) {
-									matchFound = true;
+								if (baseDir) {
+									if (filename.startsWith(baseDir)) {
+										matchFound = true;
+									}
+								} else {
+									if (filename === test.file) {
+										matchFound = true;
+									}
 								}
 							}
 							if (matchFound) {

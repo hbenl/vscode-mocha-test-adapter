@@ -31,6 +31,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	nodePath: { onChange: 'reloadTests' },
 	mochaPath: { onChange: 'reloadTests' },
 	monkeyPatch: { onChange: 'reloadTests' },
+	multiFileSuites: { onChange: 'reloadTests' },
 	debuggerPort: { onChange: 'reloadConfig' },
 	debuggerConfig: { onChange: 'reloadConfig' },
 	esmLoader: { onChange: 'reloadTests' },

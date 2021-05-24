@@ -58,6 +58,8 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 	let logEnabled = args.logEnabled;
 	let sendErrorInfo = (args.action === 'loadTests');
 	const sourceMapSupportEnabled = args.mochaOpts.requires.includes('source-map-support/register');
+	const multiFileSuites = args.multiFileSuites || false;
+	const useBaseDir = sourceMapSupportEnabled || multiFileSuites;
 
 	try {
 
@@ -92,7 +94,7 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 				Mocha,
 				args.mochaOpts.ui,
 				locationSymbol,
-				sourceMapSupportEnabled ? args.cwd : undefined,
+				useBaseDir ? args.cwd : undefined,
 				args.logEnabled ? sendMessage : undefined
 			);
 		}
@@ -174,7 +176,7 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 			const stringify: (obj: any) => string = require(`${mochaPath}/lib/utils`).stringify;
 			const regExp = new RegExp('^(' + args.tests!.map(RegExEscape).join('|') + ')$');
 			mocha.grep(regExp);
-			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled));
+			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled, useBaseDir ? args.cwd : undefined));
 
 			if (args.logEnabled) sendMessage('Running tests');
 			mocha.run(() => {

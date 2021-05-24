@@ -11,6 +11,7 @@ export async function createTestMochaAdapter(
 	workspaceName: string,
 	opts?: {
 		monkeyPatch?: boolean,
+		multiFileSuites?: boolean,
 		env?: EnvVars,
 		pruneFiles?: boolean,
 		esmLoader?: boolean
@@ -38,6 +39,7 @@ export async function createTestMochaAdapter(
 	const testFiles = await findFiles(absoluteGlob);
 	const extraFiles = mochaOptsAndFiles.files.map(file => path.resolve(workspaceFolderPath, file));
 	const monkeyPatch = (opts && (opts.monkeyPatch !== undefined)) ? opts.monkeyPatch : true;
+	const multiFileSuites = (opts && opts.multiFileSuites) || false;
 	const env = (opts && opts.env) ? opts.env : {};
 	const pruneFiles = (opts && opts.pruneFiles) || false;
 	const esmLoader = (opts && (opts.esmLoader !== undefined)) ? opts.esmLoader : true;
@@ -50,6 +52,7 @@ export async function createTestMochaAdapter(
 		env,
 
 		monkeyPatch,
+		multiFileSuites,
 		pruneFiles,
 
 		debuggerPort: 9229,

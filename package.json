@@ -52,7 +52,7 @@
     "stack-trace": "0.0.10",
     "tslib": "^2.2.0",
     "vscode-test-adapter-api": "^1.9.0",
-    "vscode-test-adapter-remoting-util": "^0.12.0",
+    "vscode-test-adapter-remoting-util": "^0.13.0",
     "vscode-test-adapter-util": "^0.7.1"
   },
   "devDependencies": {
@@ -259,6 +259,12 @@
           "description": "Apply a monkey patch to Mocha's `bdd`, `tdd` and `qunit` interfaces to get more accurate line numbers for the tests and suites",
           "type": "boolean",
           "default": true,
+          "scope": "resource"
+        },
+        "mochaExplorer.multiFileSuites": {
+          "description": "Ignore Mocha's idea of which file a test is located in. This is necessary for the worker to find the correct test and error locations when a suite includes tests from other files.",
+          "type": "boolean",
+          "default": false,
           "scope": "resource"
         },
         "mochaExplorer.debuggerPort": {
