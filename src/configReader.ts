@@ -125,7 +125,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 				if (isTestFile === 'config') {
 					load();
 				} else {
-					load([ filename ]);
+					load([ normalizePath(filename) ]);
 				}
 
 			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
