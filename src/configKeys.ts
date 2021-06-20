@@ -29,6 +29,7 @@ const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	pkgFile: { onChange: 'reloadTests' },
 	optsFile: { onChange: 'reloadTests' },
 	nodePath: { onChange: 'reloadTests' },
+	nodeArgv: { onChange: 'reloadTests' },
 	mochaPath: { onChange: 'reloadTests' },
 	monkeyPatch: { onChange: 'reloadTests' },
 	multiFileSuites: { onChange: 'reloadTests' },

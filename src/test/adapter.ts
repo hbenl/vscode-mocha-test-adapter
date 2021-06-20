@@ -47,6 +47,7 @@ export async function createTestMochaAdapter(
 	const config: AdapterConfig = {
 
 		nodePath: undefined,
+		nodeArgv: [],
 		mochaPath: normalizePath(path.dirname(require.resolve('mocha'))),
 		cwd: workspaceFolderPath,
 		env,

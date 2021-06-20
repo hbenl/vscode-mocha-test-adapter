@@ -116,7 +116,7 @@ export class MochaOptsReader {
 		});
 	}
 
-	async readOptsUsingMocha(cwd: string, nodePath?: string, argv: string[] = []): Promise<MochaOptsAndFiles> {
+	async readOptsUsingMocha(cwd: string, nodePath?: string, nodeArgv: string[] = [], argv: string[] = []): Promise<MochaOptsAndFiles> {
 
 		const options = await new Promise<any>((resolve, reject) => {
 
@@ -125,9 +125,9 @@ export class MochaOptsReader {
 
 			let childProc: ChildProcess;
 			if (nodePath) {
-				childProc = spawn(nodePath, [ childProcScript, ...argv ], { cwd, stdio });
+				childProc = spawn(nodePath, [ ...nodeArgv, childProcScript, ...argv ], { cwd, stdio });
 			} else {
-				childProc = fork(childProcScript, argv, { cwd, execArgv: [], stdio });
+				childProc = fork(childProcScript, argv, { cwd, execArgv: nodeArgv, stdio });
 			}
 
 			let finished = false;

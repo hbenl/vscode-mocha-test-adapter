@@ -16,6 +16,7 @@ export type EnvVars = { [envVar: string]: string | null };
 export interface AdapterConfig {
 
 	nodePath: string | undefined;
+	nodeArgv: string[];
 	mochaPath: string;
 	cwd: string;
 	env: EnvVars;
@@ -162,6 +163,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		const cwd = this.getCwd(config);
 		const nodePath = await this.getNodePath(config);
+		const nodeArgv = this.getNodeArgv(config);
 
 		let optsFromFiles: MochaOptsAndFiles;
 		const optsReader = new MochaOptsReader(this.log);
@@ -201,7 +203,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 					argv.push('--package', packageFile);
 				}
 			}
-			optsFromFiles = await optsReader.readOptsUsingMocha(cwd, nodePath, argv);
+			optsFromFiles = await optsReader.readOptsUsingMocha(cwd, nodePath, nodeArgv, argv);
 
 		}
 
@@ -219,6 +221,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		return {
 			nodePath,
+			nodeArgv,
 			mochaPath: await this.getMochaPath(config),
 			cwd,
 			env: await this.getEnv(config, mochaOpts),
@@ -597,6 +600,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 		if (this.log.enabled) this.log.debug(`Using nodePath: ${nodePath}`);
 		return nodePath;
+	}
+
+	private getNodeArgv(config: vscode.WorkspaceConfiguration): string[] {
+		return config.get<string[]>(configKeys.nodeArgv.key) || [];
 	}
 
 	private getMonkeyPatch(config: vscode.WorkspaceConfiguration): boolean {

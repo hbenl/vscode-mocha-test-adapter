@@ -95,7 +95,7 @@ export abstract class MochaAdapterCore {
 					path.resolve(this.workspaceFolderPath, config.launcherScript) :
 					this.workerScript;
 
-				const childProc = this.launchWorkerProcess(config, childProcScript, []);
+				const childProc = this.launchWorkerProcess(config, childProcScript, config.nodeArgv);
 
 				if (this.log.enabled) {
 					childProc.stdout!.on('data', data => this.log.info(`Worker (stdout): ${data.toString()}`));
@@ -273,7 +273,10 @@ export abstract class MochaAdapterCore {
 					path.resolve(this.workspaceFolderPath, config.launcherScript) :
 					this.workerScript;
 
-				const execArgv = (debug && !config.launcherScript) ? [ `--inspect-brk=${config.debuggerPort}` ] : [];
+				const execArgv = [ ...config.nodeArgv ];
+				if (debug && !config.launcherScript) {
+					execArgv.push(`--inspect-brk=${config.debuggerPort}`);
+				}
 
 				this.runningTestProcess = this.launchWorkerProcess(config, childProcScript, execArgv);
 
