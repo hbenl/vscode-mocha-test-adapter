@@ -4,12 +4,15 @@ import { readFile, fileExists, normalizePath } from './util';
 import * as vscode from 'vscode';
 import { glob } from 'glob';
 import minimatch from 'minimatch';
+import chokidar from 'chokidar';
+import assert from 'assert';
 import { parse as dotenvParse } from 'dotenv';
 import { detectNodePath, Log } from 'vscode-test-adapter-util';
 import { IDisposable, IConfigReader } from './core';
 import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
 import { MochaOptsReader, MochaOptsAndFiles } from './optsReader';
 import { configKeys, OnChange, configSection } from './configKeys';
+import { FileChangeDebouncer } from './debouncer';
 
 export type EnvVars = { [envVar: string]: string | null };
 
@@ -50,11 +53,26 @@ export interface AdapterConfig {
 	autoload: boolean | 'onStart';
 }
 
+interface DetailedWatcherConfig {
+	files: string | string[];
+	ignore?: string | string[];
+	debounce?: number;
+}
+
+interface NormalizedWatcherConfig {
+	files: string[];
+	ignore: string[];
+	debounce: number;
+}
+
 export class ConfigReader implements IConfigReader, IDisposable {
 
 	private disposables: IDisposable[] = [];
 
 	private enabledStateKey: string;
+
+	private watcher?: chokidar.FSWatcher;
+	private debouncer?: FileChangeDebouncer;
 
 	private _currentConfig: Promise<AdapterConfig | undefined> | undefined;
 	get currentConfig(): Promise<AdapterConfig | undefined> {
@@ -67,8 +85,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	constructor(
 		private readonly workspaceFolder: vscode.WorkspaceFolder,
 		private readonly workspaceState: vscode.Memento,
-		load: (changedFiles?: string[]) => Promise<void>,
-		retire: (tests?: string[]) => void,
+		private load: (changedFiles?: string[], reloadConfig?: boolean) => Promise<void>,
+		private retire: (tests?: string[]) => void,
 		private readonly log: Log
 	) {
 
@@ -108,31 +126,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}));
 
 		this.disposables.push(vscode.workspace.onDidSaveTextDocument(async document => {
-
-			const config = await this.currentConfig;
-			if (config?.autoload !== true) {
-				if (this.log.enabled) this.log.info(`Reloading cancelled because the adapter or autoloading is disabled`);
-				return;
-			}
-
-			const filename = document.uri.fsPath;
-			if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
-
-			const isTestFile = await this.isTestFile(filename);
-			if (isTestFile) {
-
-				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a test file`);
-				
-				if (isTestFile === 'config') {
-					load();
-				} else {
-					load([ normalizePath(filename) ]);
-				}
-
-			} else if (filename.startsWith(this.workspaceFolder.uri.fsPath)) {
-				this.log.info('Sending retire event');
-				retire();
-			}
+			this.onFileChanged(document.uri.fsPath, false);
 		}));
 	}
 
@@ -153,7 +147,63 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return (autoload !== undefined) ? autoload : true;
 	}
 
+	private async onFileChanged(filename: string, fromWatcher: boolean) {
+
+		const config = await this.currentConfig;
+		if (config?.autoload !== true) {
+			if (this.log.enabled) this.log.info(`Reloading cancelled because the adapter or autoloading is disabled`);
+			return;
+		}
+
+		if (this.log.enabled) this.log.info(`${filename} was saved - checking if this affects ${this.workspaceFolder.uri.fsPath}`);
+
+		const isTestFile = await this.isTestFile(filename);
+		if (!isTestFile && !filename.startsWith(this.workspaceFolder.uri.fsPath)) {
+			return;
+		}
+
+		if (isTestFile === 'config') {
+			if (!fromWatcher) {
+				if (this.log.enabled) this.log.info(`Reloading because ${filename} is a config file`);
+				this.debouncer?.reset();
+				this.load();
+			}
+			return;
+		}
+
+		if (fromWatcher) {
+			assert(this.debouncer);
+			this.debouncer.fileChanged(isTestFile ? filename : undefined);
+		} else if (!this.watcher) {
+			this.filesChangedCallback(isTestFile, isTestFile ? [ filename ] : undefined);
+		}
+	}
+
+	private filesChangedCallback(reload?: boolean, testFiles?: string[]) {
+		if (reload) {
+			if (testFiles) {
+				if (this.log.enabled) this.log.info(`Reloading because ${JSON.stringify(testFiles)} are test files`);
+				this.load(testFiles.map(normalizePath), false);
+			} else {
+				if (this.log.enabled) this.log.info('Reloading because of changed files');
+				this.load(undefined, false);
+			}
+		} else {
+			this.log.info('Sending retire event');
+			this.retire();
+		}
+	}
+
 	private async readConfig(): Promise<AdapterConfig | undefined> {
+
+		if (this.watcher) {
+			this.watcher.close();
+			this.watcher = undefined;
+		}
+		if (this.debouncer) {
+			this.debouncer.dispose();
+			this.debouncer = undefined;
+		}
 
 		const config = vscode.workspace.getConfiguration(configSection, this.workspaceFolder.uri);
 
@@ -217,6 +267,21 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			.map(file => path.resolve(this.workspaceFolder.uri.fsPath, file));
 		if (this.log.enabled && (extraFiles.length > 0)) {
 			this.log.debug(`Adding files ${JSON.stringify(extraFiles)}`);
+		}
+
+		const watcherConfig = this.getWatcherConfig(config);
+		if (watcherConfig) {
+			this.watcher = chokidar.watch(watcherConfig.files, {
+				ignored: watcherConfig.ignore,
+				ignoreInitial: true
+			});
+			this.debouncer = new FileChangeDebouncer(
+				watcherConfig.debounce,
+				(reload, changedFiles) => this.filesChangedCallback(reload, changedFiles)
+			);
+			this.watcher.on('add', filename => this.onFileChanged(filename, true));
+			this.watcher.on('change', filename => this.onFileChanged(filename, true));
+			this.watcher.on('unlink', filename => this.onFileChanged(filename, true));
 		}
 
 		return {
@@ -361,6 +426,40 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 
 		return [ ...ignoresFromConfig, ...ignoresFromOptsFile ];
+	}
+
+	private getWatcherConfig(config: vscode.WorkspaceConfiguration): NormalizedWatcherConfig | undefined {
+		const rawConfig = config.get<string | string[] | DetailedWatcherConfig>(configKeys.watch.key);
+		if (!rawConfig) {
+			return undefined;
+		}
+
+		const normalizeArray = (files: string[]) => files.map(
+			file => path.resolve(this.workspaceFolder.uri.fsPath, file)
+		);
+
+		const defaultIgnore = normalizeArray([ '**/node_modules/**' ]);
+		const defaultDebounce = 200;
+
+		if (typeof rawConfig === 'string') {
+			return {
+				files: normalizeArray([ rawConfig ]),
+				ignore: defaultIgnore,
+				debounce: defaultDebounce
+			};
+		} else if (Array.isArray(rawConfig)) {
+			return {
+				files: normalizeArray(rawConfig),
+				ignore: defaultIgnore,
+				debounce: defaultDebounce
+			};
+		} else {
+			return {
+				files: normalizeArray((typeof rawConfig.files === 'string') ? [ rawConfig.files ] : rawConfig.files),
+				ignore: normalizeArray(rawConfig.ignore ? (Array.isArray(rawConfig.ignore) ? rawConfig.ignore : [ rawConfig.ignore ]) : []),
+				debounce: (rawConfig.debounce === undefined) ? defaultDebounce : rawConfig.debounce
+			};
+		}
 	}
 
 	private async lookupFiles(
@@ -672,6 +771,10 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	}
 
 	dispose(): void {
+		if (this.watcher) {
+			this.watcher.close();
+			this.watcher = undefined;
+		}
 		for (const disposable of this.disposables) {
 			disposable.dispose();
 		}

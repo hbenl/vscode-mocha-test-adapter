@@ -11,6 +11,7 @@ export const configSection = 'mochaExplorer';
 const rawConfigKeys: { [key: string]: { onChange?: OnChange } } = {
 	files: { onChange: 'reloadTests' },
 	ignore: { onChange: 'reloadTests' },
+	watch: { onChange: 'reloadConfig' },
 	pruneFiles: { onChange: 'retire' },
 	env: { onChange: 'reloadTests' },
 	envPath: { onChange: 'reloadTests' },

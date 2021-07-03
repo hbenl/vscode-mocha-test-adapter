@@ -25,7 +25,8 @@ Run your Mocha tests using the
 
 ## Using transpilers (Typescript, Babel, etc.)
 
-If you use a transpiler for your test sources, there are 2 ways to make the tests work in Mocha Test Explorer:
+If you use a transpiler in your project, there are 2 ways to make the tests work in Mocha Test Explorer.
+The first one is easier to configure, the second one offers better performance (especially in large projects):
 * running the original (non-transpiled) sources directly by transpiling them on-the-fly using `ts-node` for Typescript, `babel-register` for Babel, etc.
   Example for Typescript:
   ```json
@@ -34,11 +35,17 @@ If you use a transpiler for your test sources, there are 2 ways to make the test
   ```
 
 * enabling source-maps in your transpiler's configuration and running the transpiled test sources using the
-  [`source-map-support`](https://www.npmjs.com/package/source-map-support) package. Example for Typescript:
+  [`source-map-support`](https://www.npmjs.com/package/source-map-support) package.
+  Furthermore, you should tell Mocha Test Explorer which files to watch for changes. For example:
   ```json
-  "mochaExplorer.files": "test/**/*.js",
-  "mochaExplorer.require": "source-map-support/register"
+  "mochaExplorer.files": "out/test/**/*.js",
+  "mochaExplorer.require": "source-map-support/register",
+  "mochaExplorer.watch": "out/**/*.js"
   ```
+  `mochaExplorer.watch` can be a string, an array of strings or an object with the properties `files` and optionally `ignore` and `debounce`.
+  Make sure that it references the source files of your tests and of the application under test.
+  Watching files consumes system resources, so it shouldn't reference more files than necessary.
+  For this reason, `ignore` is set to `**/node_modules/**` by default.
 
 ## Running VS Code extension tests using vscode-test
 
@@ -137,6 +144,7 @@ Property                           | Description
 -----------------------------------|---------------------------------------------------------------
 `mochaExplorer.files`              | The glob(s) describing the location of your test files (relative to the workspace folder) (default: `"test/**/*.js"`). These globs will be _added to_ the globs found in a mocha configuration file
 `mochaExplorer.ignore`             | Glob(s) of files to be ignored (relative to the workspace folder). These globs will be _added to_ the globs found in a mocha configuration file
+`mochaExplorer.watch`              | Configure a file watcher. See the section on using transpilers for more details.
 `mochaExplorer.env`                | Environment variables to be set when running the tests (e.g. `{ "NODE_ENV": "production" }`). These environment variables will be _added to_ the environment of the process running mocha. To _remove_ an environment variable, set its value to `null`
 `mochaExplorer.envPath`            | Path to a dotenv file (relative to the workspace folder) containing environment variables to be set when running the tests. If you set both `mochaExplorer.env` and `mochaExplorer.envPath`, the environment variables will be merged (with those from `mochaExplorer.env` overriding those from `mochaExplorer.envPath`)
 `mochaExplorer.cwd`                | The working directory where mocha is run (relative to the workspace folder)

@@ -42,7 +42,7 @@ export class MochaAdapter extends MochaAdapterCore implements TestAdapter, IDisp
 		this.configReader = new ConfigReader(
 			workspaceFolder,
 			workspaceState,
-			(changedFiles?: string[]) => this.load(changedFiles),
+			(changedTestFiles?: string[], reloadConfig?: boolean) => this.load(changedTestFiles, reloadConfig),
 			(tests?: string[]) => this.retireEmitter.fire({ tests }),
 			log
 		);

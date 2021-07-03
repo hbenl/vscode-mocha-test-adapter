@@ -41,6 +41,7 @@
     "hbenl.vscode-test-explorer"
   ],
   "dependencies": {
+    "chokidar": "^3.5.2",
     "diff": "^5.0.0",
     "dotenv": "^10.0.0",
     "escape-string-regexp": "^5.0.0",
@@ -118,6 +119,46 @@
             "type": "string"
           },
           "scope": "resource"
+        },
+        "mochaExplorer.watch": {
+          "description": "Watch the specified files, directories or glob patterns",
+          "type": [
+            "string",
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "properties": {
+            "files": {
+              "description": "Files, directories or glob patterns to be watched for file changes",
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "default": "**/*.js"
+            },
+            "ignore": {
+              "description": "Files, directories or glob patterns to be ignored",
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "default": "**/node_modules/**"
+            },
+            "debounce": {
+              "description": "The time in milliseconds to wait after a file change before reloading",
+              "type": "number",
+              "default": 200
+            }
+          }
         },
         "mochaExplorer.pruneFiles": {
           "description": "Only load the test files needed for the current test run (the default is to load all configured files)",

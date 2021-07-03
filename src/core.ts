@@ -61,7 +61,7 @@ export abstract class MochaAdapterCore {
 		protected readonly log: ILog
 	) {}
 
-	async load(changedFiles?: string[]): Promise<void> {
+	async load(changedFiles?: string[], reloadConfig = true): Promise<void> {
 
 		if (this.skipNextLoadRequest) {
 			if (this.log.enabled) this.log.info(`Skipping the initial load request for ${this.workspaceFolderPath}`);
@@ -77,7 +77,9 @@ export abstract class MochaAdapterCore {
 
 			this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
-			this.configReader.reloadConfig();
+			if (reloadConfig) {
+				this.configReader.reloadConfig();
+			}
 			const config = await this.configReader.currentConfig;
 
 			if (!config) {
