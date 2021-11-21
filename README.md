@@ -1,7 +1,7 @@
 # Mocha Test Explorer for Visual Studio Code
 
-Run your Mocha tests using the 
-[Test Explorer UI](https://marketplace.visualstudio.com/items?itemName=hbenl.vscode-test-explorer).
+Run your Mocha tests using the
+[Vscode Testing API](https://code.visualstudio.com/api/extension-guides/testing).
 
 ![Screenshot](img/screenshot.png)
 

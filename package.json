@@ -37,9 +37,7 @@
     "package": "vsce package",
     "publish": "vsce publish"
   },
-  "extensionDependencies": [
-    "hbenl.vscode-test-explorer"
-  ],
+  "extensionDependencies": [],
   "dependencies": {
     "chokidar": "^3.5.2",
     "diff": "^5.0.0",
