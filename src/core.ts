@@ -175,7 +175,7 @@ export abstract class MochaAdapterCore {
 
 					await this.connectToWorkerProcess(config, childProc, args, handler);
 
-				} catch (err) {
+				} catch (err: any) {
 					this.log.error(`Couldn't establish IPC: ${util.inspect(err)}`);
 					if (!testsLoaded) {
 						this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', errorMessage: `Couldn't establish IPC:\n${err.stack}` });
@@ -347,7 +347,7 @@ export abstract class MochaAdapterCore {
 
 					await this.connectToWorkerProcess(config, this.runningTestProcess, args, handler);
 
-				} catch (err) {
+				} catch (err: any) {
 					this.log.error(`Couldn't establish IPC: ${util.inspect(err)}`)
 					if (!childProcessFinished) {
 						childProcessFinished = true;
