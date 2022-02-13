@@ -80,7 +80,12 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 
 		let requireOrImport: ((file: string) => Promise<any>) | undefined;
 		if (args.esmLoader) {
-			const esmUtilsPath = path.join(mochaPath, 'lib/esm-utils.js');
+			let esmUtilsPath = path.join(mochaPath, 'lib/nodejs/esm-utils.js');
+			if (await fileExists(esmUtilsPath)) {
+				const esmUtils = require(esmUtilsPath);
+				requireOrImport = esmUtils.requireOrImport;
+			}
+			esmUtilsPath = path.join(mochaPath, 'lib/esm-utils.js');
 			if (await fileExists(esmUtilsPath)) {
 				const esmUtils = require(esmUtilsPath);
 				requireOrImport = esmUtils.requireOrImport;
