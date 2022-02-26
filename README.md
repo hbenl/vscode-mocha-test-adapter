@@ -20,7 +20,7 @@ Run your Mocha tests using the
 * Put your Mocha command line options (if you have any) in a [mocha configuration file](https://mochajs.org/#configuring-mocha-nodejs)
   (either a `.mocharc.*` file or a `mocha` property in your `package.json` or a [`mocha.opts`](https://mochajs.org/#mochaopts) file)
   or VS Code's settings (see below)
-* Open the Test view
+* Open the Test view by clicking on the flask icon in the [Activity Bar](https://code.visualstudio.com/docs/getstarted/userinterface#_activity-bar)
 * Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
 ## Using transpilers (Typescript, Babel, etc.)
