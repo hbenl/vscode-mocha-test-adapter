@@ -36,7 +36,7 @@ export default (async () => {
 			socket.pipe(split()).once('data', resolve);
 		});
 
-		execute(JSON.parse(argsJson), msg => writeMessage(socket, msg), () => socket.unref());
+		await execute(JSON.parse(argsJson), msg => writeMessage(socket, msg), () => socket.unref());
 
 	} else if (process.send) {
 
@@ -44,11 +44,11 @@ export default (async () => {
 			process.once('message', resolve);
 		});
 
-		execute(args, async msg => { process.send!(msg); });
+		await execute(args, async msg => { process.send!(msg); });
 
 	} else {
 
-		execute(JSON.parse(process.argv[3]), async msg => console.log(msg));
+		await execute(JSON.parse(process.argv[3]), async msg => console.log(msg));
 
 	}
 })();
@@ -184,9 +184,12 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled, useBaseDir ? args.cwd : undefined));
 
 			if (args.logEnabled) sendMessage('Running tests');
-			mocha.run(() => {
-				sendMessage({ type: 'finished' });
-				if (onFinished) onFinished();
+			await new Promise<void>(resolve => {
+				mocha.run(() => {
+					sendMessage({ type: 'finished' });
+					if (onFinished) onFinished();
+					resolve();
+				});
 			});
 
 		}
