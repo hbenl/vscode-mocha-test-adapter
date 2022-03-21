@@ -194,4 +194,6 @@ then that stacktrace doesn't mean that something went wrong: such stacktraces ar
 There is a [bug in Node 10.6.0 - 10.9.0](https://github.com/nodejs/node/issues/21671) that breaks this adapter.
 If you're using a version of Node affected by this bug, add `"mochaExplorer.nodePath": null` to your configuration as a workaround.
 
+If auto scan doesn't work try disabeling `mochaExplorer.esmLoader`
+
 If you think you've found a bug, please [file a bug report](https://github.com/hbenl/vscode-mocha-test-adapter/issues) and attach the diagnostic logs.
