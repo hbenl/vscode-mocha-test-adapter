@@ -130,7 +130,7 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 			}
 		}
 
-		const mocha = new Mocha();
+		const mocha = new Mocha({ require: args.mochaOpts.requires });
 
 		mocha.ui(args.mochaOpts.ui);
 		mocha.timeout(args.mochaOpts.timeout);
