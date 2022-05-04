@@ -20,6 +20,7 @@ Run your Mocha tests using the
 * Put your Mocha command line options (if you have any) in a [mocha configuration file](https://mochajs.org/#configuring-mocha-nodejs)
   (either a `.mocharc.*` file or a `mocha` property in your `package.json` or a [`mocha.opts`](https://mochajs.org/#mochaopts) file)
   or VS Code's settings (see below)
+* Ensure that your project's root folder is a VS Code root folder.  If you are using a "monorepo" architecture (ie. a single repository with multiple projects in separate sub-folders), you may need to add your project sub-folders to VS Code separately.  See [this article on multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) for further details on how to add folders.
 * Open the Test view by clicking on the flask icon in the [Activity Bar](https://code.visualstudio.com/docs/getstarted/userinterface#_activity-bar)
 * Run / Debug your tests using the ![Run](img/run.png) / ![Debug](img/debug.png) icons in the Test Explorer or the CodeLenses in your test file
 
