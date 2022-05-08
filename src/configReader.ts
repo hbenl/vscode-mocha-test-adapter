@@ -491,7 +491,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private async globFiles(config: vscode.WorkspaceConfiguration, relativeGlob: string) {
 		if (this.getGlobImplementation(config) === 'glob') {
 
-			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob));
+			const cwdRelativeGlob = config.cwd ? path.join(config.cwd, relativeGlob) : relativeGlob;
+			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, cwdRelativeGlob));
 			return await new Promise<string[]>(
 				(resolve, reject) => glob(
 					absoluteGlob,
