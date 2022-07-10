@@ -1,5 +1,5 @@
 import * as path from 'path';
-import fs from 'fs';
+import module from 'module';
 import { readFile, fileExists, normalizePath } from './util';
 import * as vscode from 'vscode';
 import { glob } from 'glob';
@@ -287,7 +287,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		return {
 			nodePath,
 			nodeArgv,
-			mochaPath: await this.getMochaPath(config),
+			mochaPath: await this.getMochaPath(config, cwd),
 			cwd,
 			env: await this.getEnv(config, mochaOpts),
 			monkeyPatch: this.getMonkeyPatch(config),
@@ -667,22 +667,16 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		}
 	}
 
-	private async getMochaPath(config: vscode.WorkspaceConfiguration): Promise<string> {
+	private async getMochaPath(config: vscode.WorkspaceConfiguration, cwd: string): Promise<string> {
 
 		const configuredMochaPath = config.get<string | null>(configKeys.mochaPath.key);
 
 		if (configuredMochaPath === 'default') {
 
-			const localMochaPath = path.resolve(this.workspaceFolder.uri.fsPath, 'node_modules/mocha');
-			const hasLocalMocha = await new Promise<boolean>(resolve => {
-				fs.stat(localMochaPath, (err, stats) => {
-					resolve(!err && stats.isDirectory());
-				});
-			});
-
-			if (hasLocalMocha) {
-				return localMochaPath;
-			}
+			const cwdRequire = module.createRequire(path.join(cwd, "index.js"));
+			try {
+				return path.dirname(cwdRequire.resolve('mocha'));
+			} catch {}
 
 		} else if (configuredMochaPath) {
 
