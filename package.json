@@ -42,10 +42,10 @@
   ],
   "dependencies": {
     "chokidar": "^3.5.3",
-    "diff": "^5.0.0",
-    "dotenv": "^16.0.0",
+    "diff": "^5.1.0",
+    "dotenv": "^16.0.1",
     "escape-string-regexp": "^5.0.0",
-    "glob": "^7.2.0",
+    "glob": "^7.2.3",
     "minimatch": "^4.2.1",
     "mocha": "^10.0.0",
     "source-map-support": "^0.5.21",
@@ -57,16 +57,16 @@
     "vscode-test-adapter-util": "^0.7.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.17.10",
-    "@babel/preset-env": "^7.17.10",
-    "@babel/register": "^7.17.7",
-    "@rollup/plugin-commonjs": "^22.0.0",
-    "@rollup/plugin-node-resolve": "^13.2.1",
+    "@babel/core": "^7.18.6",
+    "@babel/preset-env": "^7.18.6",
+    "@babel/register": "^7.18.6",
+    "@rollup/plugin-commonjs": "^22.0.1",
+    "@rollup/plugin-node-resolve": "^13.3.0",
     "@types/diff": "^5.0.2",
     "@types/glob": "^7.2.0",
     "@types/minimatch": "^3.0.5",
     "@types/mocha": "^9.1.1",
-    "@types/node": "^12.20.50",
+    "@types/node": "^12.20.55",
     "@types/source-map-support": "^0.5.4",
     "@types/split": "^1.0.1",
     "@types/stack-trace": "^0.0.30",
@@ -74,11 +74,11 @@
     "esm": "^3.2.25",
     "mocha-prepare": "^0.1.0",
     "rimraf": "^3.0.2",
-    "rollup": "^2.71.1",
-    "rollup-plugin-typescript2": "^0.31.2",
-    "ts-node": "^10.7.0",
-    "typescript": "^4.6.4",
-    "vsce": "^2.7.0"
+    "rollup": "^2.76.0",
+    "rollup-plugin-typescript2": "^0.32.1",
+    "ts-node": "^10.8.2",
+    "typescript": "^4.7.4",
+    "vsce": "^2.9.2"
   },
   "engines": {
     "vscode": "^1.47.0"
