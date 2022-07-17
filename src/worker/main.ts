@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
-import module from 'module';
+import Module from 'module';
 import { createConnection, receiveConnection, writeMessage } from 'vscode-test-adapter-remoting-util/out/ipc';
 import split from 'split';
 import RegExEscape from 'escape-string-regexp';
@@ -106,7 +106,20 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		}
 
 		const cwd = process.cwd();
-		const cwdRequire = module.createRequire(path.join(cwd, "index.js"));
+		let cwdRequire: NodeRequire;
+		if (Module.createRequire as any) {
+			cwdRequire = Module.createRequire(path.join(cwd, "index.js"));
+		} else {
+			cwdRequire = require;
+			module.paths.push(cwd, path.join(cwd, 'node_modules'));
+			let dir = mochaPath;
+			while (true) {
+				module.paths.push(path.join(dir, 'node_modules'));
+				const next = path.dirname(dir);
+				if (next === dir) break;
+				dir = next;
+			}
+		}
 
 		let requires = []
 		for (let req of args.mochaOpts.requires) {
