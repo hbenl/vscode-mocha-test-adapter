@@ -158,7 +158,7 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 		if (args.mochaOpts.delay) mocha.delay();
 		if (args.mochaOpts.fullTrace) mocha.fullTrace();
 		if (args.mochaOpts.asyncOnly) mocha.asyncOnly();
-		if (mocha.parallelMode) {
+		if (!args.debuggerPort && mocha.parallelMode) {
 			mocha.parallelMode(args.mochaOpts.parallel);
 			if (args.mochaOpts.jobs !== undefined) {
 				mocha.options.jobs = args.mochaOpts.jobs;
