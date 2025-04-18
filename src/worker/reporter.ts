@@ -106,7 +106,7 @@ export default (
 							let matchFound = false;
 							if (useSourceMapSupport && test.file) {
 								const mapAndUrl = retrieveSourceMap(test.file);
-								if (mapAndUrl && (typeof mapAndUrl.map === 'string')) {
+								if (mapAndUrl && (typeof mapAndUrl.map === 'string') && (typeof mapAndUrl.url === 'string')) {
 									const parsedSourcemap = JSON.parse(mapAndUrl.map);
 									if (parsedSourcemap.sources.length === 1) {
 										const dirname = path.dirname(mapAndUrl.url);
