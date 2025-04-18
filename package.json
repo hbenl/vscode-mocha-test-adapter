@@ -34,8 +34,13 @@
     "build-tests": "cd src/test/workspaces/sourcemap ; tsc",
     "build": "npm run build-extension && npm run build-worker",
     "rebuild": "npm run clean && npm run build",
-    "package": "vsce package",
-    "publish": "vsce publish"
+    "package": "vsce package --allow-star-activation",
+    "publish": "vsce publish --allow-star-activation",
+    "test": "mocha",
+    "zero-to-build": "npm install && npm run clean && npm run reinstall && npm run build",
+    "zero-to-test": "npm run zero-to-build && npm run build-tests && npm run test",
+    "zero-to-package": "npm run zero-to-test && npm run package",
+    "zero-to-hero": "npm run zero-to-test && npm run publish"
   },
   "extensionDependencies": [
     "hbenl.vscode-test-explorer"
