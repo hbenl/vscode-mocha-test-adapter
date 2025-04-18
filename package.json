@@ -72,6 +72,7 @@
     "@types/split": "^1.0.1",
     "@types/stack-trace": "^0.0.30",
     "@types/vscode": "~1.47.0",
+    "@vscode/vsce": "^3.3.2",
     "esm": "^3.2.25",
     "mocha-prepare": "^0.1.0",
     "rimraf": "^3.0.2",
@@ -79,8 +80,7 @@
     "rollup-plugin-typescript2": "^0.32.1",
     "semver": "^7.7.1",
     "ts-node": "^10.8.2",
-    "typescript": "^5.8.3",
-    "vsce": "^2.9.2"
+    "typescript": "^5.8.3"
   },
   "engines": {
     "vscode": "^1.47.0"
