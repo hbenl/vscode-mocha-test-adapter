@@ -1,8 +1,23 @@
 import * as assert from 'assert';
 import { createTestMochaAdapter } from "./adapter";
 import { getExpectedTests, getExpectedTestRunEvents, removeStackTraces } from './expectedTests';
+import semver from 'semver';
 
-describe("ESM tests using the esm package from npm", function() {
+// Check Node.js version
+const nodeVersion = semver.coerce(process.version);
+if (!nodeVersion) {
+	throw new Error(`Unable to parse Node.js version: ${process.version}`);
+}
+
+/**
+ * Node.js 20 and later have native ESM support, which
+ * causes issues with the esm package. Issues are only
+ * observed with Node.js 22 and above. The tests are
+ * skipped in this case.
+ */
+const describeFn = semver.gte(nodeVersion, "22.0.0") ? describe.skip : describe;
+
+describeFn("ESM tests using the esm package from npm", function() {
 
 	it("should be loaded", async function() {
 
