@@ -3,7 +3,7 @@ import module from 'module';
 import { readFile, fileExists, normalizePath } from './util';
 import * as vscode from 'vscode';
 import { glob } from 'glob';
-import minimatch from 'minimatch';
+import { minimatch } from 'minimatch';
 import chokidar from 'chokidar';
 import assert from 'assert';
 import { parse as dotenvParse } from 'dotenv';
