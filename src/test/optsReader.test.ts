@@ -64,4 +64,14 @@ describe("The OptsReader", function() {
 			ignores: [ 'test/*.no-test.js' ]
 		});
 	});
+
+	it("should load inherited settings", async function() {
+		const optsReader = new MochaOptsReader(new TestLog());
+
+		const optsAndFiles = await optsReader.readOptsUsingMocha(path.resolve(__dirname, 'workspaces/extending'));
+
+		assert.strictEqual(optsAndFiles.mochaOpts.ui, "tdd");
+
+		assert.ok(optsAndFiles.mochaOpts.asyncOnly);
+	})
 });

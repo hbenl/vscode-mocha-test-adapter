@@ -54,7 +54,8 @@
     "tslib": "^2.4.0",
     "vscode-test-adapter-api": "^1.9.0",
     "vscode-test-adapter-remoting-util": "^0.13.0",
-    "vscode-test-adapter-util": "^0.7.1"
+    "vscode-test-adapter-util": "^0.7.1",
+    "yargs": "^16.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.6",
@@ -71,6 +72,7 @@
     "@types/split": "^1.0.1",
     "@types/stack-trace": "^0.0.30",
     "@types/vscode": "~1.47.0",
+    "@types/yargs": "^16.0.5",
     "esm": "^3.2.25",
     "mocha-prepare": "^0.1.0",
     "rimraf": "^3.0.2",
