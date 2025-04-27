@@ -278,7 +278,7 @@ export abstract class MochaAdapterCore {
 				const execArgv = [ ...config.nodeArgv ];
 				if (debug && !config.launcherScript) {
 					config.launcherScript
-					? config.env.MOCHA_WORKER_DEBUG = true	
+					? config.env.MOCHA_WORKER_DEBUG = "true"
 					: execArgv.push(`--inspect-brk=${config.debuggerPort}`);
 				}
 
