@@ -141,7 +141,7 @@ function findCallLocation(
 				let file = stackFrame.getFileName();
 				if (typeof file === 'string') {
 					file = normalizePathOrFileUrlToPath(file);
-					if (file.startsWith(baseDir)) {
+					if (file.startsWith(baseDir) && !file.includes('node_modules')) {
 						return { file, line: stackFrame.getLineNumber() - 1 };
 					}
 				}
