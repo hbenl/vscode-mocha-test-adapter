@@ -3,7 +3,7 @@ import module from 'module';
 import { readFile, fileExists, normalizePath } from './util';
 import * as vscode from 'vscode';
 import { glob } from 'glob';
-import { minimatch } from 'minimatch';
+import minimatch from 'minimatch';
 import chokidar from 'chokidar';
 import assert from 'assert';
 import { parse as dotenvParse } from 'dotenv';
@@ -493,9 +493,19 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 			const cwdRelativeGlob = config.cwd ? path.join(config.cwd, relativeGlob) : relativeGlob;
 			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, cwdRelativeGlob));
-			
-			const matches = await glob(absoluteGlob, { nodir: true });
-			return matches.map(normalizePath).sort();
+			return await new Promise<string[]>(
+				(resolve, reject) => glob(
+					absoluteGlob,
+					{ nodir: true },
+					(err, matches) => {
+						if (err) {
+							reject(err);
+						} else {
+							resolve(matches.map(normalizePath));
+						}
+					}
+			));
+
 		} else {
 
 			if (relativeGlob.startsWith('./')) {

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { glob } from 'glob';
+import { Glob } from 'glob';
 import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, RetireEvent } from 'vscode-test-adapter-api';
 import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputChannel, ILog } from '../core';
 import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
@@ -140,7 +140,7 @@ export class TestMochaAdapter extends MochaAdapterCore {
 	}
 
 	protected onDidTerminateDebugSession(cb: (session: any) => void): IDisposable {
-		return { dispose() { } };
+		return { dispose() {} };
 	}
 }
 
@@ -156,7 +156,7 @@ export class TestConfigReader implements IConfigReader {
 		this.config = initialConfig;
 	}
 
-	reloadConfig(): void { }
+	reloadConfig(): void {}
 }
 
 export class TestEventCollector<T> implements IEventEmitter<T> {
@@ -190,7 +190,14 @@ export class TestLog implements ILog {
 	}
 }
 
-async function findFiles(globPattern: string): Promise<string[]> {
-	const files = await glob(globPattern, {  });
-	return files.map(normalizePath).sort();
+async function findFiles(glob: string): Promise<string[]> {
+	return new Promise<string[]>((resolve, reject) => {
+		new Glob(glob, (err, files) => {
+			if (err) {
+				reject(err);
+			} else {
+				resolve(files.map(normalizePath));
+			}
+		})
+	})
 }
