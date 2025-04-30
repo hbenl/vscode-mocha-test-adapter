@@ -494,7 +494,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 			const cwdRelativeGlob = config.cwd ? path.join(config.cwd, relativeGlob) : relativeGlob;
 			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, cwdRelativeGlob));
 			
-			const matches = await glob(absoluteGlob, { nodir: true });
+			const matches = await glob(absoluteGlob, { nodir: true, windowsPathsNoEscape: true });
 			return matches.map(normalizePath).sort();
 		} else {
 
