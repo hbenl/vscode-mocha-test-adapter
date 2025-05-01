@@ -26,7 +26,7 @@
   "main": "out/main.js",
   "scripts": {
     "reinstall": "rimraf node_modules package-lock.json && npm install",
-    "clean": "rimraf out .rpt2_cache vscode-mocha-test-adapter-*.vsix",
+    "clean": "rimraf out .rpt2_cache vscode-mocha-test-adapter-*.vsix --glob",
     "build-extension": "tsc",
     "watch-extension": "tsc -w",
     "build-worker": "rollup -c",
