@@ -191,6 +191,6 @@ export class TestLog implements ILog {
 }
 
 async function findFiles(globPattern: string): Promise<string[]> {
-	const files = await glob(globPattern, {  });
+	const files = await glob(globPattern, { windowsPathsNoEscape: true });
 	return files.map(normalizePath).sort();
 }
