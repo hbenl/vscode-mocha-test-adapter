@@ -538,7 +538,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 		if (!config?.mochaConfigFile) {
 			for (const configFile of [ '.mocharc.js', '.mocharc.json', '.mocharc.yaml', '.mocharc.yml' ]) {
-				const resolvedConfigFile = path.resolve(this.workspaceFolder.uri.fsPath, configFile);
+				const resolvedConfigFile = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, configFile));
 				if (absolutePath === resolvedConfigFile) {
 					return 'config';
 				}
