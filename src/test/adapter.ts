@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { Glob } from 'glob';
+import { glob } from 'glob';
 import { TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, RetireEvent } from 'vscode-test-adapter-api';
 import { MochaAdapterCore, IConfigReader, IEventEmitter, IDisposable, IOutputChannel, ILog } from '../core';
 import { MochaOpts } from 'vscode-test-adapter-remoting-util/out/mocha';
@@ -190,14 +190,7 @@ export class TestLog implements ILog {
 	}
 }
 
-async function findFiles(glob: string): Promise<string[]> {
-	return new Promise<string[]>((resolve, reject) => {
-		new Glob(glob, (err, files) => {
-			if (err) {
-				reject(err);
-			} else {
-				resolve(files.map(normalizePath));
-			}
-		})
-	})
+async function findFiles(globPattern: string): Promise<string[]> {
+	const files = await glob(globPattern, { windowsPathsNoEscape: true });
+	return files.map(normalizePath).sort();
 }

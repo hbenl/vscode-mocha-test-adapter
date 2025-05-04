@@ -3,7 +3,7 @@ import module from 'module';
 import { readFile, fileExists, normalizePath } from './util';
 import * as vscode from 'vscode';
 import { glob } from 'glob';
-import minimatch from 'minimatch';
+import { minimatch } from 'minimatch';
 import chokidar from 'chokidar';
 import assert from 'assert';
 import { parse as dotenvParse } from 'dotenv';
@@ -493,18 +493,8 @@ export class ConfigReader implements IConfigReader, IDisposable {
 
 			const cwdRelativeGlob = config.cwd ? path.join(config.cwd, relativeGlob) : relativeGlob;
 			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, cwdRelativeGlob));
-			return await new Promise<string[]>(
-				(resolve, reject) => glob(
-					absoluteGlob,
-					{ nodir: true },
-					(err, matches) => {
-						if (err) {
-							reject(err);
-						} else {
-							resolve(matches.map(normalizePath));
-						}
-					}
-			));
+			const matches = await glob(absoluteGlob, { nodir: true, windowsPathsNoEscape: true });
+			return matches.map(normalizePath);
 
 		} else {
 
@@ -520,7 +510,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private absolutePathMatchesRelativeGlob(absolutePath: string, relativeGlob: string): boolean {
 		absolutePath = normalizePath(absolutePath);
 		const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob));
-		return minimatch(absolutePath, absoluteGlob);
+		return minimatch(absolutePath, absoluteGlob, { windowsPathsNoEscape: true });
 	}
 
 	private async isTestFile(absolutePath: string): Promise<boolean | 'config'> {
@@ -562,7 +552,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 		const globs = config.globs;
 		for (const relativeGlob of globs) {
 			const absoluteGlob = normalizePath(path.resolve(this.workspaceFolder.uri.fsPath, relativeGlob));
-			if (minimatch(absolutePath, absoluteGlob) &&
+			if (minimatch(absolutePath, absoluteGlob, { windowsPathsNoEscape: true }) &&
 				config.ignores.every(ignore => !this.absolutePathMatchesRelativeGlob(absolutePath, ignore))) {
 				return true;
 			}
