@@ -185,7 +185,14 @@ async function execute(args: WorkerArgs, sendMessage: (message: any) => Promise<
 
 		} else {
 
-			const stringify: (obj: any) => string = require(`${mochaPath}/lib/utils`).stringify;
+			let stringify: (obj: any) => string;
+			try {
+				// Mocha >=12 renamed the CommonJS utils module to lib/utils.cjs
+				// (lib/utils is now an ESM-only directory without an index module)
+				stringify = require(`${mochaPath}/lib/utils.cjs`).stringify;
+			} catch (err) {
+				stringify = require(`${mochaPath}/lib/utils`).stringify;
+			}
 			const regExp = new RegExp('^(' + args.tests!.map(RegExEscape).join('|') + ')$');
 			mocha.grep(regExp);
 			mocha.reporter(<any>ReporterFactory(sendMessage, stringify, sourceMapSupportEnabled, useBaseDir ? args.cwd : undefined));
