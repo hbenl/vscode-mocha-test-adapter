@@ -11,7 +11,7 @@ describe("The OptsReader", function() {
 
 		const optsAndFiles = await optsReader.readOptsUsingMocha(path.resolve(__dirname, 'workspaces/javascript/empty'));
 
-		assert.deepStrictEqual(optsAndFiles, <MochaOptsAndFiles>{
+		assert.deepStrictEqual(optsAndFiles, {
 			mochaOpts: {
 				ui: 'bdd',
 				requires: undefined,
@@ -34,7 +34,7 @@ describe("The OptsReader", function() {
 
 		const optsAndFiles = await optsReader.readMochaOptsFile(path.resolve(__dirname, 'workspaces/javascript/empty/test/mocha.opts'));
 
-		assert.deepStrictEqual(optsAndFiles, <MochaOptsAndFiles>{
+		assert.deepStrictEqual(optsAndFiles, {
 			mochaOpts: {},
 			files: [],
 			ignores: [],
@@ -48,7 +48,7 @@ describe("The OptsReader", function() {
 
 		const optsAndFiles = await optsReader.readMochaOptsFile(path.resolve(__dirname, 'workspaces/optsReader/test/mocha.opts'));
 
-		assert.deepStrictEqual(optsAndFiles, <MochaOptsAndFiles>{
+		assert.deepStrictEqual(optsAndFiles, {
 			mochaOpts: {
 				ui: 'tdd',
 				requires: [ 'ts-node/register', 'setup.js' ],
