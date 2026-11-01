@@ -570,7 +570,7 @@ export class ConfigReader implements IConfigReader, IDisposable {
 	private async getEnv(config: vscode.WorkspaceConfiguration, mochaOpts: MochaOpts): Promise<EnvVars> {
 
 		let resultEnv: EnvVars = config.get(configKeys.env.key) || {};
-		if (this.log.enabled) this.log.debug(`Using environment variables from config: ${JSON.stringify(resultEnv)}`);
+		if (this.log.enabled) this.log.debug(`Using environment variable names from config: ${JSON.stringify(Object.keys(resultEnv))}`);
 
 		let envPath: string | undefined = config.get<string>(configKeys.envPath.key);
 		if (envPath) {
